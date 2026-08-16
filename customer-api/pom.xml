@@ -45,12 +45,8 @@
       <name>MuleSoft Releases Repository</name>
       <url>https://repository.mulesoft.org/releases/</url>
       <layout>default</layout>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
     </pluginRepository>
   </pluginRepositories>
 
@@ -63,6 +59,12 @@
   </distributionManagement>
 
   <dependencies>
+    <dependency>
+      <groupId>org.mule.connectors</groupId>
+      <artifactId>mule-http-connector</artifactId>
+      <version>1.11.3</version>
+      <classifier>mule-plugin</classifier>
+    </dependency>
     <dependency>
       <groupId>org.mule.connectors</groupId>
       <artifactId>mule-db-connector</artifactId>
