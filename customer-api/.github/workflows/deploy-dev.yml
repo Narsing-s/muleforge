@@ -1,0 +1,72 @@
+name: Deploy Customer API to CloudHub 2.0 - DEV
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Anypoint environment name'
+        required: true
+        default: 'Development'
+      target:
+        description: 'CloudHub 2.0 target name'
+        required: true
+        default: 'CloudHub-US-East-2'
+      region:
+        description: 'CloudHub 2.0 region'
+        required: true
+        default: 'us-east-2'
+      application_name:
+        description: 'CloudHub 2.0 application name'
+        required: true
+        default: 'customer-api'
+
+permissions:
+  contents: read
+
+env:
+  ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+  ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+
+jobs:
+  deploy:
+    name: Build and deploy to CloudHub 2.0 DEV
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Verify required secrets exist
+        shell: bash
+        run: |
+          test -n "$ANYPOINT_CLIENT_ID" || { echo 'ANYPOINT_CLIENT_ID GitHub Environment secret is required'; exit 1; }
+          test -n "$ANYPOINT_CLIENT_SECRET" || { echo 'ANYPOINT_CLIENT_SECRET GitHub Environment secret is required'; exit 1; }
+
+      - name: Build and package
+        working-directory: customer-api
+        run: mvn --batch-mode --no-transfer-progress clean package
+
+      - name: Deploy to CloudHub 2.0
+        working-directory: customer-api
+        env:
+          CLOUDHUB2_ENVIRONMENT: ${{ inputs.environment }}
+          CLOUDHUB2_TARGET: ${{ inputs.target }}
+          CLOUDHUB2_REGION: ${{ inputs.region }}
+          CLOUDHUB2_APPLICATION: ${{ inputs.application_name }}
+        run: >-
+          mvn --batch-mode --no-transfer-progress deploy -DmuleDeploy
+          -Dcloudhub2.environment="$CLOUDHUB2_ENVIRONMENT"
+          -Dcloudhub2.target="$CLOUDHUB2_TARGET"
+          -Dcloudhub2.region="$CLOUDHUB2_REGION"
+          -Dcloudhub2.applicationName="$CLOUDHUB2_APPLICATION"
+
+      - name: Deployment summary
+        if: success()
+        run: echo "CloudHub 2.0 deployment submitted successfully for ${{ inputs.application_name }}"
