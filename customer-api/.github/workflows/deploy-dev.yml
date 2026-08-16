@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Anypoint environment name'
+        description: 'Exact Anypoint Platform environment name (case-sensitive)'
         required: true
         default: 'Development'
       target:
         description: 'CloudHub 2.0 target name'
         required: true
-        default: 'CloudHub-US-East-2'
+        default: 'Cloudhub-US-East-2'
       region:
         description: 'CloudHub 2.0 region'
         required: true
@@ -20,12 +20,13 @@ on:
         required: true
         default: 'customer-api'
 
-permissions:
-  contents: read
-
 env:
+  ANYPOINT_ORG_ID: ${{ secrets.ANYPOINT_ORG_ID }}
   ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
   ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -43,11 +44,13 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Verify required secrets exist
+      - name: Verify required Anypoint configuration
         shell: bash
         run: |
+          test -n "$ANYPOINT_ORG_ID" || { echo 'ANYPOINT_ORG_ID GitHub Environment secret is required'; exit 1; }
           test -n "$ANYPOINT_CLIENT_ID" || { echo 'ANYPOINT_CLIENT_ID GitHub Environment secret is required'; exit 1; }
           test -n "$ANYPOINT_CLIENT_SECRET" || { echo 'ANYPOINT_CLIENT_SECRET GitHub Environment secret is required'; exit 1; }
+          echo "Anypoint organization/business-group ID is configured."
 
       - name: Build and package
         working-directory: customer-api
