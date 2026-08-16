@@ -22,6 +22,9 @@ All notable MuleForge changes are documented here.
 - GitHub Actions CI quality gate for pull requests and protected branches.
 - CI checks for CLI tests, MuleForge verification and secret hygiene.
 - CI/CD documentation covering GitHub Actions, environments, secrets and deployment boundaries.
+- CloudHub 2.0 DEV deployment profile for the reference `customer-api`.
+- Manual GitHub Actions CloudHub 2.0 DEV deployment workflow using GitHub Environment secrets.
+- CloudHub 2.0 deployment documentation and security guidance.
 
 ### Improved
 
@@ -36,7 +39,8 @@ All notable MuleForge changes are documented here.
 - The web UI is a local workspace preview; it does not yet replace Anypoint Studio or provide browser-based Mule runtime execution.
 - A full Maven/MUnit verification requires a Mule/Maven environment, access to the required Mule repositories and valid connector dependencies/credentials.
 - Snowflake duplicate protection is implemented as an application lookup; standard Snowflake tables do not provide ordinary unique indexes.
-- CloudHub, CloudHub 2.0, Runtime Fabric and on-premises deployment automation are not yet implemented.
+- CloudHub 2.0 deployment is currently a manually triggered DEV reference workflow and must be validated against the target organization's Anypoint permissions/configuration before use.
+- QA/UAT/PROD promotion workflows are not yet generated automatically.
 - The development branch is not yet the stable `1.0.0` release.
 
 ## [0.2.0]
