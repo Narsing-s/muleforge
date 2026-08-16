@@ -5,7 +5,7 @@ function slug(value) {
   return String(value || "project").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project";
 }
 
-function extractEndpoints(text) {
+function parseEndpoints(text) {
   const found = [];
   const re = /\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[^\s,.;]+)/gi;
   let match;
@@ -17,19 +17,26 @@ function inferConnectors(text) {
   const lower = text.toLowerCase();
   const connectors = ["http"];
   if (/snowflake/.test(lower)) connectors.push("snowflake");
-  if (/\bdatabase\b|mysql|postgres|oracle/.test(lower)) connectors.push("database");
-  if (/sftp|file transfer/.test(lower)) connectors.push("sftp");
+  if (/\b(database|mysql|postgres|postgresql|oracle)\b/.test(lower)) connectors.push("database");
+  if (/\b(sftp|file transfer)\b/.test(lower)) connectors.push("sftp");
   if (/ibm\s*mq|queue manager/.test(lower)) connectors.push("ibm-mq");
   if (/anypoint\s*mq|message queue/.test(lower)) connectors.push("anypoint-mq");
-  if (/object\s*store|cache/.test(lower)) connectors.push("object-store");
+  if (/object\s*store|objectstore|cache/.test(lower)) connectors.push("object-store");
   return [...new Set(connectors)];
+}
+
+function inferFields(text) {
+  const match = text.match(/(?:accept|fields?|parameters?)\s*[:\-]?\s*([^.!?\n]+)/i);
+  if (!match) return [];
+  return match[1].split(/,|\band\b/i).map(v => v.trim().replace(/[^A-Za-z0-9_]/g, "")).filter(Boolean);
 }
 
 function buildRequirementModel(requirement, answers = {}) {
   const text = String(requirement || "").trim();
   if (!text) throw new Error("A requirement is required");
-  const endpoints = extractEndpoints(text);
-  const model = {
+  const endpoints = answers.operations || parseEndpoints(text);
+  const inferredFields = inferFields(text);
+  return {
     requirement: text,
     project: {
       name: slug(answers.projectName || "mule-api"),
@@ -41,52 +48,55 @@ function buildRequirementModel(requirement, answers = {}) {
     },
     api: {
       name: answers.apiName || slug(answers.projectName || "mule-api"),
-      version: "v1",
+      version: answers.apiVersion || "v1",
       type: answers.apiType || "System API",
       specification: "RAML",
       basePath: answers.basePath || "/api/v1"
     },
     connectors: answers.connectors || inferConnectors(text),
-    operations: endpoints.length ? endpoints.map((endpoint) => ({ name: `${endpoint.method.toLowerCase()}${slug(endpoint.path).replace(/-/g, "_")}`, ...endpoint })) : [],
-    validation: answers.validation || [],
+    operations: endpoints.map((endpoint, index) => ({
+      name: endpoint.name || `${endpoint.method.toLowerCase()}${slug(endpoint.path).replace(/-/g, "_") || index}`,
+      method: endpoint.method,
+      path: endpoint.path,
+      requestFields: endpoint.requestFields || answers.requestFields || inferredFields,
+      responseFields: endpoint.responseFields || answers.responseFields || [],
+      validation: endpoint.validation || answers.validation || [],
+      successStatus: endpoint.successStatus || (endpoint.method === "POST" ? 201 : 200),
+      errors: endpoint.errors || answers.errors || []
+    })),
+    decisions: answers.decisions || [],
     testing: { munit: answers.munit !== false },
     deployment: { target: answers.deployment || "none" }
   };
-  return model;
+}
+
+function missingQuestions(model) {
+  const questions = [];
+  if (!model.operations.length) questions.push({ key: "operations", question: "Which HTTP operations and paths are required? Example: POST /customers, GET /customers/{customerId}" });
+  if (model.operations.some(op => !op.requestFields.length)) questions.push({ key: "requestFields", question: "What request fields are required for each operation?" });
+  if (model.operations.some(op => !op.responseFields.length)) questions.push({ key: "responseFields", question: "What should the successful response contain?" });
+  if (model.operations.some(op => !op.validation.length)) questions.push({ key: "validation", question: "What validation rules should be enforced?" });
+  if (model.operations.some(op => !op.errors.length)) questions.push({ key: "errors", question: "Which business and error cases should be handled?" });
+  if (model.connectors.length === 1) questions.push({ key: "backend", question: "Which backend systems or connectors are required?" });
+  return questions;
 }
 
 function writeDocumentation(root, model) {
   const docs = path.join(root, "docs");
-  const dirs = [
-    "01-requirements", "02-architecture", "03-api", "04-database", "05-dataweave",
-    "06-flows", "07-configuration", "08-testing", "09-deployment", "10-troubleshooting"
-  ];
-  dirs.forEach((dir) => fs.mkdirSync(path.join(docs, dir), { recursive: true }));
-
-  const endpointText = model.operations.length
-    ? model.operations.map((op) => `- **${op.method} ${op.path}**`).join("\n")
-    : "No explicit endpoints were found in the requirement. Add them to `muleforge.yaml`.";
-  const connectorText = model.connectors.map((c) => `- ${c}`).join("\n");
-
-  fs.writeFileSync(path.join(docs, "README.md"), `# ${model.project.name} Documentation\n\nThis documentation is generated by MuleForge from the project requirement and configuration.\n\n## Navigation\n\n1. [Requirements](01-requirements/requirements.md)\n2. [Architecture](02-architecture/architecture.md)\n3. [API](03-api/api-overview.md)\n4. [Database](04-database/database-design.md)\n5. [DataWeave](05-dataweave/transformations.md)\n6. [Flows](06-flows/main-flow.md)\n7. [Configuration](07-configuration/configuration.md)\n8. [Testing](08-testing/testing.md)\n9. [Deployment](09-deployment/deployment.md)\n10. [Troubleshooting](10-troubleshooting/troubleshooting.md)\n`);
-
-  fs.writeFileSync(path.join(docs, "01-requirements/requirements.md"), `# Requirements\n\n## User requirement\n\n${model.requirement}\n\n## Generated decisions\n\n- API type: ${model.api.type}\n- Runtime: Mule ${model.project.muleRuntime}\n- Java: ${model.project.java}\n- Connectors:\n${connectorText}\n`);
-  fs.writeFileSync(path.join(docs, "02-architecture/architecture.md"), `# Architecture\n\n## Components\n\nClient → HTTP API → Mule flows → ${model.connectors.filter((c) => c !== "http").join(" / ") || "business logic"}\n\n## Flow diagram\n\nSee [flow-diagram.md](flow-diagram.md).\n`);
-  fs.writeFileSync(path.join(docs, "02-architecture/flow-diagram.md"), `# Flow Diagram\n\n\`\`\`mermaid\nflowchart TD\n    A[Client] --> B[HTTP Listener]\n    B --> C[Validation]\n    C --> D[Business Flow]\n    D --> E[Response]\n\`\`\`\n`);
-  fs.writeFileSync(path.join(docs, "03-api/api-overview.md"), `# API Overview\n\nBase path: \`${model.api.basePath}\`\n\n## Endpoints\n\n${endpointText}\n\nThe canonical API contract is in \`src/main/resources/api/${model.project.artifactId}.raml\`.\n`);
-  fs.writeFileSync(path.join(docs, "03-api/endpoints.md"), `# Endpoints\n\n${endpointText}\n`);
-  fs.writeFileSync(path.join(docs, "03-api/request-response.md"), `# Request and Response\n\nRequest and response schemas should be refined in the RAML contract and regenerated when the requirement changes.\n`);
-  fs.writeFileSync(path.join(docs, "03-api/error-responses.md"), `# Error Responses\n\nThe generated implementation should use Mule error handling for validation, connector and unexpected system errors.\n`);
-  fs.writeFileSync(path.join(docs, "04-database/database-design.md"), `# Database Design\n\nConfigured connectors: ${connectorText}\n\nCredentials must be supplied through secure/environment properties.\n`);
-  fs.writeFileSync(path.join(docs, "04-database/queries.md"), `# Queries\n\nDatabase queries are generated or added according to the confirmed requirement.\n`);
-  fs.writeFileSync(path.join(docs, "05-dataweave/transformations.md"), `# DataWeave Transformations\n\nDataWeave transformations belong under \`src/main/resources/dw\` when they become substantial enough to maintain separately.\n`);
-  fs.writeFileSync(path.join(docs, "06-flows/main-flow.md"), `# Main Flow\n\nThe flow is generated from the confirmed requirement.\n\n1. Receive request\n2. Validate request\n3. Execute business operation\n4. Transform response\n5. Return response\n`);
-  fs.writeFileSync(path.join(docs, "06-flows/validation-flow.md"), `# Validation Flow\n\nValidation rules should be recorded in the requirement model and implemented before backend operations.\n`);
-  fs.writeFileSync(path.join(docs, "06-flows/error-handling.md"), `# Error Handling\n\nConnector failures and unexpected errors should be handled through the project's global Mule error strategy.\n`);
-  fs.writeFileSync(path.join(docs, "07-configuration/configuration.md"), `# Configuration\n\nNever commit secrets. Use environment properties or secure properties for credentials.\n\nRuntime: ${model.project.muleRuntime}\nJava: ${model.project.java}\n`);
-  fs.writeFileSync(path.join(docs, "08-testing/testing.md"), `# Testing\n\nMUnit generation is enabled: **${model.testing.munit ? "yes" : "no"}**.\n\nTests should cover happy paths, validation failures and connector failures.\n`);
-  fs.writeFileSync(path.join(docs, "09-deployment/deployment.md"), `# Deployment\n\nTarget: **${model.deployment.target}**\n\nConfigure environment-specific properties and credentials before deployment.\n`);
-  fs.writeFileSync(path.join(docs, "10-troubleshooting/troubleshooting.md"), `# Troubleshooting\n\nStart with:\n\n\`muleforge validate\`\n\nthen:\n\n\`muleforge build\`\n\nCheck Mule logs for connector and DataWeave errors.\n`);
+  ["00-solution-design", "01-requirements", "02-architecture", "03-api", "04-database", "05-dataweave", "06-flows", "07-configuration", "08-testing", "09-deployment", "10-troubleshooting"].forEach(dir => fs.mkdirSync(path.join(docs, dir), { recursive: true }));
+  const endpointText = model.operations.length ? model.operations.map(op => `- **${op.method} ${op.path}** — ${op.name}`).join("\n") : "- No operations confirmed.";
+  fs.writeFileSync(path.join(docs, "README.md"), `# ${model.project.name} Documentation\n\nGenerated from the confirmed MuleForge requirement.\n\n- [Solution Design](00-solution-design/solution-design.md)\n- [Requirements](01-requirements/requirements.md)\n- [Architecture](02-architecture/architecture.md)\n- [API](03-api/api-overview.md)\n- [Flows](06-flows/main-flow.md)\n- [Testing](08-testing/testing.md)\n- [Deployment](09-deployment/deployment.md)\n`);
+  fs.writeFileSync(path.join(docs, "00-solution-design/solution-design.md"), `# Solution Design\n\n## Confirmed requirement\n\n${model.requirement}\n\n## API operations\n${endpointText}\n\n## Connectors\n${model.connectors.map(c => `- ${c}`).join("\n") || "- None confirmed."}\n`);
+  fs.writeFileSync(path.join(docs, "01-requirements/requirements.md"), `# Requirements\n\n${model.requirement}\n\n## Decisions\n${model.decisions.map(d => `- ${d}`).join("\n") || "- None recorded."}\n`);
+  fs.writeFileSync(path.join(docs, "02-architecture/architecture.md"), `# Architecture\n\nClient → HTTP Listener → Validation → Business Flow → Connector/Backend → Response\n`);
+  fs.writeFileSync(path.join(docs, "03-api/api-overview.md"), `# API\n\nBase path: \`${model.api.basePath}\`\n\n${endpointText}\n`);
+  fs.writeFileSync(path.join(docs, "04-database/database-design.md"), `# Database Design\n\nConnectors: ${model.connectors.join(", ") || "None confirmed"}\n\nCredentials must use environment or secure properties.\n`);
+  fs.writeFileSync(path.join(docs, "05-dataweave/transformations.md"), `# DataWeave\n\nTransformations are generated from confirmed request and response definitions.\n`);
+  fs.writeFileSync(path.join(docs, "06-flows/main-flow.md"), `# Flows\n\n${model.operations.map(op => `## ${op.name}\n\n${op.method} ${op.path}\n\n1. Receive request\n2. Validate\n3. Execute confirmed business logic\n4. Transform response\n5. Return ${op.successStatus}\n`).join("\n") || "No flow is generated until an operation is confirmed."}`);
+  fs.writeFileSync(path.join(docs, "07-configuration/configuration.md"), `# Configuration\n\nRuntime: ${model.project.muleRuntime}\nJava: ${model.project.java}\n\nNever commit secrets.\n`);
+  fs.writeFileSync(path.join(docs, "08-testing/testing.md"), `# Testing\n\nMUnit enabled: ${model.testing.munit ? "yes" : "no"}.\n\nTests should cover success, validation, business errors and connector failures.\n`);
+  fs.writeFileSync(path.join(docs, "09-deployment/deployment.md"), `# Deployment\n\nTarget: ${model.deployment.target}\n`);
+  fs.writeFileSync(path.join(docs, "10-troubleshooting/troubleshooting.md"), `# Troubleshooting\n\nRun \`muleforge validate\`, then \`muleforge build\`.\n`);
 }
 
-module.exports = { buildRequirementModel, writeDocumentation };
+module.exports = { buildRequirementModel, missingQuestions, writeDocumentation };
