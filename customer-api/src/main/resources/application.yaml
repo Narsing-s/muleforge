@@ -4,3 +4,9 @@ http:
 api:
   name: customer-api
   version: v1
+
+# Set these values through environment-specific secure properties.
+db:
+  url: jdbc:snowflake://${SNOWFLAKE_ACCOUNT}.snowflakecomputing.com/?warehouse=${SNOWFLAKE_WAREHOUSE}&db=${SNOWFLAKE_DATABASE}&schema=${SNOWFLAKE_SCHEMA}
+  user: ${SNOWFLAKE_USER}
+  password: ${SNOWFLAKE_PASSWORD}
