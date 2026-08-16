@@ -16,6 +16,13 @@
     <cloudhub2.replicas>1</cloudhub2.replicas>
     <cloudhub2.vCores>0.1</cloudhub2.vCores>
   </properties>
+  <distributionManagement>
+    <repository>
+      <id>anypoint-exchange</id>
+      <name>Anypoint Exchange</name>
+      <url>https://maven.anypoint.mulesoft.com/api/v3/organizations/${env.ANYPOINT_ORG_ID}/maven</url>
+    </repository>
+  </distributionManagement>
   <dependencies>
     <dependency>
       <groupId>org.mule.connectors</groupId>
