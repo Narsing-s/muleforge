@@ -9,6 +9,16 @@
     <mule.maven.plugin.version>4.3.0</mule.maven.plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+  <dependencies>
+{{#each connectorDependencies}}
+    <dependency>
+      <groupId>{{groupId}}</groupId>
+      <artifactId>{{artifactId}}</artifactId>
+      <version>{{version}}</version>
+      <classifier>mule-plugin</classifier>
+    </dependency>
+{{/each}}
+  </dependencies>
   <build>
     <plugins>
       <plugin>
