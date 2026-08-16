@@ -114,7 +114,7 @@ A successful result should look like:
 MuleForge Verification
 
 Requirement coverage     100%
-API validation            PASS
+API validation           PASS
 Mule implementation      PASS
 MUnit                    PASS
 Maven build              PASS
