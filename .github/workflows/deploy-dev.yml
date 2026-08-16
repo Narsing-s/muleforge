@@ -7,7 +7,7 @@ on:
         description: Anypoint Platform environment name
         required: true
         type: string
-        default: Development
+        default: dev
       target:
         description: CloudHub 2.0 target/shared space name
         required: true
@@ -57,7 +57,7 @@ jobs:
   deploy:
     name: Build and deploy reference Customer API
     runs-on: ubuntu-latest
-    environment: development
+    environment: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -66,6 +66,20 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+
+      - name: Verify Anypoint deployment credentials
+        env:
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
+        run: |
+          set -e
+          missing=0
+          if [ -z "$ANYPOINT_CLIENT_ID" ]; then echo "::error::Missing GitHub environment secret ANYPOINT_CLIENT_ID"; missing=1; fi
+          if [ -z "$ANYPOINT_CLIENT_SECRET" ]; then echo "::error::Missing GitHub environment secret ANYPOINT_CLIENT_SECRET"; missing=1; fi
+          if [ -z "$ANYPOINT_ORG_ID" ]; then echo "::error::Missing GitHub environment variable ANYPOINT_ORG_ID"; missing=1; fi
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+          echo "Anypoint deployment credentials are configured."
 
       - name: MUnit tests
         if: ${{ inputs.munit }}
@@ -77,15 +91,16 @@ jobs:
         env:
           ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
           ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
-          ANYPOINT_ORG_ID: ${{ secrets.ANYPOINT_ORG_ID }}
+          ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
         run: |
-          test -n "$ANYPOINT_CLIENT_ID"
-          test -n "$ANYPOINT_CLIENT_SECRET"
-          test -n "$ANYPOINT_ORG_ID"
           mvn --batch-mode clean deploy -DmuleDeploy \
             -Dcloudhub2.environment="${{ inputs.environment }}" \
             -Dcloudhub2.target="${{ inputs.target }}" \
             -Dcloudhub2.applicationName="${{ inputs.application_name }}" \
             -Dcloudhub2.muleVersion="${{ inputs.mule_runtime }}" \
             -Dcloudhub2.replicas="${{ inputs.replicas }}" \
-            -Dcloudhub2.vCores="${{ inputs.vcores }}"
+            -Dcloudhub2.vCores="${{ inputs.vcores }}" \
+            -Dcloudhub2.businessGroupId="$ANYPOINT_ORG_ID" \
+            -Dcloudhub2.connectedAppClientId="$ANYPOINT_CLIENT_ID" \
+            -Dcloudhub2.connectedAppClientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Dcloudhub2.connectedAppGrantType="client_credentials"
