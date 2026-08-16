@@ -29,6 +29,8 @@ RAML + Mule + DataWeave + MUnit + docs
       ↓
 Verify requirement coverage
       ↓
+Git / CI quality gate
+      ↓
 Developer review
 ```
 
@@ -122,6 +124,46 @@ RESULT: READY FOR DEVELOPER REVIEW
 
 A passing static verification is **not** a substitute for reviewing business behavior, credentials, environments or deployment configuration.
 
+## 🔁 CI/CD with GitHub Actions
+
+MuleForge includes a GitHub Actions CI quality gate in the development branch at `.github/workflows/ci.yml`.
+
+The workflow runs on pull requests and protected branches and checks:
+
+```text
+CLI tests
+   ↓
+MuleForge verification
+   ↓
+Reference-project checks
+   ↓
+Secret-hygiene checks
+```
+
+A generated repository can use the same model to prevent changes from being merged when tests or MuleForge verification fail.
+
+CI is intentionally separate from deployment. GitHub Actions executes the pipeline; MuleForge supplies the project model, verification and pipeline templates. Credentials must be stored in GitHub Secrets/environments or an approved enterprise secret manager.
+
+Recommended promotion model:
+
+```text
+Pull Request
+    ↓
+CI: verify + test + package
+    ↓
+DEV
+    ↓
+QA approval
+    ↓
+UAT approval
+    ↓
+PROD approval
+```
+
+See [CI/CD documentation](docs/cicd/README.md) and [GitHub Actions guidance](docs/cicd/github-actions.md).
+
+> CloudHub, CloudHub 2.0, Runtime Fabric and on-premises deployment helpers remain roadmap items. Do not put Anypoint credentials directly into generated workflow files.
+
 ## 🛠️ CLI commands
 
 | Command | Purpose |
@@ -154,6 +196,9 @@ customer-api/
 ├── muleforge.yaml
 ├── pom.xml
 ├── mule-artifact.json
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── src/
 │   ├── main/
 │   │   ├── mule/
@@ -191,6 +236,8 @@ The generated `docs/` folder describes the specific application. The MuleForge r
 - Requirement/project verification
 - Maven build and test integration
 - Local development environment diagnostics
+- GitHub Actions CI quality gate
+- Secret-hygiene checks in CI
 
 ## ⚠️ Current limitations
 
@@ -198,7 +245,8 @@ MuleForge is still under active development. In particular:
 
 - Connector-specific business implementations are being expanded.
 - Some generated flows still require developer review and refinement.
-- Full runtime validation requires a suitable Mule/Maven environment and, where applicable, real connector credentials.
+- Full runtime validation requires a Mule/Maven environment and, where applicable, real connector credentials.
+- Cloud deployment automation is not yet complete.
 - The development branch is not a guarantee of production readiness.
 
 Do not deploy generated applications to production solely because `muleforge verify` passes.
@@ -216,6 +264,8 @@ Start here:
 - [Configuration](docs/configuration/muleforge-yaml.md)
 - [Generation](docs/generation/README.md)
 - [Connectors](docs/connectors/README.md)
+- [CI/CD](docs/cicd/README.md)
+- [GitHub Actions](docs/cicd/github-actions.md)
 - [Deployment](docs/deployment/README.md)
 - [Troubleshooting](docs/troubleshooting/README.md)
 
@@ -240,11 +290,11 @@ The generated application can then be opened in Anypoint Studio and deployed thr
 ```text
 Developer machine
       ↓
-MuleForge CLI
+MuleForge CLI / Web UI
       ↓
 Generated Mule application
       ↓
-Anypoint Studio / CI/CD
+Git / CI/CD
       ↓
 CloudHub / CloudHub 2.0 / Runtime Fabric / on-prem
 ```
@@ -257,12 +307,17 @@ When adding a feature, update the implementation, tests and user documentation t
 
 ## 🗺️ Roadmap
 
+- [x] GitHub Actions CI quality gate
+- [x] CLI verification
+- [x] Local Web UI
 - [ ] Production-grade requirement-to-flow generation
 - [ ] Connector-specific implementation generation
 - [ ] Requirement-derived MUnit scenarios
 - [ ] Complete requirement-to-code traceability
 - [ ] Automatic documentation synchronization
+- [ ] `muleforge cicd init`
 - [ ] CloudHub and CloudHub 2.0 deployment helpers
+- [ ] Runtime Fabric deployment helpers
 - [ ] Public npm release
 - [ ] Stable `1.0.0` release
 
