@@ -14,18 +14,25 @@ All notable MuleForge changes are documented here.
 - Solution design, flow, API, test and verification views in the local UI.
 - Web UI documentation at `docs/getting-started/web-ui.md`.
 - Security guidance for public use.
+- Connector dependency resolution for generated Maven projects.
+- Real Database connector generation for Snowflake-backed customer create/read operations.
+- Snowflake JDBC dependency support for the generic Database connector.
+- Executable `customer-api` reference implementation with duplicate lookup, insert, read, validation and HTTP error responses.
+- Reference Snowflake schema and implementation documentation.
 
 ### Improved
 
 - Requirement-driven generation no longer needs to assume a fixed Customer API as the project definition.
 - Verification reports explain missing implementation coverage instead of only reporting file existence.
+- Database metadata now drives connector selection and business-flow generation.
 - Package and CLI version aligned to `0.3.0`.
 
 ### Known limitations
 
-- Some connector business operations are still being expanded.
-- The current web UI is a local workspace preview; it does not yet replace Anypoint Studio or provide browser-based Mule runtime execution.
-- Full runtime validation requires a Mule/Maven environment and appropriate connector credentials.
+- Connector-specific business operations beyond the Snowflake customer reference implementation are still being expanded.
+- The web UI is a local workspace preview; it does not yet replace Anypoint Studio or provide browser-based Mule runtime execution.
+- A full Maven/MUnit verification requires a Mule/Maven environment, access to the required Mule repositories and valid connector dependencies/credentials.
+- Snowflake duplicate protection is implemented as an application lookup; standard Snowflake tables do not provide ordinary unique indexes.
 - The development branch is not yet the stable `1.0.0` release.
 
 ## [0.2.0]
