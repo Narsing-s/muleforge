@@ -19,6 +19,9 @@ All notable MuleForge changes are documented here.
 - Snowflake JDBC dependency support for the generic Database connector.
 - Executable `customer-api` reference implementation with duplicate lookup, insert, read, validation and HTTP error responses.
 - Reference Snowflake schema and implementation documentation.
+- GitHub Actions CI quality gate for pull requests and protected branches.
+- CI checks for CLI tests, MuleForge verification and secret hygiene.
+- CI/CD documentation covering GitHub Actions, environments, secrets and deployment boundaries.
 
 ### Improved
 
@@ -33,6 +36,7 @@ All notable MuleForge changes are documented here.
 - The web UI is a local workspace preview; it does not yet replace Anypoint Studio or provide browser-based Mule runtime execution.
 - A full Maven/MUnit verification requires a Mule/Maven environment, access to the required Mule repositories and valid connector dependencies/credentials.
 - Snowflake duplicate protection is implemented as an application lookup; standard Snowflake tables do not provide ordinary unique indexes.
+- CloudHub, CloudHub 2.0, Runtime Fabric and on-premises deployment automation are not yet implemented.
 - The development branch is not yet the stable `1.0.0` release.
 
 ## [0.2.0]
