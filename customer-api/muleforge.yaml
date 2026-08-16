@@ -1,0 +1,28 @@
+project:
+  name: customer-api
+  version: 1.0.0
+
+api:
+  name: customer-api
+  version: v1
+  specification: RAML
+  basePath: /api/v1
+
+operations:
+  - name: getCustomer
+    method: GET
+    path: /customers/{customerId}
+
+  - name: createCustomer
+    method: POST
+    path: /customers
+
+database:
+  type: snowflake
+  table: CUSTOMER
+
+testing:
+  munit: true
+
+deployment:
+  target: none

@@ -1,0 +1,6 @@
+http:
+  port: 8081
+
+api:
+  name: customer-api
+  version: v1

@@ -1,0 +1,17 @@
+node_modules/
+npm-debug.log*
+.DS_Store
+.env
+.env.*
+*.log
+
+# Mule / Maven
+target/
+*.class
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db

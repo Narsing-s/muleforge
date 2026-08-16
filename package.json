@@ -1,0 +1,31 @@
+{
+  "name": "muleforge",
+  "version": "0.1.0",
+  "description": "Open-source Mule 4 API project generator",
+  "main": "src/index.js",
+  "bin": {
+    "muleforge": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "mulesoft",
+    "mule",
+    "mule4",
+    "api",
+    "generator",
+    "raml",
+    "dataweave",
+    "integration"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "chalk": "^5.0.0",
+    "commander": "^14.0.0",
+    "fs-extra": "^11.0.0",
+    "handlebars": "^4.7.0",
+    "yaml": "^2.0.0"
+  }
+}

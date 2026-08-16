@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core
+        http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http
+        http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <http:listener-config
+        name="HTTP_Listener_config"
+        doc:name="HTTP Listener config">
+
+        <http:listener-connection
+            host="0.0.0.0"
+            port="${http.port}" />
+
+    </http:listener-config>
+
+    <flow name="customer-api-flow">
+
+        <http:listener
+            config-ref="HTTP_Listener_config"
+            path="/api/v1/customers"
+            allowedMethods="GET,POST"
+            doc:name="HTTP Listener" />
+
+        <logger
+            level="INFO"
+            message="MuleForge generated API received request"
+            doc:name="Logger" />
+
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[
+%dw 2.0
+output application/json
+---
+{
+    message: "MuleForge generated API is running"
+}
+                ]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+    </flow>
+
+</mule>
