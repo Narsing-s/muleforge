@@ -15,7 +15,7 @@
       <groupId>{{groupId}}</groupId>
       <artifactId>{{artifactId}}</artifactId>
       <version>{{version}}</version>
-      <classifier>{{classifier}}</classifier>
+      {{#if classifier}}<classifier>{{classifier}}</classifier>{{/if}}
     </dependency>
     {{/each}}
   </dependencies>
