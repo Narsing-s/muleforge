@@ -55,7 +55,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Build and deploy reference Customer API
+    name: Build, publish to Exchange and deploy Customer API
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -90,19 +90,53 @@ jobs:
           fi
           echo "CloudHub target: ${{ inputs.target }}"
 
+      - name: Configure Maven authentication for Exchange
+        env:
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+        run: |
+          set -e
+          mkdir -p "$HOME/.m2"
+          cat > "$HOME/.m2/settings.xml" <<EOF
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+            <servers>
+              <server>
+                <id>anypoint-exchange</id>
+                <username>~~~Client~~~</username>
+                <password>${ANYPOINT_CLIENT_ID}~?~${ANYPOINT_CLIENT_SECRET}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+          chmod 600 "$HOME/.m2/settings.xml"
+
       - name: MUnit tests
         if: ${{ inputs.munit }}
         working-directory: customer-api
         run: mvn --batch-mode test
 
-      - name: Deploy to CloudHub 2.0
+      - name: Publish customer-api to Anypoint Exchange
+        working-directory: customer-api
+        env:
+          ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+        run: |
+          set -e
+          echo "Publishing customer-api:${GITHUB_SHA:0:8} to Exchange business group $ANYPOINT_ORG_ID"
+          mvn --batch-mode clean deploy -Daether.connector.basic.parallelPut=false
+
+      - name: Deploy published customer-api to CloudHub 2.0
         working-directory: customer-api
         env:
           ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
           ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
           ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
         run: |
-          mvn --batch-mode clean deploy -DmuleDeploy \
+          set -e
+          mvn --batch-mode mule:deploy -DmuleDeploy \
             -Dcloudhub2.environment="${{ inputs.environment }}" \
             -Dcloudhub2.target="${{ inputs.target }}" \
             -Dcloudhub2.applicationName="${{ inputs.application_name }}" \
