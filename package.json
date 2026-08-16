@@ -1,7 +1,7 @@
 {
   "name": "muleforge",
-  "version": "0.2.0",
-  "description": "Open-source CLI for generating Mule 4 API projects",
+  "version": "0.3.0",
+  "description": "Open-source CLI for requirement-driven Mule 4 project generation",
   "main": "src/index.js",
   "bin": {
     "muleforge": "src/index.js"
