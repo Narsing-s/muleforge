@@ -2,52 +2,73 @@
 
 ### Define once. Generate everything. Build faster with MuleSoft.
 
-MuleForge is an open-source CLI for generating Mule 4 API projects from a simple declarative configuration.
+MuleForge is an open-source CLI for generating Mule 4 API project scaffolding from a declarative `muleforge.yaml` configuration.
 
-Instead of manually creating Mule project files, API specifications, Maven configuration, application properties and CI/CD workflows, define your API in `muleforge.yaml` and let MuleForge generate the project.
+## Install
 
----
+```bash
+npm install -g muleforge
+```
 
-## ✨ Why MuleForge?
+## Quick start
 
-Starting a MuleSoft API project usually involves creating and configuring multiple files:
+```bash
+muleforge init customer-api
+cd customer-api
+muleforge generate
+muleforge validate
+muleforge build
+```
 
-- RAML / API specification
-- Mule XML flows
-- Maven `pom.xml`
-- `mule-artifact.json`
-- Application properties
-- MUnit tests
-- DataWeave
-- Error handling
-- CI/CD workflows
-- Documentation
+The generated project includes the Mule Maven project configuration, Mule artifact metadata, application properties, API folders, MUnit scaffolding and a reusable MuleForge configuration.
 
-MuleForge aims to automate this repetitive setup.
+## Commands
 
-### Our goal
+| Command | Purpose |
+|---|---|
+| `muleforge init <name>` | Create a new project |
+| `muleforge generate` | Generate project files from `muleforge.yaml` |
+| `muleforge validate` | Validate generated project files |
+| `muleforge build` | Run `mvn clean package` |
+| `muleforge test` | Run `mvn test` |
+| `muleforge clean` | Run `mvn clean` |
+| `muleforge doctor` | Check Java and Maven availability |
 
-> Turn API design into a ready-to-build MuleSoft project.
+## Configuration
 
----
+Example:
 
-# 🎯 Vision
+```yaml
+project:
+  name: customer-api
+  artifactId: customer-api
+  groupId: com.example
+  version: 1.0.0
+  muleRuntime: 4.9.0
 
-MuleForge is designed to evolve into a community-driven MuleSoft developer toolkit.
+api:
+  name: customer-api
+  version: v1
+  specification: RAML
+  basePath: /api/v1
 
-The long-term vision is:
+operations:
+  - name: getCustomer
+    method: GET
+    path: /customers/{customerId}
 
-```text
-API Definition
-      ↓
-muleforge.yaml
-      ↓
-MuleForge CLI
-      ↓
-RAML + Mule XML + DataWeave
-      ↓
-Maven + MUnit
-      ↓
-CI/CD
-      ↓
-CloudHub
+  - name: createCustomer
+    method: POST
+    path: /customers
+
+testing:
+  munit: true
+```
+
+## Vision
+
+MuleForge is intended to remove repetitive MuleSoft project setup: project metadata, Maven configuration, Mule artifact metadata, API scaffolding, tests, properties and CI/CD. Future releases can add connector-aware generation, API implementation generation, CloudHub deployment configuration and interactive project setup.
+
+## License
+
+Apache-2.0

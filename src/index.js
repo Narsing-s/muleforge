@@ -3,307 +3,120 @@
 const { Command } = require("commander");
 const fs = require("fs");
 const path = require("path");
+const { execFileSync } = require("child_process");
+const YAML = require("yaml");
+const Handlebars = require("handlebars");
 
+const VERSION = "0.2.0";
 const program = new Command();
 
-program
-  .name("muleforge")
-  .description("Open-source Mule 4 API project generator")
-  .version("0.1.0");
-
-function createFile(filePath, content) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content);
+function write(file, content) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, content, "utf8");
 }
 
-program
-  .command("init <projectName>")
-  .description("Initialize a new MuleForge project")
+function render(template, data) {
+  return Handlebars.compile(template)(data);
+}
+
+function loadConfig(configPath = "muleforge.yaml") {
+  const full = path.resolve(configPath);
+  if (!fs.existsSync(full)) throw new Error(`Configuration not found: ${configPath}`);
+  return YAML.parse(fs.readFileSync(full, "utf8"));
+}
+
+function context(config) {
+  const project = config.project || {};
+  return {
+    projectName: project.name || "mule-api",
+    artifactId: project.artifactId || project.name || "mule-api",
+    groupId: project.groupId || "com.example",
+    version: project.version || "1.0.0",
+    muleRuntime: project.muleRuntime || "4.9.0"
+  };
+}
+
+function generateProject(configPath = "muleforge.yaml") {
+  const config = loadConfig(configPath);
+  const data = context(config);
+  const root = path.resolve(path.dirname(configPath));
+  const templates = path.resolve(__dirname, "../templates");
+
+  const pom = fs.readFileSync(path.join(templates, "pom.xml.hbs"), "utf8");
+  const artifact = fs.readFileSync(path.join(templates, "mule-artifact.json.hbs"), "utf8");
+  const munit = fs.readFileSync(path.join(templates, "munit/basic-test.xml.hbs"), "utf8");
+
+  write(path.join(root, "pom.xml"), render(pom, data));
+  write(path.join(root, "mule-artifact.json"), render(artifact, data));
+  if ((config.testing || {}).munit !== false) {
+    write(path.join(root, "src/test/munit", `${data.artifactId}-test.xml`), render(munit, data));
+  }
+
+  console.log(`✔ Generated pom.xml`);
+  console.log(`✔ Generated mule-artifact.json`);
+  if ((config.testing || {}).munit !== false) console.log(`✔ Generated MUnit test`);
+  console.log(`🎉 ${data.projectName} generated successfully`);
+}
+
+function validate(configPath = "muleforge.yaml") {
+  const config = loadConfig(configPath);
+  const data = context(config);
+  const root = path.resolve(path.dirname(configPath));
+  const required = ["pom.xml", "mule-artifact.json", "src/main/resources/application.yaml"];
+  const missing = required.filter((file) => !fs.existsSync(path.join(root, file)));
+
+  console.log("\n🚀 MuleForge Validator\n");
+  console.log(`✔ Configuration: ${configPath}`);
+  console.log(`✔ Project: ${data.projectName}`);
+  console.log(`✔ Mule runtime: ${data.muleRuntime}`);
+  if (missing.length) {
+    missing.forEach((file) => console.log(`✖ Missing: ${file}`));
+    console.error(`\n${missing.length} problem(s) found.`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log("✔ Maven project");
+  console.log("✔ Mule artifact");
+  console.log("✔ Application properties");
+  console.log("\nValidation successful.\n");
+}
+
+function runMaven(args) {
+  try {
+    execFileSync(process.platform === "win32" ? "mvn.cmd" : "mvn", args, { stdio: "inherit" });
+  } catch (error) {
+    process.exitCode = error.status || 1;
+  }
+}
+
+program.name("muleforge").description("Open-source Mule 4 API project generator").version(VERSION);
+
+program.command("init <projectName>")
+  .description("Create a MuleForge project skeleton")
   .action((projectName) => {
-    console.log("");
-    console.log("🚀 MuleForge");
-    console.log("");
-
-    const projectPath = path.resolve(process.cwd(), projectName);
-
-    if (fs.existsSync(projectPath)) {
-      console.error(`❌ Project already exists: ${projectName}`);
-      process.exit(1);
-    }
-
-    console.log(`Creating project: ${projectName}`);
-    console.log("");
-
-    // Create directories
-    const directories = [
-      "src/main/mule",
-      "src/main/resources/api",
-      "src/main/resources/dw",
-      "src/test/munit",
-      "database",
-      ".github/workflows"
-    ];
-
-    directories.forEach((dir) => {
-      fs.mkdirSync(path.join(projectPath, dir), {
-        recursive: true
-      });
-    });
-
-    // muleforge.yaml
-    createFile(
-      path.join(projectPath, "muleforge.yaml"),
-      `project:
-  name: ${projectName}
-  version: 1.0.0
-
-api:
-  name: ${projectName}
-  version: v1
-  specification: RAML
-  basePath: /api/v1
-
-operations:
-  - name: getCustomer
-    method: GET
-    path: /customers/{customerId}
-
-  - name: createCustomer
-    method: POST
-    path: /customers
-
-database:
-  type: snowflake
-  table: CUSTOMER
-
-testing:
-  munit: true
-
-deployment:
-  target: none
-`
-    );
-
-    // README
-    createFile(
-      path.join(projectPath, "README.md"),
-      `# ${projectName}
-
-Generated by **MuleForge**.
-
-## Project
-
-This MuleSoft application was generated using MuleForge.
-
-## Generate
-
-\`\`\`bash
-muleforge generate muleforge.yaml
-\`\`\`
-
-## Build
-
-\`\`\`bash
-mvn clean package
-\`\`\`
-
-## Test
-
-\`\`\`bash
-mvn test
-\`\`\`
-`
-    );
-
-    // RAML
-    createFile(
-      path.join(
-        projectPath,
-        "src/main/resources/api",
-        `${projectName}.raml`
-      ),
-      `#%RAML 1.0
-title: ${projectName}
-version: v1
-baseUri: /api/v1
-
-/customers:
-  get:
-    responses:
-      200:
-        body:
-          application/json:
-            type: object
-
-  post:
-    body:
-      application/json:
-        type: object
-    responses:
-      201:
-        body:
-          application/json:
-            type: object
-
-  /{customerId}:
-    get:
-      responses:
-        200:
-          body:
-            application/json:
-              type: object
-
-        404:
-          body:
-            application/json:
-              type: object
-`
-    );
-
-    // Mule XML
-    createFile(
-      path.join(
-        projectPath,
-        "src/main/mule",
-        `${projectName}.xml`
-      ),
-      `<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:http="http://www.mulesoft.org/schema/mule/http"
-      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="
-        http://www.mulesoft.org/schema/mule/core
-        http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-        http://www.mulesoft.org/schema/mule/http
-        http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-
-    <http:listener-config
-        name="HTTP_Listener_config"
-        doc:name="HTTP Listener config">
-
-        <http:listener-connection
-            host="0.0.0.0"
-            port="\${http.port}" />
-
-    </http:listener-config>
-
-    <flow name="${projectName}-flow">
-
-        <http:listener
-            config-ref="HTTP_Listener_config"
-            path="/api/v1/customers"
-            allowedMethods="GET,POST"
-            doc:name="HTTP Listener" />
-
-        <logger
-            level="INFO"
-            message="MuleForge generated API received request"
-            doc:name="Logger" />
-
-        <ee:transform>
-            <ee:message>
-                <ee:set-payload><![CDATA[
-%dw 2.0
-output application/json
----
-{
-    message: "MuleForge generated API is running"
-}
-                ]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-
-    </flow>
-
-</mule>
-`
-    );
-
-    // Application properties
-    createFile(
-      path.join(
-        projectPath,
-        "src/main/resources",
-        "application.yaml"
-      ),
-      `http:
-  port: 8081
-
-api:
-  name: ${projectName}
-  version: v1
-`
-    );
-
-    // GitHub Actions
-    createFile(
-      path.join(
-        projectPath,
-        ".github/workflows",
-        "build.yml"
-      ),
-      `name: MuleForge Build
-
-on:
-  push:
-    branches:
-      - main
-
-  pull_request:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Build
-        run: mvn clean package
-`
-    );
-
-    console.log("✔ Project directory created");
-    console.log("✔ MuleForge configuration created");
-    console.log("✔ RAML specification created");
-    console.log("✔ Mule flow created");
-    console.log("✔ Application properties created");
-    console.log("✔ GitHub Actions workflow created");
-    console.log("✔ README created");
-    console.log("");
-    console.log("🎉 MuleForge project created successfully!");
-    console.log("");
-    console.log(`Next steps:`);
-    console.log(`  cd ${projectName}`);
-    console.log(`  muleforge generate`);
-    console.log("");
+    const root = path.resolve(process.cwd(), projectName);
+    if (fs.existsSync(root)) throw new Error(`Project already exists: ${projectName}`);
+    fs.mkdirSync(root, { recursive: true });
+    const config = `project:\n  name: ${projectName}\n  artifactId: ${projectName}\n  groupId: com.example\n  version: 1.0.0\n  muleRuntime: 4.9.0\n\napi:\n  name: ${projectName}\n  version: v1\n  specification: RAML\n  basePath: /api/v1\n\noperations:\n  - name: getCustomer\n    method: GET\n    path: /customers/{customerId}\n\n  - name: createCustomer\n    method: POST\n    path: /customers\n\ndatabase:\n  type: none\n\ntesting:\n  munit: true\n\ndeployment:\n  target: none\n`;
+    write(path.join(root, "muleforge.yaml"), config);
+    ["src/main/mule", "src/main/resources/api", "src/main/resources/dw", "src/test/munit", "database", ".github/workflows"].forEach((d) => fs.mkdirSync(path.join(root, d), { recursive: true }));
+    write(path.join(root, "src/main/resources/application.yaml"), `http:\n  port: 8081\n\napi:\n  name: ${projectName}\n  version: v1\n`);
+    write(path.join(root, "README.md"), `# ${projectName}\n\nGenerated by MuleForge.\n\n## Commands\n\n- muleforge generate\n- muleforge validate\n- muleforge build\n- muleforge test\n`);
+    console.log(`\n🎉 Project created: ${projectName}`);
+    console.log(`\nNext:\n  cd ${projectName}\n  muleforge generate\n  muleforge validate\n  muleforge build\n`);
   });
 
-program
-  .command("generate [config]")
-  .description("Generate a MuleSoft project")
-  .action((config) => {
-    console.log("");
-    console.log("🚀 MuleForge Generator");
-    console.log("");
+program.command("generate [config]").description("Generate missing Mule project files").action((config = "muleforge.yaml") => generateProject(config));
+program.command("validate [config]").description("Validate a MuleForge project").action((config = "muleforge.yaml") => validate(config));
+program.command("build").description("Build the Mule application with Maven").action(() => runMaven(["clean", "package"]));
+program.command("test").description("Run Mule tests with Maven").action(() => runMaven(["test"]));
+program.command("clean").description("Clean the Maven target directory").action(() => runMaven(["clean"]));
+program.command("doctor").description("Check local Java and Maven tooling").action(() => {
+  console.log("\n🚀 MuleForge Doctor\n");
+  for (const command of ["java", "mvn"]) {
+    try { execFileSync(command, ["-version"], { stdio: "inherit" }); console.log(`✔ ${command}`); }
+    catch { console.log(`✖ ${command} not found`); }
+  }
+});
 
-    if (config) {
-      console.log(`Configuration: ${config}`);
-    } else {
-      console.log("Using muleforge.yaml");
-    }
-
-    console.log("");
-  });
-
-program.parse();
+try { program.parse(); } catch (error) { console.error(`\n❌ ${error.message}`); process.exitCode = 1; }
