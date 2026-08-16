@@ -1,0 +1,7 @@
+{
+  "minMuleVersion": "4.9.0",
+  "secureProperties": [
+    "db.user",
+    "db.password"
+  ]
+}
