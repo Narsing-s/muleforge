@@ -91,6 +91,18 @@ deployment:
     );
 
     // =========================================================
+    // mule-artifact.json
+    // =========================================================
+
+    createFile(
+      path.join(projectPath, "mule-artifact.json"),
+      `{
+  "minMuleVersion": "4.9.0"
+}
+`
+    );
+
+    // =========================================================
     // README.md
     // =========================================================
 
@@ -436,6 +448,7 @@ jobs:
 
     console.log("✔ Project directory created");
     console.log("✔ MuleForge configuration created");
+    console.log("✔ Mule artifact configuration created");
     console.log("✔ RAML specification created");
     console.log("✔ Mule flow created");
     console.log("✔ Application properties created");
