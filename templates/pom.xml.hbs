@@ -29,4 +29,34 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>cloudhub2</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.mule.tools.maven</groupId>
+            <artifactId>mule-maven-plugin</artifactId>
+            <version>${mule.maven.plugin.version}</version>
+            <extensions>true</extensions>
+            <configuration>
+              <cloudhub2Deployment>
+                <uri>https://anypoint.mulesoft.com</uri>
+                <provider>MC</provider>
+                <environment>${anypoint.environment}</environment>
+                <target>${cloudhub.target}</target>
+                <muleVersion>${cloudhub.muleVersion}</muleVersion>
+                <applicationName>${cloudhub.applicationName}</applicationName>
+                <replicas>${cloudhub.replicas}</replicas>
+                <vCores>${cloudhub.vCores}</vCores>
+                <connectedAppClientId>${anypoint.clientId}</connectedAppClientId>
+                <connectedAppClientSecret>${anypoint.clientSecret}</connectedAppClientSecret>
+                <connectedAppGrantType>client_credentials</connectedAppGrantType>
+              </cloudhub2Deployment>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
