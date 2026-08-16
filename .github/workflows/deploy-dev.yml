@@ -77,9 +77,11 @@ jobs:
         env:
           ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
           ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_ORG_ID: ${{ secrets.ANYPOINT_ORG_ID }}
         run: |
           test -n "$ANYPOINT_CLIENT_ID"
           test -n "$ANYPOINT_CLIENT_SECRET"
+          test -n "$ANYPOINT_ORG_ID"
           mvn --batch-mode clean deploy -DmuleDeploy \
             -Dcloudhub2.environment="${{ inputs.environment }}" \
             -Dcloudhub2.target="${{ inputs.target }}" \
