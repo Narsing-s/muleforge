@@ -4,20 +4,67 @@
   <artifactId>customer-api</artifactId>
   <version>1.0.0</version>
   <packaging>mule-application</packaging>
+
   <properties>
     <app.runtime>4.9.0</app.runtime>
     <mule.maven.plugin.version>4.3.0</mule.maven.plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cloudhub2.applicationName>customer-api</cloudhub2.applicationName>
+    <cloudhub2.applicationName>customer-api-dev</cloudhub2.applicationName>
     <cloudhub2.environment>Development</cloudhub2.environment>
     <cloudhub2.target>CloudHub-US-East-2</cloudhub2.target>
     <cloudhub2.provider>MC</cloudhub2.provider>
-    <cloudhub2.region>us-east-2</cloudhub2.region>
-    <cloudhub2.workers>1</cloudhub2.workers>
-    <cloudhub2.workerType>MICRO</cloudhub2.workerType>
-    <cloudhub2.objectStoreV2>true</cloudhub2.objectStoreV2>
+    <cloudhub2.muleVersion>4.9.0</cloudhub2.muleVersion>
+    <cloudhub2.replicas>1</cloudhub2.replicas>
+    <cloudhub2.vCores>0.1</cloudhub2.vCores>
   </properties>
+
+  <repositories>
+    <repository>
+      <id>anypoint-exchange</id>
+      <name>Anypoint Exchange</name>
+      <url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
+      <layout>default</layout>
+    </repository>
+    <repository>
+      <id>mulesoft-releases</id>
+      <name>MuleSoft Releases Repository</name>
+      <url>https://repository.mulesoft.org/releases/</url>
+      <layout>default</layout>
+    </repository>
+    <repository>
+      <id>mulesoft-public</id>
+      <name>MuleSoft Public Repository</name>
+      <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+      <layout>default</layout>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>mulesoft-releases</id>
+      <name>MuleSoft Releases Repository</name>
+      <url>https://repository.mulesoft.org/releases/</url>
+      <layout>default</layout>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <distributionManagement>
+    <repository>
+      <id>anypoint-exchange</id>
+      <name>Anypoint Exchange</name>
+      <url>https://maven.anypoint.mulesoft.com/api/v3/organizations/${env.ANYPOINT_ORG_ID}/maven</url>
+    </repository>
+  </distributionManagement>
+
   <dependencies>
+    <dependency>
+      <groupId>org.mule.connectors</groupId>
+      <artifactId>mule-http-connector</artifactId>
+      <version>1.11.3</version>
+      <classifier>mule-plugin</classifier>
+    </dependency>
     <dependency>
       <groupId>org.mule.connectors</groupId>
       <artifactId>mule-db-connector</artifactId>
@@ -30,6 +77,7 @@
       <version>3.20.0</version>
     </dependency>
   </dependencies>
+
   <build>
     <plugins>
       <plugin>
@@ -44,10 +92,9 @@
             <environment>${cloudhub2.environment}</environment>
             <target>${cloudhub2.target}</target>
             <provider>${cloudhub2.provider}</provider>
-            <region>${cloudhub2.region}</region>
-            <workers>${cloudhub2.workers}</workers>
-            <workerType>${cloudhub2.workerType}</workerType>
-            <objectStoreV2Enabled>${cloudhub2.objectStoreV2}</objectStoreV2Enabled>
+            <muleVersion>${cloudhub2.muleVersion}</muleVersion>
+            <replicas>${cloudhub2.replicas}</replicas>
+            <vCores>${cloudhub2.vCores}</vCores>
             <connectedAppClientId>${env.ANYPOINT_CLIENT_ID}</connectedAppClientId>
             <connectedAppClientSecret>${env.ANYPOINT_CLIENT_SECRET}</connectedAppClientSecret>
             <connectedAppGrantType>client_credentials</connectedAppGrantType>

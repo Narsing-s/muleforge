@@ -10,11 +10,11 @@
         http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
         http://www.mulesoft.org/schema/mule/ee http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
-    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config">
+    <http:listener-config name="HTTP_Listener_config">
         <http:listener-connection host="0.0.0.0" port="${http.port}" />
     </http:listener-config>
 
-    <db:config name="Database_Config" doc:name="Snowflake Database Config">
+    <db:config name="Database_Config">
         <db:generic-connection
             url="${db.url}"
             driverClassName="net.snowflake.client.jdbc.SnowflakeDriver"
@@ -27,7 +27,7 @@
             <http:response statusCode="#[vars.httpStatus default 201]" />
         </http:listener>
 
-        <ee:transform doc:name="Validate customer request">
+        <ee:transform>
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -40,18 +40,17 @@ else payload]]></ee:set-payload>
             </ee:message>
         </ee:transform>
 
-        <try doc:name="Create customer">
+        <try>
             <set-variable variableName="request" value="#[payload]" />
-
-            <db:select config-ref="Database_Config" doc:name="Check duplicate customer">
+            <db:select config-ref="Database_Config">
                 <db:sql><![CDATA[SELECT CUSTOMER_ID FROM CUSTOMER WHERE EMAIL = :email LIMIT 1]]></db:sql>
                 <db:input-parameters><![CDATA[#[{ email: vars.request.email }]]]></db:input-parameters>
             </db:select>
 
-            <choice doc:name="Customer exists?">
+            <choice>
                 <when expression="#[sizeOf(payload) &gt; 0]">
                     <set-variable variableName="httpStatus" value="409" />
-                    <ee:transform doc:name="Duplicate response">
+                    <ee:transform>
                         <ee:message>
                             <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -62,7 +61,7 @@ output application/json
                 </when>
                 <otherwise>
                     <set-variable variableName="customerId" value="#[uuid()]" />
-                    <db:insert config-ref="Database_Config" doc:name="Insert customer">
+                    <db:insert config-ref="Database_Config">
                         <db:sql><![CDATA[INSERT INTO CUSTOMER (CUSTOMER_ID, NAME, EMAIL, MOBILE_NUMBER) VALUES (:customerId, :name, :email, :mobileNumber)]]></db:sql>
                         <db:input-parameters><![CDATA[#[{
                             customerId: vars.customerId,
@@ -72,7 +71,7 @@ output application/json
                         }]]]></db:input-parameters>
                     </db:insert>
                     <set-variable variableName="httpStatus" value="201" />
-                    <ee:transform doc:name="Created response">
+                    <ee:transform>
                         <ee:message>
                             <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -86,7 +85,7 @@ output application/json
             <error-handler>
                 <on-error-continue type="ANY" logException="true">
                     <set-variable variableName="httpStatus" value="500" />
-                    <ee:transform doc:name="System error response">
+                    <ee:transform>
                         <ee:message>
                             <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -104,16 +103,16 @@ output application/json
             <http:response statusCode="#[vars.httpStatus default 200]" />
         </http:listener>
 
-        <try doc:name="Get customer">
-            <db:select config-ref="Database_Config" doc:name="Find customer">
+        <try>
+            <db:select config-ref="Database_Config">
                 <db:sql><![CDATA[SELECT CUSTOMER_ID, NAME, EMAIL, MOBILE_NUMBER FROM CUSTOMER WHERE CUSTOMER_ID = :customerId LIMIT 1]]></db:sql>
                 <db:input-parameters><![CDATA[#[{ customerId: attributes.uriParams.customerId }]]]></db:input-parameters>
             </db:select>
 
-            <choice doc:name="Customer found?">
+            <choice>
                 <when expression="#[sizeOf(payload) == 0]">
                     <set-variable variableName="httpStatus" value="404" />
-                    <ee:transform doc:name="Not found response">
+                    <ee:transform>
                         <ee:message>
                             <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -124,7 +123,7 @@ output application/json
                 </when>
                 <otherwise>
                     <set-variable variableName="httpStatus" value="200" />
-                    <ee:transform doc:name="Customer response">
+                    <ee:transform>
                         <ee:message>
                             <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -138,7 +137,7 @@ output application/json
             <error-handler>
                 <on-error-continue type="ANY" logException="true">
                     <set-variable variableName="httpStatus" value="500" />
-                    <ee:transform doc:name="System error response">
+                    <ee:transform>
                         <ee:message>
                             <ee:set-payload><![CDATA[%dw 2.0
 output application/json

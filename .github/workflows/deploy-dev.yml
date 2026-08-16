@@ -1,0 +1,106 @@
+name: Deploy Reference Customer API to CloudHub 2.0 - DEV
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Anypoint Platform environment name
+        required: true
+        type: string
+        default: dev
+      target:
+        description: CloudHub 2.0 target/shared space name
+        required: true
+        type: string
+        default: CloudHub-US-East-2
+      application_name:
+        description: CloudHub application name
+        required: true
+        type: string
+        default: customer-api-dev
+      mule_runtime:
+        description: Mule runtime version
+        required: true
+        type: string
+        default: 4.9.0
+      replicas:
+        description: Number of replicas
+        required: true
+        type: string
+        default: "1"
+      vcores:
+        description: vCores per replica
+        required: true
+        type: choice
+        options:
+          - "0.1"
+          - "0.2"
+          - "0.5"
+          - "1"
+          - "1.5"
+          - "2"
+          - "2.5"
+          - "3"
+          - "3.5"
+          - "4"
+        default: "0.1"
+      munit:
+        description: Run MUnit before deployment
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy reference Customer API
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Verify Anypoint deployment credentials
+        env:
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
+        run: |
+          set -e
+          missing=0
+          if [ -z "$ANYPOINT_CLIENT_ID" ]; then echo "::error::Missing GitHub environment secret ANYPOINT_CLIENT_ID"; missing=1; fi
+          if [ -z "$ANYPOINT_CLIENT_SECRET" ]; then echo "::error::Missing GitHub environment secret ANYPOINT_CLIENT_SECRET"; missing=1; fi
+          if [ -z "$ANYPOINT_ORG_ID" ]; then echo "::error::Missing GitHub environment variable ANYPOINT_ORG_ID"; missing=1; fi
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+          echo "Anypoint deployment credentials are configured."
+
+      - name: MUnit tests
+        if: ${{ inputs.munit }}
+        working-directory: customer-api
+        run: mvn --batch-mode test
+
+      - name: Deploy to CloudHub 2.0
+        working-directory: customer-api
+        env:
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
+        run: |
+          mvn --batch-mode clean deploy -DmuleDeploy \
+            -Dcloudhub2.environment="${{ inputs.environment }}" \
+            -Dcloudhub2.target="${{ inputs.target }}" \
+            -Dcloudhub2.applicationName="${{ inputs.application_name }}" \
+            -Dcloudhub2.muleVersion="${{ inputs.mule_runtime }}" \
+            -Dcloudhub2.replicas="${{ inputs.replicas }}" \
+            -Dcloudhub2.vCores="${{ inputs.vcores }}" \
+            -Dcloudhub2.businessGroupId="$ANYPOINT_ORG_ID" \
+            -Dcloudhub2.connectedAppClientId="$ANYPOINT_CLIENT_ID" \
+            -Dcloudhub2.connectedAppClientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Dcloudhub2.connectedAppGrantType="client_credentials"

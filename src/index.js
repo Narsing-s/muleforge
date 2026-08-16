@@ -20,63 +20,23 @@ function context(config) {
   const selectedConnectors = [...(config.connectors || []), ...(db.type === "snowflake" ? ["database"] : [])];
   const connectors = resolveConnectors(selectedConnectors);
   return {
-    projectName: p.name || "mule-api",
-    artifactId: p.artifactId || p.name || "mule-api",
-    groupId: p.groupId || "com.example",
-    version: p.version || "1.0.0",
-    muleRuntime: p.muleRuntime || "4.9.0",
-    java: p.java || "17",
-    apiName: a.name || p.name || "Mule API",
-    apiVersion: a.version || "v1",
-    basePath: a.basePath || "/api/v1",
-    connectors,
-    connectorDependencies: buildConnectorDependencies(config, config.connectorVersions || config.connectors?.versions || {}),
-    hasSnowflake: db.type === "snowflake",
-    hasDatabase: Boolean(db.type) || connectors.some(c => c.id === "database"),
-    databaseType: db.type || "",
-    databaseTable: db.table || "CUSTOMER",
-    hasSftp: connectors.some(c => c.id === "sftp")
+    projectName: p.name || "mule-api", artifactId: p.artifactId || p.name || "mule-api", groupId: p.groupId || "com.example", version: p.version || "1.0.0", muleRuntime: p.muleRuntime || "4.9.0", java: p.java || "17", apiName: a.name || p.name || "Mule API", apiVersion: a.version || "v1", basePath: a.basePath || "/api/v1", connectors, connectorDependencies: buildConnectorDependencies(config, config.connectorVersions || config.connectors?.versions || {}), hasSnowflake: db.type === "snowflake", hasDatabase: Boolean(db.type) || connectors.some(c => c.id === "database"), databaseType: db.type || "", databaseTable: db.table || "CUSTOMER", hasSftp: connectors.some(c => c.id === "sftp")
   };
 }
 function generateRaml(config, d) {
   let out = `#%RAML 1.0\ntitle: ${d.apiName}\nversion: ${d.apiVersion}\nbaseUri: ${d.basePath}\n\n`;
   const groups = new Map();
   for (const op of config.operations || []) { if (!groups.has(op.path)) groups.set(op.path, []); groups.get(op.path).push(op); }
-  for (const [resource, ops] of groups) {
-    out += `${resource}:\n`;
-    for (const op of ops) {
-      const code = op.successStatus || (String(op.method).toUpperCase() === "POST" ? 201 : 200);
-      out += `  ${String(op.method).toLowerCase()}:\n    description: ${op.name || `${op.method} ${op.path}`}\n    responses:\n      ${code}:\n        body:\n          application/json:\n            type: object\n`;
-    }
-  }
+  for (const [resource, ops] of groups) for (const op of ops) { const code = op.successStatus || (String(op.method).toUpperCase() === "POST" ? 201 : 200); out += `${resource}:\n  ${String(op.method).toLowerCase()}:\n    description: ${op.name || `${op.method} ${op.path}`}\n    responses:\n      ${code}:\n        body:\n          application/json:\n            type: object\n`; }
   return out;
 }
 function generateMuleXml(config, d) {
-  const databaseConfig = d.hasDatabase ? `\n  <db:config name="Database_Config" doc:name="Database Config">\n    <db:generic-connection url="\${db.url}" driverClassName="${d.hasSnowflake ? "net.snowflake.client.jdbc.SnowflakeDriver" : ""}" user="\${db.user}" password="\${db.password}" />\n  </db:config>\n` : "";
+  const databaseConfig = d.hasDatabase ? `\n  <db:config name="Database_Config">\n    <db:generic-connection url="\${db.url}" driverClassName="${d.hasSnowflake ? "net.snowflake.client.jdbc.SnowflakeDriver" : ""}" user="\${db.user}" password="\${db.password}" />\n  </db:config>\n` : "";
   const header = `<?xml version="1.0" encoding="UTF-8"?>\n<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/ee http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">\n  <http:listener-config name="HTTP_Listener_config"><http:listener-connection host="0.0.0.0" port="\${http.port}" /></http:listener-config>${databaseConfig}`;
   return `${header}${generateBusinessFlows(config, d)}</mule>\n`;
 }
-function generateProject(file = "muleforge.yaml") {
-  const config = loadConfig(file), d = context(config), root = path.resolve(path.dirname(file)), t = path.resolve(__dirname, "../templates");
-  write(path.join(root, "pom.xml"), render(fs.readFileSync(path.join(t, "pom.xml.hbs"), "utf8"), d));
-  write(path.join(root, "mule-artifact.json"), render(fs.readFileSync(path.join(t, "mule-artifact.json.hbs"), "utf8"), d));
-  write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d));
-  write(path.join(root, "src/main/resources/api", `${d.artifactId}.raml`), generateRaml(config, d));
-  write(path.join(root, "src/main/mule", `${d.artifactId}.xml`), generateMuleXml(config, d));
-  if ((config.testing || {}).munit !== false) write(path.join(root, "src/test/munit", `${d.artifactId}-test.xml`), render(fs.readFileSync(path.join(t, "munit/basic-test.xml.hbs"), "utf8"), d));
-  console.log(`\n✔ Mule project generated\n✔ Requirement-derived operations: ${(config.operations || []).length}\n✔ Connectors: ${d.connectors.map(c => c.name).join(", ") || "none"}\n✔ Maven dependencies: ${d.connectorDependencies.length}\n`);
-}
+function generateProject(file = "muleforge.yaml") { const config = loadConfig(file), d = context(config), root = path.resolve(path.dirname(file)), t = path.resolve(__dirname, "../templates"); write(path.join(root, "pom.xml"), render(fs.readFileSync(path.join(t, "pom.xml.hbs"), "utf8"), d)); write(path.join(root, "mule-artifact.json"), render(fs.readFileSync(path.join(t, "mule-artifact.json.hbs"), "utf8"), d)); write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d)); write(path.join(root, "src/main/resources/api", `${d.artifactId}.raml`), generateRaml(config, d)); write(path.join(root, "src/main/mule", `${d.artifactId}.xml`), generateMuleXml(config, d)); if ((config.testing || {}).munit !== false) write(path.join(root, "src/test/munit", `${d.artifactId}-test.xml`), render(fs.readFileSync(path.join(t, "munit/basic-test.xml.hbs"), "utf8"), d)); console.log(`\n✔ Mule project generated\n✔ Requirement-derived operations: ${(config.operations || []).length}\n✔ Connectors: ${d.connectors.map(c => c.name).join(", ") || "none"}\n✔ Maven dependencies: ${d.connectorDependencies.length}\n`); }
 function validate(file = "muleforge.yaml") { const report = verifyProject(file); printReport(report); if (!report.ready) process.exitCode = 1; }
 function mvn(args) { try { execFileSync(process.platform === "win32" ? "mvn.cmd" : "mvn", args, { stdio: "inherit" }); } catch (e) { process.exitCode = e.status || 1; } }
 function doctor() { console.log("\n🚀 MuleForge Doctor\n"); for (const c of ["node", "java", "mvn", "git"]) { try { execFileSync(process.platform === "win32" ? `${c}.cmd` : c, ["--version"], { stdio: "inherit" }); console.log(`✔ ${c}`); } catch { console.log(`✖ ${c} not found`); } } }
-program.name("muleforge").description("Open-source CLI for requirement-driven Mule 4 project generation").version(VERSION);
-registerCreate(program);
-program.command("generate [config]").description("Generate project files from muleforge.yaml").action((config = "muleforge.yaml") => generateProject(config));
-program.command("validate [config]").description("Validate generated project and requirement coverage").action((config = "muleforge.yaml") => validate(config));
-program.command("verify [config]").description("Verify requirement coverage and generated project quality").option("--build", "Run Maven tests when static verification passes").action((config = "muleforge.yaml", options) => { const report = verifyProject(config, options); printReport(report); if (!report.ready) process.exitCode = 1; });
-program.command("build").description("Build the Mule application with Maven").action(() => mvn(["clean", "package"]));
-program.command("test").description("Run Maven tests").action(() => mvn(["test"]));
-program.command("clean").description("Clean Maven output").action(() => mvn(["clean"]));
-program.command("doctor").description("Check local development tools").action(doctor);
-program.command("ui").description("Open the local MuleForge web workspace").option("-p, --port <port>", "Local port", "4173").action(({ port }) => startUi(Number(port)));
-program.parseAsync().catch(e => { console.error(`\n❌ ${e.message}`); process.exitCode = 1; });
+program.name("muleforge").description("Open-source CLI for requirement-driven Mule 4 project generation").version(VERSION); registerCreate(program); program.command("generate [config]").description("Generate project files from muleforge.yaml").action((config = "muleforge.yaml") => generateProject(config)); program.command("validate [config]").description("Validate generated project and requirement coverage").action((config = "muleforge.yaml") => validate(config)); program.command("verify [config]").description("Verify requirement coverage and generated project quality").option("--build", "Run Maven tests when static verification passes").action((config = "muleforge.yaml", options) => { const report = verifyProject(config, options); printReport(report); if (!report.ready) process.exitCode = 1; }); program.command("build").description("Build the Mule application with Maven").action(() => mvn(["clean", "package"])); program.command("test").description("Run Maven tests").action(() => mvn(["test"])); program.command("clean").description("Clean Maven output").action(() => mvn(["clean"])); program.command("doctor").description("Check local development tools").action(doctor); program.command("ui").description("Open the local MuleForge web workspace").option("-p, --port <port>", "Local port", "4173").action(({ port }) => startUi(Number(port))); program.parseAsync().catch(e => { console.error(`\n❌ ${e.message}`); process.exitCode = 1; });
