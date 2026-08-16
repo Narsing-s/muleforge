@@ -9,31 +9,36 @@ const CONNECTORS = {
     name: "Database",
     description: "Database connector",
     maven: "org.mule.connectors:mule-db-connector",
-    namespace: "db"
+    namespace: "db",
+    defaultVersion: "1.14.13"
   },
   snowflake: {
     name: "Snowflake",
     description: "Snowflake database connector",
     maven: "com.mulesoft.connectors:mule-snowflake-connector",
-    namespace: "snowflake"
+    namespace: "snowflake",
+    defaultVersion: "1.0.0"
   },
   sftp: {
     name: "SFTP",
     description: "Secure file transfer",
     maven: "org.mule.connectors:mule-sftp-connector",
-    namespace: "sftp"
+    namespace: "sftp",
+    defaultVersion: "2.5.0"
   },
   "ibm-mq": {
     name: "IBM MQ",
     description: "IBM MQ messaging",
     maven: "com.mulesoft.connectors:mule-ibm-mq-connector",
-    namespace: "ibm-mq"
+    namespace: "ibm-mq",
+    defaultVersion: "1.7.0"
   },
   "anypoint-mq": {
     name: "Anypoint MQ",
     description: "Anypoint MQ messaging",
     maven: "com.mulesoft.connectors:mule-anypoint-mq-connector",
-    namespace: "anypoint-mq"
+    namespace: "anypoint-mq",
+    defaultVersion: "4.0.0"
   },
   "object-store": {
     name: "Object Store",
@@ -49,9 +54,25 @@ function normalizeConnector(value) {
 
 function resolveConnectors(values = []) {
   const selected = [...new Set(values.map(normalizeConnector).filter(Boolean))];
-  const unknown = selected.filter((name) => !CONNECTORS[name]);
+  const unknown = selected.filter(name => !CONNECTORS[name]);
   if (unknown.length) throw new Error(`Unsupported connector(s): ${unknown.join(", ")}`);
-  return selected.map((name) => ({ id: name, ...CONNECTORS[name] }));
+  return selected.map(name => ({ id: name, ...CONNECTORS[name] }));
 }
 
-module.exports = { CONNECTORS, normalizeConnector, resolveConnectors };
+function buildConnectorDependencies(config = {}, versions = {}) {
+  const connectors = resolveConnectors([
+    ...(config.connectors || []),
+    ...(config.database && config.database.type === "snowflake" ? ["database"] : [])
+  ]);
+  return connectors.filter(c => c.maven).map(c => {
+    const [groupId, artifactId] = c.maven.split(":");
+    return {
+      groupId,
+      artifactId,
+      version: versions[c.id] || c.defaultVersion,
+      classifier: "mule-plugin"
+    };
+  });
+}
+
+module.exports = { CONNECTORS, normalizeConnector, resolveConnectors, buildConnectorDependencies };
