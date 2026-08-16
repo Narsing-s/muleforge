@@ -12,7 +12,7 @@ on:
         description: CloudHub 2.0 target/shared space name
         required: true
         type: string
-        default: CloudHub-US-East-2
+        default: Cloudhub-US-East-2
       application_name:
         description: CloudHub application name
         required: true
@@ -80,6 +80,15 @@ jobs:
           if [ -z "$ANYPOINT_ORG_ID" ]; then echo "::error::Missing GitHub environment variable ANYPOINT_ORG_ID"; missing=1; fi
           if [ "$missing" -ne 0 ]; then exit 1; fi
           echo "Anypoint deployment credentials are configured."
+
+      - name: Validate CloudHub 2.0 target
+        run: |
+          set -e
+          if [ "${{ inputs.target }}" = "CloudHub-US-East-2" ]; then
+            echo "::error::Invalid target casing: use Cloudhub-US-East-2 (lowercase h in hub)."
+            exit 1
+          fi
+          echo "CloudHub target: ${{ inputs.target }}"
 
       - name: MUnit tests
         if: ${{ inputs.munit }}
