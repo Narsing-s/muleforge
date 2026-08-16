@@ -16,8 +16,8 @@ const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive:
 const render = (template, data) => Handlebars.compile(template, { noEscape: true })(data);
 function loadConfig(file = "muleforge.yaml") { const full = path.resolve(file); if (!fs.existsSync(full)) throw new Error(`Configuration not found: ${file}`); return YAML.parse(fs.readFileSync(full, "utf8")) || {}; }
 function context(config) {
-  const p = config.project || {}, a = config.api || {};
-  const selectedConnectors = [...(config.connectors || []), ...(config.database && config.database.type === "snowflake" ? ["database"] : [])];
+  const p = config.project || {}, a = config.api || {}, db = config.database || {};
+  const selectedConnectors = [...(config.connectors || []), ...(db.type === "snowflake" ? ["database"] : [])];
   const connectors = resolveConnectors(selectedConnectors);
   return {
     projectName: p.name || "mule-api",
@@ -31,8 +31,10 @@ function context(config) {
     basePath: a.basePath || "/api/v1",
     connectors,
     connectorDependencies: buildConnectorDependencies(config, config.connectorVersions || config.connectors?.versions || {}),
-    hasSnowflake: Boolean(config.database && config.database.type === "snowflake"),
-    hasDatabase: Boolean(config.database) || connectors.some(c => c.id === "database"),
+    hasSnowflake: db.type === "snowflake",
+    hasDatabase: Boolean(db.type) || connectors.some(c => c.id === "database"),
+    databaseType: db.type || "",
+    databaseTable: db.table || "CUSTOMER",
     hasSftp: connectors.some(c => c.id === "sftp")
   };
 }
