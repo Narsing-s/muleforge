@@ -1,54 +1,154 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
-      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:db="http://www.mulesoft.org/schema/mule/db"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="
-        http://www.mulesoft.org/schema/mule/core
-        http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-        http://www.mulesoft.org/schema/mule/http
-        http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-        http://www.mulesoft.org/schema/mule/ee/core
-        http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+        http://www.mulesoft.org/schema/mule/ee http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
-    <http:listener-config
-        name="HTTP_Listener_config"
-        doc:name="HTTP Listener config">
-
-        <http:listener-connection
-            host="0.0.0.0"
-            port="${http.port}" />
-
+    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config">
+        <http:listener-connection host="0.0.0.0" port="${http.port}" />
     </http:listener-config>
 
-    <flow name="customer-api-flow">
+    <db:config name="Database_Config" doc:name="Snowflake Database Config">
+        <db:generic-connection
+            url="${db.url}"
+            driverClassName="net.snowflake.client.jdbc.SnowflakeDriver"
+            user="${db.user}"
+            password="${db.password}" />
+    </db:config>
 
-        <http:listener
-            config-ref="HTTP_Listener_config"
-            path="/api/v1/customers"
-            allowedMethods="GET,POST"
-            doc:name="HTTP Listener" />
+    <flow name="create-customer-flow">
+        <http:listener config-ref="HTTP_Listener_config" path="/api/v1/customers" allowedMethods="POST">
+            <http:response statusCode="#[vars.httpStatus default 201]" />
+        </http:listener>
 
-        <logger
-            level="INFO"
-            message="MuleForge generated API received request"
-            doc:name="Logger" />
-
-        <ee:transform>
+        <ee:transform doc:name="Validate customer request">
             <ee:message>
-                <ee:set-payload><![CDATA[
-%dw 2.0
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{
-    message: "MuleForge generated API is running"
-}
-                ]]></ee:set-payload>
+if (isEmpty(payload.name default "") or isEmpty(payload.email default "") or isEmpty(payload.mobileNumber default ""))
+    error({type: "VALIDATION", description: "name, email and mobileNumber are required"})
+else if (!((payload.email as String) matches /.+@.+\..+/))
+    error({type: "VALIDATION", description: "Invalid email"})
+else payload]]></ee:set-payload>
             </ee:message>
         </ee:transform>
 
+        <try doc:name="Create customer">
+            <set-variable variableName="request" value="#[payload]" />
+
+            <db:select config-ref="Database_Config" doc:name="Check duplicate customer">
+                <db:sql><![CDATA[SELECT CUSTOMER_ID FROM CUSTOMER WHERE EMAIL = :email LIMIT 1]]></db:sql>
+                <db:input-parameters><![CDATA[#[{ email: vars.request.email }]]]></db:input-parameters>
+            </db:select>
+
+            <choice doc:name="Customer exists?">
+                <when expression="#[sizeOf(payload) &gt; 0]">
+                    <set-variable variableName="httpStatus" value="409" />
+                    <ee:transform doc:name="Duplicate response">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ status: "FAILED", code: "CUSTOMER_EXISTS", message: "Customer already exists" }]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </when>
+                <otherwise>
+                    <set-variable variableName="customerId" value="#[uuid()]" />
+                    <db:insert config-ref="Database_Config" doc:name="Insert customer">
+                        <db:sql><![CDATA[INSERT INTO CUSTOMER (CUSTOMER_ID, NAME, EMAIL, MOBILE_NUMBER) VALUES (:customerId, :name, :email, :mobileNumber)]]></db:sql>
+                        <db:input-parameters><![CDATA[#[{
+                            customerId: vars.customerId,
+                            name: vars.request.name,
+                            email: vars.request.email,
+                            mobileNumber: vars.request.mobileNumber
+                        }]]]></db:input-parameters>
+                    </db:insert>
+                    <set-variable variableName="httpStatus" value="201" />
+                    <ee:transform doc:name="Created response">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ customerId: vars.customerId, status: "SUCCESS" }]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </otherwise>
+            </choice>
+
+            <error-handler>
+                <on-error-continue type="ANY" logException="true">
+                    <set-variable variableName="httpStatus" value="500" />
+                    <ee:transform doc:name="System error response">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ status: "FAILED", code: "CUSTOMER_CREATE_FAILED", message: "Customer could not be created" }]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
+    </flow>
+
+    <flow name="get-customer-flow">
+        <http:listener config-ref="HTTP_Listener_config" path="/api/v1/customers/{customerId}" allowedMethods="GET">
+            <http:response statusCode="#[vars.httpStatus default 200]" />
+        </http:listener>
+
+        <try doc:name="Get customer">
+            <db:select config-ref="Database_Config" doc:name="Find customer">
+                <db:sql><![CDATA[SELECT CUSTOMER_ID, NAME, EMAIL, MOBILE_NUMBER FROM CUSTOMER WHERE CUSTOMER_ID = :customerId LIMIT 1]]></db:sql>
+                <db:input-parameters><![CDATA[#[{ customerId: attributes.uriParams.customerId }]]]></db:input-parameters>
+            </db:select>
+
+            <choice doc:name="Customer found?">
+                <when expression="#[sizeOf(payload) == 0]">
+                    <set-variable variableName="httpStatus" value="404" />
+                    <ee:transform doc:name="Not found response">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ status: "FAILED", code: "CUSTOMER_NOT_FOUND", message: "Customer not found" }]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </when>
+                <otherwise>
+                    <set-variable variableName="httpStatus" value="200" />
+                    <ee:transform doc:name="Customer response">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ customerId: payload[0].CUSTOMER_ID, name: payload[0].NAME, email: payload[0].EMAIL, mobileNumber: payload[0].MOBILE_NUMBER, status: "SUCCESS" }]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </otherwise>
+            </choice>
+
+            <error-handler>
+                <on-error-continue type="ANY" logException="true">
+                    <set-variable variableName="httpStatus" value="500" />
+                    <ee:transform doc:name="System error response">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ status: "FAILED", code: "CUSTOMER_READ_FAILED", message: "Customer could not be retrieved" }]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
     </flow>
 
 </mule>
