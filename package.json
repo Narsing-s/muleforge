@@ -1,10 +1,13 @@
 {
   "name": "muleforge",
-  "version": "0.1.0",
-  "description": "Open-source Mule 4 API project generator",
+  "version": "0.2.0",
+  "description": "Open-source CLI for generating Mule 4 API projects",
   "main": "src/index.js",
   "bin": {
     "muleforge": "src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "start": "node src/index.js",
@@ -14,12 +17,22 @@
     "mulesoft",
     "mule",
     "mule4",
+    "muleforge",
     "api",
     "generator",
     "raml",
     "dataweave",
-    "integration"
+    "integration",
+    "anypoint"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Narsing-s/muleforge.git"
+  },
+  "homepage": "https://github.com/Narsing-s/muleforge",
+  "bugs": {
+    "url": "https://github.com/Narsing-s/muleforge/issues"
+  },
   "license": "Apache-2.0",
   "dependencies": {
     "chalk": "^5.0.0",
