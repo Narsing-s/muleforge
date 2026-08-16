@@ -1,6 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.muleforge.examples</groupId>
+  <groupId>${env.ANYPOINT_ORG_ID}</groupId>
   <artifactId>customer-api</artifactId>
   <version>1.0.0</version>
   <packaging>mule-application</packaging>
@@ -11,7 +11,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <cloudhub2.applicationName>customer-api-dev</cloudhub2.applicationName>
     <cloudhub2.environment>dev</cloudhub2.environment>
-    <!-- CloudHub 2.0 shared-space target names are case-sensitive. -->
     <cloudhub2.target>Cloudhub-US-East-2</cloudhub2.target>
     <cloudhub2.provider>MC</cloudhub2.provider>
     <cloudhub2.muleVersion>4.9.0</cloudhub2.muleVersion>
@@ -88,6 +87,7 @@
         <version>${mule.maven.plugin.version}</version>
         <extensions>true</extensions>
         <configuration>
+          <classifier>mule-application</classifier>
           <cloudhub2Deployment>
             <uri>https://anypoint.mulesoft.com</uri>
             <applicationName>${cloudhub2.applicationName}</applicationName>
