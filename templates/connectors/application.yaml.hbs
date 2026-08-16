@@ -1,0 +1,31 @@
+http:
+  port: ${http.port}
+
+api:
+  name: {{apiName}}
+  version: {{apiVersion}}
+
+{{#if hasSnowflake}}
+snowflake:
+  account: ${snowflake.account}
+  warehouse: ${snowflake.warehouse}
+  database: ${snowflake.database}
+  schema: ${snowflake.schema}
+  user: ${snowflake.user}
+  password: ${snowflake.password}
+{{/if}}
+
+{{#if hasDatabase}}
+database:
+  url: ${db.url}
+  user: ${db.user}
+  password: ${db.password}
+{{/if}}
+
+{{#if hasSftp}}
+sftp:
+  host: ${sftp.host}
+  port: ${sftp.port}
+  user: ${sftp.user}
+  password: ${sftp.password}
+{{/if}}
