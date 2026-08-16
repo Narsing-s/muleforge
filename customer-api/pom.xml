@@ -10,12 +10,13 @@
     <mule.maven.plugin.version>4.3.0</mule.maven.plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <cloudhub2.applicationName>customer-api-dev</cloudhub2.applicationName>
-    <cloudhub2.environment>Development</cloudhub2.environment>
+    <cloudhub2.environment>dev</cloudhub2.environment>
     <cloudhub2.target>CloudHub-US-East-2</cloudhub2.target>
     <cloudhub2.provider>MC</cloudhub2.provider>
     <cloudhub2.muleVersion>4.9.0</cloudhub2.muleVersion>
     <cloudhub2.replicas>1</cloudhub2.replicas>
     <cloudhub2.vCores>0.1</cloudhub2.vCores>
+    <cloudhub2.businessGroupId>${env.ANYPOINT_ORG_ID}</cloudhub2.businessGroupId>
   </properties>
 
   <repositories>
@@ -95,6 +96,7 @@
             <muleVersion>${cloudhub2.muleVersion}</muleVersion>
             <replicas>${cloudhub2.replicas}</replicas>
             <vCores>${cloudhub2.vCores}</vCores>
+            <businessGroupId>${cloudhub2.businessGroupId}</businessGroupId>
             <connectedAppClientId>${env.ANYPOINT_CLIENT_ID}</connectedAppClientId>
             <connectedAppClientSecret>${env.ANYPOINT_CLIENT_SECRET}</connectedAppClientSecret>
             <connectedAppGrantType>client_credentials</connectedAppGrantType>
