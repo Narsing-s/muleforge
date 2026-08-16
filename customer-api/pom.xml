@@ -11,7 +11,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <cloudhub2.applicationName>customer-api-dev</cloudhub2.applicationName>
     <cloudhub2.environment>dev</cloudhub2.environment>
-    <cloudhub2.target>CloudHub-US-East-2</cloudhub2.target>
+    <!-- CloudHub 2.0 shared-space target names are case-sensitive. -->
+    <cloudhub2.target>Cloudhub-US-East-2</cloudhub2.target>
     <cloudhub2.provider>MC</cloudhub2.provider>
     <cloudhub2.muleVersion>4.9.0</cloudhub2.muleVersion>
     <cloudhub2.replicas>1</cloudhub2.replicas>
