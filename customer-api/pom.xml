@@ -8,14 +8,13 @@
     <app.runtime>4.9.0</app.runtime>
     <mule.maven.plugin.version>4.3.0</mule.maven.plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cloudhub2.applicationName>customer-api</cloudhub2.applicationName>
+    <cloudhub2.applicationName>customer-api-dev</cloudhub2.applicationName>
     <cloudhub2.environment>Development</cloudhub2.environment>
     <cloudhub2.target>CloudHub-US-East-2</cloudhub2.target>
     <cloudhub2.provider>MC</cloudhub2.provider>
-    <cloudhub2.region>us-east-2</cloudhub2.region>
-    <cloudhub2.workers>1</cloudhub2.workers>
-    <cloudhub2.workerType>MICRO</cloudhub2.workerType>
-    <cloudhub2.objectStoreV2>true</cloudhub2.objectStoreV2>
+    <cloudhub2.muleVersion>4.9.0</cloudhub2.muleVersion>
+    <cloudhub2.replicas>1</cloudhub2.replicas>
+    <cloudhub2.vCores>0.1</cloudhub2.vCores>
   </properties>
   <dependencies>
     <dependency>
@@ -44,10 +43,9 @@
             <environment>${cloudhub2.environment}</environment>
             <target>${cloudhub2.target}</target>
             <provider>${cloudhub2.provider}</provider>
-            <region>${cloudhub2.region}</region>
-            <workers>${cloudhub2.workers}</workers>
-            <workerType>${cloudhub2.workerType}</workerType>
-            <objectStoreV2Enabled>${cloudhub2.objectStoreV2}</objectStoreV2Enabled>
+            <muleVersion>${cloudhub2.muleVersion}</muleVersion>
+            <replicas>${cloudhub2.replicas}</replicas>
+            <vCores>${cloudhub2.vCores}</vCores>
             <connectedAppClientId>${env.ANYPOINT_CLIENT_ID}</connectedAppClientId>
             <connectedAppClientSecret>${env.ANYPOINT_CLIENT_SECRET}</connectedAppClientSecret>
             <connectedAppGrantType>client_credentials</connectedAppGrantType>
