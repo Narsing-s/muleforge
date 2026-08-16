@@ -1,11 +1,11 @@
 const CONNECTORS = {
   http: { name: "HTTP", description: "HTTP Listener and Request", maven: null, namespace: "http" },
-  database: { name: "Database", description: "Database connector", maven: "org.mule.connectors:mule-db-connector", namespace: "db" },
-  snowflake: { name: "Snowflake", description: "Snowflake database connector", maven: "com.mulesoft.connectors:mule-snowflake-connector", namespace: "snowflake" },
-  sftp: { name: "SFTP", description: "Secure file transfer", maven: "org.mule.connectors:mule-sftp-connector", namespace: "sftp" },
+  database: { name: "Database", description: "Database connector", maven: "org.mule.connectors:mule-db-connector", namespace: "db", defaultVersion: "1.14.10" },
+  snowflake: { name: "Snowflake", description: "Snowflake database connector", maven: "com.mulesoft.connectors:mule4-snowflake-connector", namespace: "snowflake", defaultVersion: "1.1.0" },
+  sftp: { name: "SFTP", description: "Secure file transfer", maven: "org.mule.connectors:mule-sftp-connector", namespace: "sftp", defaultVersion: "2.7.0", minJava: "17" },
   "ibm-mq": { name: "IBM MQ", description: "IBM MQ messaging", maven: "com.mulesoft.connectors:mule-ibm-mq-connector", namespace: "ibm-mq" },
-  "anypoint-mq": { name: "Anypoint MQ", description: "Anypoint MQ messaging", maven: "com.mulesoft.connectors:mule-anypoint-mq-connector", namespace: "anypoint-mq" },
-  "object-store": { name: "Object Store", description: "Mule Object Store", maven: null, namespace: "os" }
+  "anypoint-mq": { name: "Anypoint MQ", description: "Anypoint MQ messaging", maven: "com.mulesoft.connectors:anypoint-mq-connector", namespace: "anypoint-mq", defaultVersion: "4.0.9" },
+  "object-store": { name: "Object Store", description: "Mule Object Store", maven: "org.mule.connectors:mule-objectstore-connector", namespace: "os", defaultVersion: "1.2.2" }
 };
 
 function normalizeConnector(value) {
@@ -22,7 +22,7 @@ function resolveConnectors(values = []) {
 function splitMavenCoordinate(coordinate) {
   if (!coordinate) return null;
   const parts = coordinate.split(":");
-  if (parts.length !== 2) throw new Error(`Invalid Maven coordinate: ${coordinate}. Expected groupId:artifactId`);
+  if (parts.length !== 2) throw new Error(`Invalid Maven coordinate: ${coordinate}`);
   return { groupId: parts[0], artifactId: parts[1] };
 }
 
@@ -31,7 +31,7 @@ function buildConnectorDependencies(config, connectorVersions = {}) {
     .map((connector) => {
       const coordinate = splitMavenCoordinate(connector.maven);
       if (!coordinate) return null;
-      const version = connectorVersions[connector.id];
+      const version = connectorVersions[connector.id] || connector.defaultVersion;
       if (!version) throw new Error(`Missing version for connector '${connector.id}'. Add connectors.versions.${connector.id} to muleforge.yaml`);
       return { ...coordinate, version };
     })
