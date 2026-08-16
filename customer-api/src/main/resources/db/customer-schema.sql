@@ -7,4 +7,5 @@ CREATE TABLE IF NOT EXISTS CUSTOMER (
     CONSTRAINT PK_CUSTOMER PRIMARY KEY (CUSTOMER_ID)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS UK_CUSTOMER_EMAIL ON CUSTOMER (EMAIL);
+-- Snowflake standard tables do not enforce ordinary UNIQUE indexes.
+-- MuleForge performs the duplicate-email lookup in the API flow.
