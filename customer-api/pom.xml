@@ -4,6 +4,8 @@
   <artifactId>customer-api</artifactId>
   <version>1.0.0</version>
   <packaging>mule-application</packaging>
+  <name>customer-api</name>
+  <description>Customer API Mule application</description>
 
   <properties>
     <app.runtime>4.9.0</app.runtime>
