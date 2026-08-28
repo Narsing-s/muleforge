@@ -1,125 +1,14 @@
-function xmlEscape(value) {
-  return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
-}
+function xmlEscape(value) { return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;"); }
 function safeName(value) { return String(value || "operation").replace(/[^A-Za-z0-9_-]/g, "-"); }
-function dwValidation(validation = []) {
-  const rules = validation.map(String).filter(Boolean).map(rule => {
-    if (/email/i.test(rule)) return 'if (!isEmpty(payload.email) and (payload.email as String) matches /.+@.+\\..+/) payload else error({type: "VALIDATION", description: "Invalid email"})';
-    if (/(greater|positive|>\s*0)/i.test(rule)) return 'if ((payload.amount default 0) > 0) payload else error({type: "VALIDATION", description: "Amount must be greater than zero"})';
-    return null;
-  }).filter(Boolean);
-  return rules.length ? rules.join("\n---\n") : "payload";
-}
-function responseTransform(op) {
-  const fields = op.responseFields && op.responseFields.length ? op.responseFields : ["status"];
-  return fields.map(f => { const key = String(f).replace(/[^A-Za-z0-9_]/g, ""); return key === "status" ? `status: "SUCCESS"` : `${key}: payload.${key} default vars.${key} default null`; }).join(",\n    ");
-}
+function dwValidation(validation = []) { const rules = validation.map(String).filter(Boolean).map(rule => { if (/email/i.test(rule)) return 'if (!isEmpty(payload.email) and (payload.email as String) matches /.+@.+\\..+/) payload else error({type: "VALIDATION", description: "Invalid email"})'; if (/(greater|positive|>\s*0)/i.test(rule)) return 'if ((payload.amount default 0) > 0) payload else error({type: "VALIDATION", description: "Amount must be greater than zero"})'; return null; }).filter(Boolean); return rules.length ? rules.join("\n---\n") : "payload"; }
+function responseTransform(op) { const fields = op.responseFields && op.responseFields.length ? op.responseFields : ["status"]; return fields.map(f => { const key = String(f).replace(/[^A-Za-z0-9_]/g, ""); return key === "status" ? `status: "SUCCESS"` : `${key}: payload.${key} default vars.${key} default null`; }).join(",\n    "); }
 function databaseType(data) { return data && data.hasDatabase ? String(data.databaseType || "").toLowerCase() : ""; }
 function isCreateCustomer(op) { return String(op.method).toUpperCase() === "POST" && /customers?$/i.test(String(op.path)); }
 function isGetCustomer(op) { return String(op.method).toUpperCase() === "GET" && /customers?\/\{[^}]+\}$/i.test(String(op.path)); }
-function customerInsertFlow(op, data) {
-  const table = xmlEscape(data.databaseTable || "CUSTOMER");
-  return `
-    <set-variable variableName="request" value="#[payload]" />
-    <db:select config-ref="Database_Config" doc:name="Check duplicate customer">
-      <db:sql><![CDATA[SELECT CUSTOMER_ID FROM ${table} WHERE EMAIL = :email LIMIT 1]]></db:sql>
-      <db:input-parameters><![CDATA[#[{ email: vars.request.email }]]]></db:input-parameters>
-    </db:select>
-    <choice doc:name="Customer exists?">
-      <when expression="#[sizeOf(payload) &gt; 0]">
-        <set-variable variableName="httpStatus" value="409" />
-        <ee:transform doc:name="Duplicate response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{ status: "FAILED", code: "CUSTOMER_EXISTS", message: "Customer already exists" }]]></ee:set-payload></ee:message></ee:transform>
-      </when>
-      <otherwise>
-        <set-variable variableName="customerId" value="#[uuid()]" />
-        <db:insert config-ref="Database_Config" doc:name="Insert customer">
-          <db:sql><![CDATA[INSERT INTO ${table} (CUSTOMER_ID, NAME, EMAIL, MOBILE_NUMBER) VALUES (:customerId, :name, :email, :mobileNumber)]]></db:sql>
-          <db:input-parameters><![CDATA[#[{ customerId: vars.customerId, name: vars.request.name, email: vars.request.email, mobileNumber: vars.request.mobileNumber }]]]></db:input-parameters>
-        </db:insert>
-        <set-variable variableName="httpStatus" value="201" />
-        <ee:transform doc:name="Created response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{ customerId: vars.customerId, status: "SUCCESS" }]]></ee:set-payload></ee:message></ee:transform>
-      </otherwise>
-    </choice>`;
-}
-function customerGetFlow(op, data) {
-  const table = xmlEscape(data.databaseTable || "CUSTOMER");
-  const parameter = String(op.path).match(/\{([^}]+)\}/)?.[1] || "customerId";
-  return `
-    <db:select config-ref="Database_Config" doc:name="Find customer">
-      <db:sql><![CDATA[SELECT CUSTOMER_ID, NAME, EMAIL, MOBILE_NUMBER FROM ${table} WHERE CUSTOMER_ID = :customerId LIMIT 1]]></db:sql>
-      <db:input-parameters><![CDATA[#[{ customerId: attributes.uriParams.${parameter} }]]]></db:input-parameters>
-    </db:select>
-    <choice doc:name="Customer found?">
-      <when expression="#[sizeOf(payload) == 0]">
-        <set-variable variableName="httpStatus" value="404" />
-        <ee:transform doc:name="Not found response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{ status: "FAILED", code: "CUSTOMER_NOT_FOUND", message: "Customer not found" }]]></ee:set-payload></ee:message></ee:transform>
-      </when>
-      <otherwise>
-        <set-variable variableName="httpStatus" value="200" />
-        <ee:transform doc:name="Customer response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{ customerId: payload[0].CUSTOMER_ID, name: payload[0].NAME, email: payload[0].EMAIL, mobileNumber: payload[0].MOBILE_NUMBER, status: "SUCCESS" }]]></ee:set-payload></ee:message></ee:transform>
-      </otherwise>
-    </choice>`;
-}
-function genericFlow(op, data) {
-  const name = `${data.artifactId}-${safeName(op.name)}-flow`, endpoint = `${data.basePath}${op.path}`, status = Number(op.successStatus || (op.method === "POST" ? 201 : 200));
-  return `  <flow name="${name}">
-    <http:listener config-ref="HTTP_Listener_config" path="${xmlEscape(endpoint)}" allowedMethods="${xmlEscape(op.method)}"><http:response statusCode="#[vars.httpStatus default ${status}]" /></http:listener>
-    <ee:transform doc:name="Validate and normalize request"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-${dwValidation(op.validation)}]]></ee:set-payload></ee:message></ee:transform>
-    <set-variable variableName="operationName" value="${xmlEscape(op.name)}" />
-    <logger level="INFO" message="MuleForge processing #[vars.operationName]" />
-    <ee:transform doc:name="Build response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{ ${responseTransform(op)} }]]></ee:set-payload></ee:message></ee:transform>
-    <set-variable variableName="httpStatus" value="${status}" />
-  </flow>\n`;
-}
-function generateOperationFlow(op, data) {
-  const name = `${data.artifactId}-${safeName(op.name)}-flow`, endpoint = `${data.basePath}${op.path}`;
-  if (data.hasDatabase && databaseType(data) === "snowflake" && isCreateCustomer(op)) {
-    return `  <flow name="${name}">
-    <http:listener config-ref="HTTP_Listener_config" path="${xmlEscape(endpoint)}" allowedMethods="POST"><http:response statusCode="#[vars.httpStatus default 201]" /></http:listener>
-    <ee:transform doc:name="Validate customer request"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-if (isEmpty(payload.name default "") or isEmpty(payload.email default "") or isEmpty(payload.mobileNumber default "")) error({type: "VALIDATION", description: "name, email and mobileNumber are required"})
-else if (!((payload.email as String) matches /.+@.+\\..+/)) error({type: "VALIDATION", description: "Invalid email"})
-else payload]]></ee:set-payload></ee:message></ee:transform>
-    <try doc:name="Create customer">${customerInsertFlow(op, data)}
-      <error-handler><on-error-continue type="ANY" logException="true"><set-variable variableName="httpStatus" value="500" /><ee:transform doc:name="System error response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{ status: "FAILED", code: "CUSTOMER_CREATE_FAILED", message: "Customer could not be created" }]]></ee:set-payload></ee:message></ee:transform></on-error-continue></error-handler>
-    </try>
-  </flow>\n`;
-  }
-  if (data.hasDatabase && databaseType(data) === "snowflake" && isGetCustomer(op)) {
-    return `  <flow name="${name}">
-    <http:listener config-ref="HTTP_Listener_config" path="${xmlEscape(endpoint)}" allowedMethods="GET"><http:response statusCode="#[vars.httpStatus default 200]" /></http:listener>
-    <try doc:name="Get customer">${customerGetFlow(op, data)}
-      <error-handler><on-error-continue type="ANY" logException="true"><set-variable variableName="httpStatus" value="500" /><ee:transform doc:name="System error response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{ status: "FAILED", code: "CUSTOMER_READ_FAILED", message: "Customer could not be retrieved" }]]></ee:set-payload></ee:message></ee:transform></on-error-continue></error-handler>
-    </try>
-  </flow>\n`;
-  }
-  return genericFlow(op, data);
-}
+function customerInsertFlow(op, data) { const table = xmlEscape(data.databaseTable || "CUSTOMER"); return `\n    <set-variable variableName="request" value="#[payload]" />\n    <db:select config-ref="Database_Config" doc:name="Check duplicate customer">\n      <db:sql><![CDATA[SELECT CUSTOMER_ID FROM ${table} WHERE EMAIL = :email LIMIT 1]]></db:sql>\n      <db:input-parameters><![CDATA[#[{ email: vars.request.email }]]]></db:input-parameters>\n    </db:select>\n    <choice doc:name="Customer exists?">\n      <when expression="#[sizeOf(payload) &gt; 0]">\n        <set-variable variableName="httpStatus" value="409" />\n        <ee:transform doc:name="Duplicate response"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ status: "FAILED", code: "CUSTOMER_EXISTS", message: "Customer already exists" }]]></ee:set-payload></ee:message></ee:transform>\n      </when>\n      <otherwise>\n        <set-variable variableName="customerId" value="#[uuid()]" />\n        <db:insert config-ref="Database_Config" doc:name="Insert customer">\n          <db:sql><![CDATA[INSERT INTO ${table} (CUSTOMER_ID, NAME, EMAIL, MOBILE_NUMBER) VALUES (:customerId, :name, :email, :mobileNumber)]]></db:sql>\n          <db:input-parameters><![CDATA[#[{ customerId: vars.customerId, name: vars.request.name, email: vars.request.email, mobileNumber: vars.request.mobileNumber }]]]></db:input-parameters>\n        </db:insert>\n        <set-variable variableName="httpStatus" value="201" />\n        <ee:transform doc:name="Created response"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ customerId: vars.customerId, status: "SUCCESS" }]]></ee:set-payload></ee:message></ee:transform>\n      </otherwise>\n    </choice>`; }
+function customerGetFlow(op, data) { const table = xmlEscape(data.databaseTable || "CUSTOMER"); const parameter = String(op.path).match(/\{([^}]+)\}/)?.[1] || "customerId"; return `\n    <db:select config-ref="Database_Config" doc:name="Find customer">\n      <db:sql><![CDATA[SELECT CUSTOMER_ID, NAME, EMAIL, MOBILE_NUMBER FROM ${table} WHERE CUSTOMER_ID = :customerId LIMIT 1]]></db:sql>\n      <db:input-parameters><![CDATA[#[{ customerId: attributes.uriParams.${parameter} }]]]></db:input-parameters>\n    </db:select>\n    <choice doc:name="Customer found?">\n      <when expression="#[sizeOf(payload) == 0]">\n        <set-variable variableName="httpStatus" value="404" />\n        <ee:transform doc:name="Not found response"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ status: "FAILED", code: "CUSTOMER_NOT_FOUND", message: "Customer not found" }]]></ee:set-payload></ee:message></ee:transform>\n      </when>\n      <otherwise>\n        <set-variable variableName="httpStatus" value="200" />\n        <ee:transform doc:name="Customer response"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ customerId: payload[0].CUSTOMER_ID, name: payload[0].NAME, email: payload[0].EMAIL, mobileNumber: payload[0].MOBILE_NUMBER, status: "SUCCESS" }]]></ee:set-payload></ee:message></ee:transform>\n      </otherwise>\n    </choice>`; }
+function errorHandler() { return `<error-handler>\n      <on-error-continue type="VALIDATION:VALIDATION" logException="false"><set-variable variableName="httpStatus" value="400"/><ee:transform doc:name="Validation error"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ status: "FAILED", code: "VALIDATION_ERROR", message: error.description default "Invalid request" }]]></ee:set-payload></ee:message></ee:transform></on-error-continue>\n      <on-error-continue type="HTTP:NOT_FOUND" logException="false"><set-variable variableName="httpStatus" value="404"/><ee:transform doc:name="Not found error"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ status: "FAILED", code: "NOT_FOUND", message: "Resource not found" }]]></ee:set-payload></ee:message></ee:transform></on-error-continue>\n      <on-error-continue type="CONNECTIVITY,RETRY_EXHAUSTED,TIMEOUT" logException="true"><set-variable variableName="httpStatus" value="503"/><ee:transform doc:name="Dependency error"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ status: "FAILED", code: "DEPENDENCY_ERROR", message: "Downstream dependency unavailable" }]]></ee:set-payload></ee:message></ee:transform></on-error-continue>\n      <on-error-continue type="ANY" logException="true"><set-variable variableName="httpStatus" value="500"/><ee:transform doc:name="Internal error"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ status: "FAILED", code: "INTERNAL_ERROR", message: "Internal server error" }]]></ee:set-payload></ee:message></ee:transform></on-error-continue>\n    </error-handler>`; }
+function genericFlow(op, data) { const name = `${data.artifactId}-${safeName(op.name)}-flow`, endpoint = `${data.basePath}${op.path}`, status = Number(op.successStatus || (String(op.method).toUpperCase() === "POST" ? 201 : 200)); return `  <flow name="${name}">\n    <http:listener config-ref="HTTP_Listener_config" path="${xmlEscape(endpoint)}" allowedMethods="${xmlEscape(op.method)}"><http:response statusCode="#[vars.httpStatus default ${status}]" /></http:listener>\n    <try doc:name="Process ${xmlEscape(op.name)}">\n      <ee:transform doc:name="Validate and normalize request"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n${dwValidation(op.validation)}]]></ee:set-payload></ee:message></ee:transform>\n      <set-variable variableName="operationName" value="${xmlEscape(op.name)}" />\n      <logger level="INFO" message="MuleForge processing #[vars.operationName]" />\n      <ee:transform doc:name="Build response"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ ${responseTransform(op)} }]]></ee:set-payload></ee:message></ee:transform>\n      <set-variable variableName="httpStatus" value="${status}" />\n      ${errorHandler()}\n    </try>\n  </flow>\n`; }
+function generateOperationFlow(op, data) { const name = `${data.artifactId}-${safeName(op.name)}-flow`, endpoint = `${data.basePath}${op.path}`; if (data.hasDatabase && databaseType(data) === "snowflake" && isCreateCustomer(op)) return `  <flow name="${name}">\n    <http:listener config-ref="HTTP_Listener_config" path="${xmlEscape(endpoint)}" allowedMethods="POST"><http:response statusCode="#[vars.httpStatus default 201]" /></http:listener>\n    <try doc:name="Create customer">\n      <ee:transform doc:name="Validate customer request"><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\nif (isEmpty(payload.name default "") or isEmpty(payload.email default "") or isEmpty(payload.mobileNumber default "")) error({type: "VALIDATION", description: "name, email and mobileNumber are required"}) else if (!((payload.email as String) matches /.+@.+\\..+/)) error({type: "VALIDATION", description: "Invalid email"}) else payload]]></ee:set-payload></ee:message></ee:transform>${customerInsertFlow(op, data)}\n      ${errorHandler()}\n    </try>\n  </flow>\n`; if (data.hasDatabase && databaseType(data) === "snowflake" && isGetCustomer(op)) return `  <flow name="${name}">\n    <http:listener config-ref="HTTP_Listener_config" path="${xmlEscape(endpoint)}" allowedMethods="GET"><http:response statusCode="#[vars.httpStatus default 200]" /></http:listener>\n    <try doc:name="Get customer">${customerGetFlow(op, data)}\n      ${errorHandler()}\n    </try>\n  </flow>\n`; return genericFlow(op, data); }
 function generateBusinessFlows(config, data) { return (config.operations || []).map(op => generateOperationFlow(op, data)).join(""); }
 module.exports = { generateBusinessFlows };
