@@ -1,7 +1,8 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { execFile } = require("child_process");
+const { readRequirementDocument, analyzeRequirementDocument } = require("./document-analyzer");
+const { generateUiAssets } = require("./ui-generator");
 
 function json(res, status, value) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -18,20 +19,30 @@ function startUi(port = Number(process.env.MULEFORGE_UI_PORT || 4173)) {
     if (req.method === "POST" && req.url === "/api/analyze") {
       let body = "";
       req.setEncoding("utf8");
-      req.on("data", chunk => { body += chunk; if (body.length > 2_000_000) req.destroy(); });
+      req.on("data", chunk => {
+        body += chunk;
+        if (body.length > 2_000_000) req.destroy();
+      });
       req.on("end", () => {
         try {
           const input = JSON.parse(body || "{}");
           const text = String(input.text || "").trim();
           const filename = path.basename(String(input.filename || "requirement.txt"));
           if (!text) return json(res, 400, { error: "Requirement document is empty." });
-          const temp = path.join(process.cwd(), `.muleforge-upload-${Date.now()}-${filename.replace(/[^A-Za-z0-9_.-]/g, "-")}`);
-          fs.writeFileSync(temp, text, "utf8");
-          execFile(process.execPath, [path.resolve(__dirname, "index.js"), "analyze", temp, input.projectName || ""], { cwd: process.cwd() }, (error, stdout, stderr) => {
-            try { fs.unlinkSync(temp); } catch {}
-            if (error) return json(res, 400, { error: (stderr || stdout || error.message).trim() });
-            return json(res, 200, { ok: true, output: stdout.trim() });
-          });
+
+          // UI generation is deliberately in-memory. Nothing is written to the
+          // user's repository and no backend credentials or external services are used.
+          const model = analyzeRequirementDocument(text, filename);
+          if (input.projectName) {
+            const project = String(input.projectName).trim().replace(/[^A-Za-z0-9._-]/g, "-");
+            if (project) {
+              model.project.name = project;
+              model.project.artifactId = project;
+              model.api.name = project;
+            }
+          }
+          const assets = generateUiAssets(model);
+          return json(res, 200, { ok: true, ...assets });
         } catch (error) {
           return json(res, 400, { error: error.message });
         }
