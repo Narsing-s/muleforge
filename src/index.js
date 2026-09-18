@@ -129,6 +129,7 @@ function releaseCheck(directory = ".") {
   add("README", fs.existsSync(path.join(root, "README.md")), "README.md is required.");
   add("CHANGELOG", fs.existsSync(path.join(root, "CHANGELOG.md")), "CHANGELOG.md is required.");
   add("CI workflow", fs.existsSync(path.join(root, ".github", "workflows", "ci.yml")), "GitHub Actions CI workflow is required.");
+  add("release workflow", fs.existsSync(path.join(root, ".github", "workflows", "release.yml")), "Gated release packaging workflow is required.");
   add("runtime validation workflow", fs.existsSync(path.join(root, ".github", "workflows", "runtime-validation.yml")), "Manual Maven/MUnit runtime validation workflow is required.");
   add("runtime validation docs", fs.existsSync(path.join(root, "docs", "cicd", "runtime-validation.md")), "Runtime validation documentation is required.");
   add("tests", fs.existsSync(path.join(root, "test")), "Automated tests are required.");
