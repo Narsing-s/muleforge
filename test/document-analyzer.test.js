@@ -51,7 +51,7 @@ test("does not silently map multiple connectors to an unrelated operation", () =
   const model = analyzeRequirementDocument(docs.map(x => x.text).join("\n"), "api.md", docs);
   assert.equal(model.operations[0].connector, null);
   assert.equal(model.operations[0].connectorAmbiguous, true);
-  assert.ok(model.conflicts.some(x => x.type === "operation-connector"));
+  assert.ok(model.conflicts.some(x => x.type === "operation-routing"));
 });
 
 test("maps a single explicit connector without inventing a second connector", () => {
