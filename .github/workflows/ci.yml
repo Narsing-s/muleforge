@@ -59,6 +59,8 @@ jobs:
             rm -rf ~/.npm/_cacache
           done
           exit 1
+      - name: Generate reference project from the confirmed model
+        run: node src/index.js generate customer-api/muleforge.yaml
       - name: Contract gate
         run: node src/index.js contract-check customer-api/muleforge.yaml
       - name: Verify reference project
