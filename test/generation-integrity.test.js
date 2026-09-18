@@ -10,6 +10,9 @@ test("generated POM keeps Mule and MUnit plugins inside build/plugins", () => {
   assert.match(pom, /<munit\.version>3\.7\.4<\/munit\.version>/);
   assert.match(pom, /<plugins>[\s\S]*mule-maven-plugin[\s\S]*munit-maven-plugin[\s\S]*<\/plugins>/);
   assert.equal((pom.match(/<plugins>/g) || []).length, 1);
+  assert.match(pom, /<artifactId>munit-runner<\/artifactId>/);
+  assert.match(pom, /<artifactId>munit-tools<\/artifactId>/);
+  assert.match(pom, /<runtimeVersion>\\${app.runtime}<\/runtimeVersion>/);
 });
 
 test("snapshot diff reports added and removed project files", () => {
