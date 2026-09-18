@@ -37,12 +37,27 @@ function source(op, data, endpoint, method, status) {
       return `    <scheduler doc:name="Documented schedule"><scheduling-strategy><fixed-frequency frequency="${match[1]}" timeUnit="${unit}"/></scheduling-strategy></scheduler>\n`;
     }
   }
+  const policy = [];
+  policy.push(`    <set-variable variableName="correlationId" value="#[attributes.headers.'x-correlation-id' default uuid()]" />`);
+  if (op.idempotency) policy.push(`    <set-variable variableName="idempotencyKey" value="#[attributes.headers.'Idempotency-Key' default null]" />
+    <choice doc:name="Validate Idempotency-Key">
+      <when expression="#[isEmpty(vars.idempotencyKey default '')]">
+        <set-variable variableName="httpStatus" value="400" />
+        <raise-error type="VALIDATION:VALIDATION" description="Idempotency-Key header is required" />
+      </when>
+    </choice>`);
+  if (op.pagination) policy.push(`    <set-variable variableName="page" value="#[(attributes.queryParams.page default 1) as Number]" />
+    <set-variable variableName="pageSize" value="#[(attributes.queryParams.pageSize default ${Number(op.pagination.defaultPageSize || 20)}) as Number]" />`);
+  if (op.transaction) policy.push(`    <logger level="INFO" message="Transactional policy requested; review transaction boundary before production use" />`);
   return `    <http:listener config-ref="HTTP_Listener_config" path="${esc(endpoint)}" allowedMethods="${method}">
-      <http:response statusCode="#[vars.httpStatus default ${status}]"/>
+      <http:response statusCode="#[vars.httpStatus default ${status}]">
+        <http:headers><![CDATA[#[{ 'x-correlation-id': vars.correlationId default uuid() }]]]></http:headers>
+      </http:response>
       <http:error-response statusCode="#[vars.httpStatus default 500]">
         <http:body><![CDATA[#[payload]]]></http:body>
       </http:error-response>
-    </http:listener>\n`;
+    </http:listener>
+${policy.join("\n")}\n`;
 }
 
 function params(fields = []) {
