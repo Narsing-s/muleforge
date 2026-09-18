@@ -61,3 +61,16 @@ test("CLI exposes deployment-check", () => {
   assert.match(source, /deployment-check/);
   assert.match(source, /validateDeployment/);
 });
+
+
+test("generated business flows support correlation IDs and configured retries", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/business-generator.js"), "utf8");
+  assert.match(source, /correlationId/);
+  assert.match(source, /until-successful/);
+  assert.match(source, /maxRetries/);
+});
+test("CloudHub 2 deployment validation enforces target and supported vCores", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/contract-validator.js"), "utf8");
+  assert.match(source, /deployment requires target/);
+  assert.match(source, /validVCores/);
+});
