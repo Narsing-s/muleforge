@@ -54,3 +54,10 @@ test("CLI exposes connector-check and sync-docs", () => {
   assert.match(index, /connector-check \[config\]/);
   assert.match(index, /sync-docs \[config\]/);
 });
+
+
+test("CLI exposes deployment-check", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
+  assert.match(source, /deployment-check/);
+  assert.match(source, /validateDeployment/);
+});
