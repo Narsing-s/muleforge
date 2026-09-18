@@ -328,6 +328,7 @@ When adding a feature, update the implementation, tests and user documentation t
 - [x] CloudHub and CloudHub 2.0 deployment helpers
 - [x] Runtime Fabric deployment helpers
 - [x] Deployment target validation and release safety checks
+- [x] On-premises Runtime Manager deployment helper
 - [ ] Public npm release
 - [ ] Stable `1.0.0` release
 
