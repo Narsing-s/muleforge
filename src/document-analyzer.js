@@ -214,7 +214,12 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
 
   function httpEvidenceForOperation(endpoint) {
     const window = operationSection(endpoint);
-    return connectivity.filter(c => c.type === "http" && c.endpoint && window.includes(c.endpoint));
+    const urls = window.match(/https?:\/\/[^\s,)"']+/gi) || [];
+    return [...new Set(urls.map(url => url.replace(/[.,;)]+$/, "")))].map(endpointUrl => ({
+      type: "http",
+      explicit: true,
+      endpoint: endpointUrl
+    }));
   }
 
   function operationConnector(endpoint) {
