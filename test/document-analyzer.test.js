@@ -103,3 +103,17 @@ test("scopes operation windows when multiple endpoints are close together", () =
   assert.equal(model.operations[1].connector, "ibm-mq");
   assert.equal(model.operations[1].destination, "CUSTOMER.OUT");
 });
+
+test("extracts Snowflake connection fields", () => {
+  const model = analyzeRequirementDocument(
+    "POST /customers uses Snowflake. Account name ACME_ACCOUNT warehouse ANALYTICS_WH database CUSTOMER_DB schema PUBLIC role APP_ROLE.",
+    "snowflake.md"
+  );
+  const sf = model.connectivity.find(x => x.type === "snowflake");
+  assert.ok(sf);
+  assert.equal(sf.accountName, "ACME_ACCOUNT");
+  assert.equal(sf.warehouse, "ANALYTICS_WH");
+  assert.equal(sf.database, "CUSTOMER_DB");
+  assert.equal(sf.schema, "PUBLIC");
+  assert.equal(sf.role, "APP_ROLE");
+});
