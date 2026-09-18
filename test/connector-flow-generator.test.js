@@ -17,3 +17,11 @@ test('generates Anypoint MQ publish flow', () => {
   const xml = connectorFlow({ name: 'publish', path: '/messages', method: 'POST', connector: 'anypoint-mq' }, { artifactId: 'mq-api', basePath: '/api/v1' });
   assert.match(xml, /anypoint-mq:publish/);
 });
+
+
+test('generates documented HTTP downstream flow', () => {
+  const xml = connectorFlow({ name: 'get-customer', path: '/customers', method: 'GET', connector: 'http', downstreamEndpoint: 'https://example.test/customers' }, { artifactId: 'customer-api', basePath: '/api/v1' });
+  assert.match(xml, /http:request/);
+  assert.match(xml, /https:\/\/example\.test\/customers/);
+  assert.match(xml, /allowedMethods="GET"/);
+});
