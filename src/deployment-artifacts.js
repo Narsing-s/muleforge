@@ -94,8 +94,35 @@ function deploymentArtifacts(root, config = {}, data = {}) {
   fs.writeFileSync(path.join(dir, 'deploy-cloudhub.yml'), target === 'cloudhub' ? enabledWorkflow('MuleForge CloudHub promotion', java, chValidation, chCommand) : disabled('MuleForge CloudHub promotion', artifact, target), 'utf8');
   fs.writeFileSync(path.join(dir, 'deploy-cloudhub2.yml'), target === 'cloudhub2' ? enabledWorkflow('MuleForge CloudHub 2.0 promotion', java, ch2Validation, ch2Command) : disabled('MuleForge CloudHub 2.0 promotion', artifact, target), 'utf8');
   fs.writeFileSync(path.join(dir, 'deploy-rtf.yml'), target === 'rtf' ? enabledWorkflow('MuleForge Runtime Fabric promotion', java, rtfValidation, rtfCommand) : disabled('MuleForge Runtime Fabric promotion', artifact, target), 'utf8');
+  const onpremValidation = [
+    '      - name: Validate on-premises deployment inputs',
+    '        env:',
+    '          ANYPOINT_ENVIRONMENT: ${{ vars.ANYPOINT_ENVIRONMENT }}',
+    '          ANYPOINT_TARGET: ${{ vars.ANYPOINT_TARGET }}',
+    '          ANYPOINT_TARGET_TYPE: ${{ vars.ANYPOINT_TARGET_TYPE || "server" }}',
+    '          ANYPOINT_APPLICATION_NAME: ${{ vars.ANYPOINT_APPLICATION_NAME }}',
+    '        run: |',
+    '          test -n "$ANYPOINT_ENVIRONMENT" || { echo "::error::ANYPOINT_ENVIRONMENT is required."; exit 1; }',
+    '          test -n "$ANYPOINT_TARGET" || { echo "::error::ANYPOINT_TARGET is required."; exit 1; }',
+    '          test -n "$ANYPOINT_APPLICATION_NAME" || { echo "::error::ANYPOINT_APPLICATION_NAME is required."; exit 1; }'
+  ].join('\\n');
+  const onpremCommand = [
+    '      - name: Deploy on-premises through Runtime Manager',
+    '        env:',
+    '          ANYPOINT_URI: ${{ vars.ANYPOINT_URI || "https://anypoint.mulesoft.com" }}',
+    '          ANYPOINT_ENVIRONMENT: ${{ vars.ANYPOINT_ENVIRONMENT }}',
+    '          ANYPOINT_TARGET: ${{ vars.ANYPOINT_TARGET }}',
+    '          ANYPOINT_TARGET_TYPE: ${{ vars.ANYPOINT_TARGET_TYPE || "server" }}',
+    '          ANYPOINT_APPLICATION_NAME: ${{ vars.ANYPOINT_APPLICATION_NAME }}',
+    '        run: |',
+    '          mvn -B -s "$HOME/.m2/settings.xml" -Dmuleforge.onprem=true \\',
+    '            -Danypoint.uri="$ANYPOINT_URI" -Danypoint.environment="$ANYPOINT_ENVIRONMENT" \\',
+    '            -Danypoint.target="$ANYPOINT_TARGET" -Danypoint.targetType="$ANYPOINT_TARGET_TYPE" \\',
+    '            -Danypoint.applicationName="$ANYPOINT_APPLICATION_NAME" clean deploy -DskipTests=false -DmuleDeploy'
+  ].join('\\n');
+  fs.writeFileSync(path.join(dir, 'deploy-onprem.yml'), target === 'onprem' ? enabledWorkflow('MuleForge on-premises promotion', java, onpremValidation, onpremCommand) : disabled('MuleForge on-premises promotion', artifact, target), 'utf8');
   const docDir = path.join(root, 'docs', '09-deployment');
   fs.mkdirSync(docDir, { recursive: true });
-  fs.writeFileSync(path.join(docDir, 'deployment-matrix.md'), '# Deployment Matrix\n\n| Target | Workflow | Maven strategy |\n|---|---|---|\n| CloudHub 1.0 | `.github/workflows/deploy-cloudhub.yml` | `cloudHubDeployment` |\n| CloudHub 2.0 | `.github/workflows/deploy-cloudhub2.yml` | `cloudhub2Deployment` |\n| Runtime Fabric | `.github/workflows/deploy-rtf.yml` | `runtimeFabricDeployment` |\n| On-premises | Maven/package foundation | Organization-specific |\n\nOnly the workflow matching `deployment.target` is enabled. Other generated workflows are safe no-op templates.\n\nCredentials are supplied through Maven `settings.xml` stored as an approved GitHub secret; usernames, passwords, tokens and client secrets are never generated into workflow files.\n', 'utf8');
+  fs.writeFileSync(path.join(docDir, 'deployment-matrix.md'), '# Deployment Matrix\n\n| Target | Workflow | Maven strategy |\n|---|---|---|\n| CloudHub 1.0 | `.github/workflows/deploy-cloudhub.yml` | `cloudHubDeployment` |\n| CloudHub 2.0 | `.github/workflows/deploy-cloudhub2.yml` | `cloudhub2Deployment` |\n| Runtime Fabric | `.github/workflows/deploy-rtf.yml` | `runtimeFabricDeployment` |\n| On-premises | .github/workflows/deploy-onprem.yml | armDeployment / Runtime Manager |\n\nOnly the workflow matching `deployment.target` is enabled. Other generated workflows are safe no-op templates.\n\nCredentials are supplied through Maven `settings.xml` stored as an approved GitHub secret; usernames, passwords, tokens and client secrets are never generated into workflow files.\n', 'utf8');
 }
 module.exports = { deploymentArtifacts };
