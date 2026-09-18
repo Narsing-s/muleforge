@@ -71,9 +71,13 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     for (const op of operations) {
       const expectedPath = `${api.basePath || ""}${op.path || ""}`;
       const listener = new RegExp(`<http:listener\\b[^>]*path=["']${expectedPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} ["']`, "i");
-      const pathPresent = op.schedule ? /<scheduler\\b/.test(mule) : (mule.includes(`path="${expectedPath}"`) || mule.includes(`path='${expectedPath}'`));
+      const pathPresent = op.schedule ? /<scheduler\b/.test(mule) : (mule.includes(`path="${expectedPath}"`) || mule.includes(`path='${expectedPath}'`));
       const methodPresent = op.schedule ? true : (mule.includes(`allowedMethods="${String(op.method).toUpperCase()}"`) || mule.includes(`allowedMethods='${String(op.method).toUpperCase()}'`));
-      checks.push(result(`Mule operation ${String(op.method).toUpperCase()} ${op.path}`, Boolean(pathPresent && methodPresent), "Generated Mule listener must match the confirmed operation."));
+      const sourcePresent = op.schedule ? /<scheduler\b/.test(mule) : Boolean(pathPresent && methodPresent);
+      const connector = String(op.connector || "").toLowerCase().replace(/_/g, "-");
+      const destinationPresent = connector === "ibm-mq" || connector === "anypoint-mq" ? mule.includes(`destination="${op.destination || ""}"`) : true;
+      const filePresent = connector === "sftp" && op.filePath ? mule.includes(`path="${op.filePath}"`) : true;
+      checks.push(result(`Mule operation ${String(op.method).toUpperCase()} ${op.path}`, Boolean(sourcePresent && destinationPresent && filePresent), "Generated source and documented connector destination/path must match the confirmed operation."));
     }
   }
 
