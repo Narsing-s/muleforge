@@ -52,7 +52,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
       connector === "ibm-mq" ? /mule-ibm-mq-connector/ :
       connector === "anypoint-mq" ? /mule-anypoint-mq-connector/ :
       connector === "sftp" ? /mule-sftp-connector/ :
-      connector === "snowflake" ? /mule-snowflake-connector/ :
+      connector === "snowflake" ? /mule4-snowflake-connector/ :
       connector === "database" ? /mule-db-connector/ :
       null;
     if (dependencyPattern) checks.push(result("Maven dependency " + connector, dependencyPattern.test(pom), "pom.xml must include the " + connector + " connector dependency."));
@@ -76,6 +76,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   if (mule) {
     const connectorIds = new Set((config.connectors || []).map(v => String(v).toLowerCase().replace(/_/g, "-")));
     if (connectorIds.has("sftp")) checks.push(result("SFTP configuration", /<sftp:config\b/.test(mule), "SFTP selection requires a generated configuration."));
+    if (connectorIds.has("snowflake")) checks.push(result("Snowflake configuration", /<snowflake:snowflake-config\b/.test(mule) && /<snowflake:(select|insert)\b/.test(mule), "Snowflake selection requires a native Snowflake configuration and operation."));
     if (connectorIds.has("ibm-mq")) checks.push(result("IBM MQ configuration", /<ibm-mq:config\b/.test(mule) && /<ibm-mq:publish\b/.test(mule), "IBM MQ selection requires a generated configuration and publish operation."));
     if (connectorIds.has("anypoint-mq")) checks.push(result("Anypoint MQ configuration", /<anypoint-mq:config\b/.test(mule) && /<anypoint-mq:publish\b/.test(mule), "Anypoint MQ selection requires a generated configuration and publish operation."));
     checks.push(result("Mule XML declaration", mule.startsWith("<?xml"), "Mule XML should contain an XML declaration."));
