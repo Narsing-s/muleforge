@@ -74,6 +74,18 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   }
 
   if (mule) {
+    const explicitConnectivity = Array.isArray(config.connectivity) ? config.connectivity : [];
+    for (const item of explicitConnectivity) {
+      const type = String(item.type || '').toLowerCase().replace(/_/g, '-');
+      const values = ['endpoint', 'host', 'port', 'path', 'queue', 'topic', 'queueManager', 'channel', 'accountName', 'warehouse', 'database', 'schema', 'role']
+        .filter(field => item[field] !== undefined && item[field] !== null && String(item[field]).trim() !== '')
+        .map(field => String(item[field]));
+      if (values.length) checks.push(result(
+        'Explicit connectivity values ' + type,
+        values.every(value => mule.includes(value)),
+        'Every explicit non-secret connectivity value from the requirement package must appear in the generated Mule configuration.'
+      ));
+    }
     const connectorIds = new Set((config.connectors || []).map(v => String(v).toLowerCase().replace(/_/g, "-")));
     if (connectorIds.has("sftp")) checks.push(result("SFTP configuration", /<sftp:config\b/.test(mule), "SFTP selection requires a generated configuration."));
     if (connectorIds.has("snowflake")) checks.push(result("Snowflake configuration", /<snowflake:snowflake-config\b/.test(mule) && /<snowflake:(select|insert)\b/.test(mule), "Snowflake selection requires a native Snowflake configuration and operation."));
