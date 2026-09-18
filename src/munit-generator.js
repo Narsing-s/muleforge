@@ -8,7 +8,9 @@ function processorMocks(op, data) {
   const connector = String(op.connector || "").toLowerCase().replace(/_/g, "-");
   const mocks = [];
   const add = (processor, payload = "#[{}]") => mocks.push(`      <munit-tools:mock-when processor="${processor}">
-        <munit-tools:then-return payload="${payload}"/>
+        <munit-tools:then-return>
+          <munit-tools:payload value="${payload}"/>
+        </munit-tools:then-return>
       </munit-tools:mock-when>`);
   if (data.hasDatabase) {
     add("db:select", "#[[]]");
@@ -73,7 +75,7 @@ function generateMunit(config, data) {
       <flow-ref name="${xmlEscape(flow)}"/>
     </munit:execution>
     <munit:validation>
-      <munit-tools:assert-that expression="#[vars.httpStatus default ${success}]" is="equalTo(${success})"/>
+      <munit-tools:assert-that expression="#[vars.httpStatus default ${success}]" is="#[MunitTools::equalTo(${success})]"/>
     </munit:validation>
   </munit:test>`);
     const scenarioPlan = deriveScenarioPlan({ ...op, method });
@@ -85,7 +87,7 @@ function generateMunit(config, data) {
       <flow-ref name="${xmlEscape(flow)}"/>
     </munit:execution>
     <munit:validation>
-      <munit-tools:assert-that expression="#[vars.httpStatus default 500]" is="equalTo(500)"/>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 500]" is="#[MunitTools::equalTo(500)]"/>
     </munit:validation>
   </munit:test>`);
     }
@@ -98,7 +100,7 @@ function generateMunit(config, data) {
       <flow-ref name="${xmlEscape(flow)}"/>
     </munit:execution>
     <munit:validation>
-      <munit-tools:assert-that expression="#[vars.httpStatus default 400]" is="equalTo(400)"/>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 400]" is="#[MunitTools::equalTo(400)]"/>
     </munit:validation>
   </munit:test>`);
     }
@@ -116,7 +118,7 @@ function generateMunit(config, data) {
       <flow-ref name="${xmlEscape(flow)}"/>
     </munit:execution>
     <munit:validation>
-      <munit-tools:assert-that expression="#[vars.httpStatus default 404]" is="equalTo(404)"/>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 404]" is="#[MunitTools::equalTo(404)]"/>
     </munit:validation>
   </munit:test>`);
     }
