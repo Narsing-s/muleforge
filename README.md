@@ -184,6 +184,8 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge build` | Build the Mule application |
 | `muleforge clean` | Clean Maven output |
 | `muleforge doctor` | Check local development tools |
+| `muleforge runtime-check` | Check Java, Maven and Mule project prerequisites |
+| `muleforge release-check` | Check release-readiness and required quality artifacts |
 
 Run:
 
