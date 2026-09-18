@@ -112,9 +112,10 @@ function generateMuleXml(config, d) {
     ? '\n  <db:config name="Database_Config"><db:generic-connection url="' + (db.url || prop("db.url")) + '" driverClassName="' + (d.hasSnowflake ? "net.snowflake.client.jdbc.SnowflakeDriver" : "") + '" user="' + (db.user || prop("db.user")) + '" password="' + (db.password || prop("db.password")) + '" /></db:config>\n'
     : "";
   const connectivityConfigs = generateConnectivityConfigs(d);
-  const header = '<?xml version="1.0" encoding="UTF-8"?>\n<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' + namespaces(d) + ' xsi:schemaLocation="' + schemas(d) + '">\n  <http:listener-config name="HTTP_Listener_config"><http:listener-connection host="0.0.0.0" port="' + prop("http.port") + '" /></http:listener-config>\n' + connectivityConfigs + databaseConfig;
-  const flows = (config.operations || []).map(op => connectorFlow(op, d)).filter(Boolean);
-  return header + (flows.length ? flows.join("\n") : generateBusinessFlows(config, d)) + '</mule>\n';
+  const dbNamespace = d.hasDatabase ? ' xmlns:db="http://www.mulesoft.org/schema/mule/db"' : "";
+  const header = '<?xml version="1.0" encoding="UTF-8"?>\n<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' + dbNamespace + " " + namespaces(d) + ' xsi:schemaLocation="' + schemas(d) + '">\n  <http:listener-config name="HTTP_Listener_config"><http:listener-connection host="0.0.0.0" port="' + prop("http.port") + '" /></http:listener-config>\n' + connectivityConfigs + databaseConfig;
+  const flows = (config.operations || []).map(op => connectorFlow(op, d) || generateBusinessFlows({ ...config, operations: [op] }, d)).filter(Boolean);
+  return header + flows.join("\n") + "</mule>\n";
 }
 
 function scenarioText(model) {
