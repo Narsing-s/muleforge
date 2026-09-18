@@ -12,7 +12,7 @@
 | `muleforge clean` | Clean build output |
 | `muleforge doctor` | Check local development tools |
 | `muleforge runtime-check` | Check Java, Maven and Mule project prerequisites without modifying the project |
-| `muleforge release-check` | Check release-readiness, versioning, required docs/CI and secret hygiene |\n| `muleforge deployment-check` | Validate deployment target, version and deployment safety rules |
+| `muleforge release-check` | Check release-readiness, versioning, required docs/CI and secret hygiene || `muleforge deployment-check` | Validate deployment target, version and deployment safety rules |
 | `muleforge self-test` | Run local generation + contract + verification + audit smoke gates |
 | `muleforge explain` | Explain the generated project and flows |
 
