@@ -137,11 +137,17 @@ output application/json
 ---
 { status: "SUCCESS", data: payload }]]></ee:set-payload></ee:message></ee:transform>`);
     }
-    const where = op.where || (fields[0] || 'ID') + ' = :' + (fields[0] || 'id');
+    const pathParameter = String(op.path || '').match(/\{([^}]+)\}/)?.[1] || null;
+    const lookupField = op.lookupField || pathParameter || (fields.find(f => /(?:id|number)$/i.test(String(f))) || 'ID');
+    const parameterName = op.parameterName || pathParameter || lookupField;
+    const where = op.where || String(lookupField).toUpperCase() + ' = :' + parameterName;
+    const input = op.parameters && Object.keys(op.parameters).length
+      ? op.parameters
+      : { [parameterName]: '#[attributes.uriParams.' + parameterName + ' default payload.' + parameterName + ' default null]' };
     return withErrorHandler(`  <flow name="${name}">
 ${source(op, data, endpoint, method, status)}    <db:select config-ref="Database_Config" doc:name="Select ${esc(table)}">
       <db:sql><![CDATA[SELECT * FROM ${table} WHERE ${esc(where)}]]></db:sql>
-      <db:input-parameters><![CDATA[#[${JSON.stringify(op.parameters || {})}]]]></db:input-parameters>
+      <db:input-parameters><![CDATA[#[${JSON.stringify(input)}]]]></db:input-parameters>
     </db:select>
     <set-variable variableName="httpStatus" value="${status}" />`);
   }
