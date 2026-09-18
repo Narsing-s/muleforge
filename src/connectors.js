@@ -5,7 +5,12 @@ const CONNECTORS = {
   sftp: { name: "SFTP", description: "Secure file transfer", maven: "org.mule.connectors:mule-sftp-connector", namespace: "sftp", defaultVersion: "2.5.0" },
   "ibm-mq": { name: "IBM MQ", description: "IBM MQ messaging", maven: "com.mulesoft.connectors:mule-ibm-mq-connector", namespace: "ibm-mq", defaultVersion: "1.9.0" },
   "anypoint-mq": { name: "Anypoint MQ", description: "Anypoint MQ messaging", maven: "com.mulesoft.connectors:mule-anypoint-mq-connector", namespace: "anypoint-mq", defaultVersion: "4.0.23" },
-  "object-store": { name: "Object Store", description: "Mule Object Store", maven: null, namespace: "os" }
+  "object-store": { name: "Object Store", description: "Mule Object Store", maven: null, namespace: "os" },
+  file: { name: "File", description: "Local file operations", maven: "org.mule.connectors:mule-file-connector", namespace: "file", defaultVersion: "1.5.2" },
+  email: { name: "Email", description: "SMTP/IMAP email", maven: "org.mule.connectors:mule-email-connector", namespace: "email", defaultVersion: "1.7.2" },
+  jms: { name: "JMS", description: "JMS messaging", maven: "org.mule.connectors:mule-jms-connector", namespace: "jms", defaultVersion: "2.10.0" },
+  kafka: { name: "Apache Kafka", description: "Kafka messaging", maven: "org.mule.connectors:mule-kafka-connector", namespace: "kafka", defaultVersion: "4.9.0" },
+  salesforce: { name: "Salesforce", description: "Salesforce API integration", maven: "org.mule.connectors:mule-sfdc-connector", namespace: "sfdc", defaultVersion: "11.2.0" }
 };
 
 const ALIASES = {
