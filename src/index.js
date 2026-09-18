@@ -109,6 +109,14 @@ function syncDocs(file = "muleforge.yaml") {
 }
 function mvn(args) { try { execFileSync(process.platform === "win32" ? "mvn.cmd" : "mvn", args, { stdio: "inherit" }); } catch (e) { process.exitCode = e.status || 1; } }
 
+function deploymentCheck(configFile = "muleforge.yaml") {
+  const config = loadConfig(configFile);
+  const result = validateDeployment(config.deployment || {});
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.valid) process.exitCode = 1;
+  return result;
+}
+
 function releaseCheck(directory = ".") {
   const root = path.resolve(directory);
   const checks = [];
