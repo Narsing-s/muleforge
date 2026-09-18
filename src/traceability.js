@@ -13,12 +13,12 @@ function buildTraceability(config = {}, root = null) {
 }
 
 function writeTraceability(root, config) {
+  fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
   const report = buildTraceability(config, root);
   fs.writeFileSync(path.join(root, 'muleforge-traceability.json'), JSON.stringify(report, null, 2) + '\n', 'utf8');
   const rows = report.requirements.map(r => '| ' + r.requirementId + ' | ' + String(r.text || '').replace(/\|/g, '\\|') + ' | ' + r.status + ' | ' + r.targets.join(', ') + ' |');
   const ops = report.operations.map(o => '| ' + o.method + ' ' + o.path + ' | ' + o.connector + ' | ' + o.targets.join(', ') + ' |');
   const md = '# Requirement Traceability\n\nGenerated from the confirmed MuleForge project model.\n\n## Requirements → generated assets\n\n| Requirement | Text | Status | Targets |\n|---|---|---|---|\n' + (rows.join('\n') || '| — | No parsed requirements | review | — |') + '\n\n## Operations → generated assets\n\n| Operation | Connector | Assets |\n|---|---|---|\n' + (ops.join('\n') || '| — | — | — |') + '\n';
-  fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
   fs.writeFileSync(path.join(root, 'docs', '11-traceability.md'), md, 'utf8');
   return report;
 }
