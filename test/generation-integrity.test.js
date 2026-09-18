@@ -108,3 +108,27 @@ test("self-test includes deployment and policy validation", () => {
   assert.match(source, /policies = validateOperationPolicies/);
   assert.match(source, /validateDeployment\(model\.deployment/);
 });
+
+
+test("RAML schema generation preserves requirement request and response fields", () => {
+  const { renderProperties } = require("../src/schema-generator");
+  const request = renderProperties([
+    { name: "email", type: "string", required: true, description: "Customer email" },
+    { name: "age", type: "integer" }
+  ], "            ");
+  const response = renderProperties(["customerId", "status"], "            ");
+  assert.match(request, /email:/);
+  assert.match(request, /type: string/);
+  assert.match(request, /required: true/);
+  assert.match(request, /description: Customer email/);
+  assert.match(request, /age:/);
+  assert.match(response, /customerId:/);
+  assert.match(response, /status:/);
+});
+
+test("generated MUnit assertions use documented MunitTools matcher expressions", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/munit-generator.js"), "utf8");
+  assert.match(source, /MunitTools::equalTo/);
+  assert.match(source, /munit-tools:payload/);
+  assert.doesNotMatch(source, /is="equalTo\(/);
+});
