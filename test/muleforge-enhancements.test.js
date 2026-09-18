@@ -97,3 +97,15 @@ test("deployment target workflow generation covers CloudHub and Runtime Fabric",
   assert.match(ch, /MAVEN_SETTINGS_XML/);
   assert.match(rtf, /deployment is not enabled/);
 });
+
+
+test("on-premises deployment workflow uses Runtime Manager armDeployment", () => {
+  const { deploymentArtifacts } = require("../src/deployment-artifacts");
+  const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-onprem-"));
+  deploymentArtifacts(root, { deployment: { target: "onprem" } }, { artifactId: "sample", java: "17" });
+  const workflow = fs.readFileSync(path.join(root, ".github/workflows/deploy-onprem.yml"), "utf8");
+  assert.match(workflow, /muleforge\.onprem=true/);
+  assert.match(workflow, /ANYPOINT_TARGET_TYPE/);
+  assert.match(workflow, /-DmuleDeploy/);
+});
