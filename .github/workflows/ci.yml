@@ -1,6 +1,13 @@
 name: MuleForge CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      run_maven:
+        description: "Run Maven tests for the generated reference project"
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main, master]
   pull_request:
