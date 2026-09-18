@@ -9,7 +9,7 @@ The manual workflow generates the reference project, runs the contract/verificat
 
 ## Why is runtime validation manual?
 
-Generated Mule applications can require access to MuleSoft/Anypoint Maven repositories. MuleSoft documents Maven as the mechanism used for Mule application packaging and testing, and MUnit 3.7.4 supports Maven 3.9.0–3.9.15 and Mule runtime 4.3+. citeturn0search0turn0search11
+Generated Mule applications can require access to MuleSoft/Anypoint Maven repositories. MuleSoft documents Maven as the mechanism used for Mule application packaging and testing, and MUnit 3.7.4 supports Maven 3.9.0–3.9.15 and Mule runtime 4.3+.
 
 MuleForge therefore does not put enterprise Maven credentials in the repository and does not make every pull request depend on credentials that an open-source contributor may not have.
 
@@ -53,4 +53,4 @@ The workflow uploads available Surefire reports, MUnit coverage reports and the 
 
 A successful Maven/MUnit run validates the generated project against the configured Maven/runtime environment. It does not prove external systems such as a production Snowflake account, SFTP server, MQ broker or Salesforce org are reachable or correctly configured. Those integrations still require environment-specific integration testing and credentials.
 
-MUnit's `munit.runtimeversion` setting is used by the generated POM; MuleSoft documents it as the current replacement for the deprecated `runtimeVersion` setting. citeturn0search4
+MUnit's `munit.runtimeversion` setting is used by the generated POM; MuleSoft documents it as the current replacement for the deprecated `runtimeVersion` setting.
