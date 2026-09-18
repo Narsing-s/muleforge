@@ -72,4 +72,36 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>cloudhub2</id>
+      <activation>
+        <property>
+          <name>muleforge.cloudhub2</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.mule.tools.maven</groupId>
+            <artifactId>mule-maven-plugin</artifactId>
+            <version>${mule.maven.plugin.version}</version>
+            <extensions>true</extensions>
+            <configuration>
+              <cloudhub2Deployment>
+                <uri>${anypoint.uri}</uri>
+                <provider>MC</provider>
+                <environment>${anypoint.environment}</environment>
+                <target>${anypoint.target}</target>
+                <muleVersion>${app.runtime}</muleVersion>
+                <server>muleforge-anypoint</server>
+                <applicationName>${anypoint.applicationName}</applicationName>
+              </cloudhub2Deployment>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
