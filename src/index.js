@@ -4,7 +4,6 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const YAML = require("yaml");
-const Handlebars = require("handlebars");
 const { buildConnectorDependencies, resolveConnectors } = require("./connectors");
 const { registerCreate } = require("./create-command");
 const { readRequirementDocument, analyzeRequirementDocument } = require("./document-analyzer");
@@ -19,7 +18,31 @@ const { writeDocumentation } = require("./requirement-model");
 const VERSION = "0.5.0";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
-const render = (template, data) => Handlebars.compile(template, { noEscape: true })(data);
+const render = (template, data) => {
+  const valueAt = (scope, key) => key.split(".").reduce((value, part) => value == null ? undefined : value[part], scope);
+  const renderBlock = (source, scope) => {
+    let out = source;
+    const blockPattern = /{{#(each|if|unless)\s+([^}]+)}}([\s\S]*?){{\/\1}}/g;
+    let match;
+    while ((match = blockPattern.exec(out))) {
+      const [, kind, key, body] = match;
+      const value = valueAt(scope, key.trim());
+      let replacement = "";
+      if (kind === "each") {
+        if (Array.isArray(value)) replacement = value.map(item => renderBlock(body, item)).join("");
+      } else if ((kind === "if" && value) || (kind === "unless" && !value)) {
+        replacement = renderBlock(body, scope);
+      }
+      out = out.slice(0, match.index) + replacement + out.slice(match.index + match[0].length);
+      blockPattern.lastIndex = 0;
+    }
+    return out.replace(/{{\s*([^#\/][^}]*)\s*}}/g, (_, key) => {
+      const value = valueAt(scope, key.trim());
+      return value == null ? "" : String(value);
+    });
+  };
+  return renderBlock(template, data);
+};
 function loadConfig(file = "muleforge.yaml") { const full = path.resolve(file); if (!fs.existsSync(full)) throw new Error(`Configuration not found: ${file}`); return YAML.parse(fs.readFileSync(full, "utf8")) || {}; }
 function context(config) { const p = config.project || {}, a = config.api || {}, db = config.database || {}; const requested = [...(config.connectors || []), ...(db.type === "snowflake" ? ["database"] : [])]; if (requested.some(c => String(c).toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-") === "snowflake")) requested.push("database"); const connectors = resolveConnectors(requested); const snowflake = db.type === "snowflake" || connectors.some(c => c.id === "snowflake"); return { projectName: p.name || "mule-api", artifactId: p.artifactId || p.name || "mule-api", groupId: p.groupId || "com.example", version: p.version || "1.0.0", muleRuntime: p.muleRuntime || "4.9.0", java: p.java || "17", apiName: a.name || p.name || "Mule API", apiVersion: a.version || "v1", basePath: a.basePath || "/api/v1", connectors, connectorDependencies: buildConnectorDependencies(config, config.connectorVersions || config.connectors?.versions || {}), hasSnowflake: snowflake, hasDatabase: Boolean(db.type) || snowflake || connectors.some(c => c.id === "database"), databaseType: db.type || (snowflake ? "snowflake" : ""), databaseTable: db.table || "CUSTOMER", hasSftp: connectors.some(c => c.id === "sftp") }; }
 function generateRaml(config, d) { let out = `#%RAML 1.0\ntitle: ${d.apiName}\nversion: ${d.apiVersion}\nbaseUri: ${d.basePath}\n\n`; const groups = new Map(); for (const op of config.operations || []) { if (!groups.has(op.path)) groups.set(op.path, []); groups.get(op.path).push(op); } for (const [resource, ops] of groups) for (const op of ops) { const code = op.successStatus || (String(op.method).toUpperCase() === "POST" ? 201 : 200); out += `${resource}:\n  ${String(op.method).toLowerCase()}:\n    description: ${op.name || `${op.method} ${op.path}`}\n    responses:\n      ${code}:\n        body:\n          application/json:\n            type: object\n`; } return out; }
