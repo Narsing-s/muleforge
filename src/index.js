@@ -209,14 +209,14 @@ program.name("muleforge").description("Open-source CLI for requirement-driven Mu
   console.log(JSON.stringify(diff, null, 2));
 });
 
-program.command("self-test").description("Run local generation, contract, verification and audit smoke gates").action(() => {
+program.command("self-test").description("Run local generation, contract, connector, verification and audit smoke gates").action(() => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-self-test-"));
   try {
     const root = path.join(temp, "self-test"); fs.mkdirSync(root, { recursive: true });
     const model = { requirement: "Self-test requirement", project: { name: "self-test", artifactId: "self-test", groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" }, api: { name: "Self Test", version: "v1", basePath: "/api/v1" }, connectors: ["http"], operations: [{ name: "health", method: "GET", path: "/health", connector: "http", responseFields: ["status"], successStatus: 200 }], testing: { munit: true }, deployment: { target: "none" } };
     const cfg = path.join(root, "muleforge.yaml"); write(cfg, YAML.stringify(model)); generateProject(cfg, { copyDesktop: false });
-    const contract = validateContract(cfg), deployment = validateDeployment(model), verification = verifyProject(cfg), audit = auditProject(cfg);
-    if (!contract.valid || !deployment.valid || !verification.ready || !audit.ready) { printReport(verification); printAudit(audit); throw new Error("Self-test quality gates failed."); }
+    const contract = validateContract(cfg), deployment = validateDeployment(model), connectors = auditConnectors(cfg), verification = verifyProject(cfg), audit = auditProject(cfg);
+    if (!contract.valid || !deployment.valid || !connectors.ready || !verification.ready || !audit.ready) { printReport(verification); printAudit(audit); throw new Error("Self-test quality gates failed."); }
     console.log("✔ Self-test passed: generation, contract, verification and audit gates are green.");
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
