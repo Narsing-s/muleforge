@@ -115,9 +115,10 @@ output application/json
     const where = op.where || (fields[0] || 'ID') + ' = :' + (fields[0] || 'id');
     const pagination = op.pagination ? " LIMIT :muleforgePageSize OFFSET :muleforgePageOffset" : "";
     const snowflakeInput = op.pagination ? { ...(op.parameters || {}), muleforgePageSize: "#[vars.pageSize]", muleforgePageOffset: "#[((vars.page - 1) * vars.pageSize)]" } : (op.parameters || {});
+    const snowflakeSelect = op.pagination ? `SELECT *, COUNT(*) OVER() AS TOTAL_COUNT FROM ${table} WHERE ${esc(where)}${pagination}` : `SELECT * FROM ${table} WHERE ${esc(where)}`;
     return withErrorHandler(`  <flow name="${name}">
 ${source(op, data, endpoint, method, status)}    <snowflake:select config-ref="Snowflake_Config" doc:name="Select ${esc(table)}">
-      <snowflake:sql><![CDATA[SELECT *, COUNT(*) OVER() AS TOTAL_COUNT FROM ${table} WHERE ${esc(where)}${pagination}]]></snowflake:sql>
+      <snowflake:sql><![CDATA[${snowflakeSelect}]]></snowflake:sql>
       <snowflake:input-parameters><![CDATA[#[${JSON.stringify(snowflakeInput)}]]]></snowflake:input-parameters>
     </snowflake:select>
     ${op.pagination ? `<ee:transform doc:name="Build pagination response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
@@ -158,6 +159,7 @@ output application/json
       ? op.parameters
       : { [parameterName]: valueExpression };
     const paginationInput = op.pagination ? { ...input, muleforgePageSize: "#[vars.pageSize]", muleforgePageOffset: "#[((vars.page - 1) * vars.pageSize)]" } : input;
+    const databaseSelect = op.pagination ? `SELECT *, COUNT(*) OVER() AS TOTAL_COUNT FROM ${table} WHERE ${esc(where)}${pagination}` : `SELECT * FROM ${table} WHERE ${esc(where)}`;
 
     if (method === 'DELETE') {
       return withErrorHandler(`  <flow name="${name}">
@@ -183,7 +185,7 @@ ${source(op, data, endpoint, method, status)}    <db:update config-ref="Database
 
     return withErrorHandler(`  <flow name="${name}">
 ${source(op, data, endpoint, method, status)}    <db:select config-ref="Database_Config" doc:name="Select ${esc(table)}">
-      <db:sql><![CDATA[SELECT *, COUNT(*) OVER() AS TOTAL_COUNT FROM ${table} WHERE ${esc(where)}${pagination}]]></db:sql>
+      <db:sql><![CDATA[${databaseSelect}]]></db:sql>
       <db:input-parameters><![CDATA[#[${JSON.stringify(paginationInput)}]]]></db:input-parameters>
     </db:select>
     ${op.pagination ? `<ee:transform doc:name="Build pagination response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
