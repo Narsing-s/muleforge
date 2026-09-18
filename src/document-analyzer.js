@@ -115,7 +115,7 @@ function inferConnectivity(text, source) {
   const pathMatch = text.match(/(?:path|directory|folder|location)\s*(?:is|=|:)\s*["']?([^\s"']+)/i);
   const queueMatch = text.match(/(?:queue|destination)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._:/-]+)/i);
   const topicMatch = text.match(/topic\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._:/-]+)/i);
-  const scheduleMatch = text.match(/(?:every|each)\s+(\d+)\s*(minutes?|hours?|seconds?|days?)/i) || text.match(/cron(?: expression)?\s*[:=]\s*([^\n]+)/i);
+  const scheduleMatch = text.match(/(?:every|each)\s+(\d+\s*(?:minutes?|hours?|seconds?|days?))/i) || text.match(/cron(?: expression)?\s*[:=]\s*([^\n]+)/i);
   const hostMatch = text.match(/(?:host|hostname|server)\s*(?:is|=|:)?\s*["']?([A-Za-z0-9._-]+)/i);
   const portMatch = text.match(/(?:port)\s*(?:is|=|:)\s*(\d{2,5})/i);
   const queueManagerMatch = text.match(/(?:queue\s*manager|queuemanager|QM)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
@@ -214,7 +214,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
 
   function httpEvidenceForOperation(endpoint) {
     const window = operationSection(endpoint);
-    return connectivity.filter(c => c.type === "http" && c.endpoint && new RegExp("https?://", "i").test(window));
+    return connectivity.filter(c => c.type === "http" && c.endpoint && window.includes(c.endpoint));
   }
 
   function operationConnector(endpoint) {
@@ -222,7 +222,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     if (nonHttp.length === 0) return "http";
     const local = [...new Set(evidenceForOperation(endpoint).map(c => c.type))];
     if (local.length === 1) return local[0];
-    return nonHttp.length === 1 ? nonHttp[0] : null;
+    return null;
   }
 
   function operationConnectivity(endpoint, type) {
