@@ -189,21 +189,39 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     return local.length === 1 ? local[0] : local[0] || null;
   }
 
+  const nonHttpConnectors = connectorIds.filter(x => x !== "http");
   const operations = endpoints.map(endpoint => {
     const requestFields = inferFields(combined, endpoint);
-    const connector = operationConnector(endpoint);
-    const local = connector ? operationConnectivity(connector) : null;
-    const httpLocal = connectivity.find(x => x.type === "http" && x.endpoint) || null;
+    const downstreamEndpoint = httpConnectivity ? httpConnectivity.endpoint : null;
+    const sftp = connectivity.find(x => x.type === "sftp");
+    const mq = connectivity.find(x => x.type === "ibm-mq" || x.type === "anypoint-mq");
+    const connector = downstreamEndpoint
+      ? "http"
+      : sftp && (sftp.schedule || sftp.path)
+        ? "sftp"
+        : mq && (mq.queue || mq.topic)
+          ? mq.type
+          : nonHttpConnectors.length === 1
+            ? nonHttpConnectors[0]
+            : "http";
+    const ambiguous = !downstreamEndpoint && !sftp?.schedule && !sftp?.path && !mq?.queue && !mq?.topic && nonHttpConnectors.length > 1;
+    if (ambiguous) {
+      merged.conflicts.push({
+        type: "operation-routing",
+        message: "Multiple non-HTTP connectors were detected but the requirement does not identify which connector belongs to this operation.",
+        values: nonHttpConnectors,
+        resolutionRequired: true
+      });
+    }
     return {
       name: endpoint.method.toLowerCase() + slug(endpoint.path).replace(/-/g, "_"),
       method: endpoint.method,
       path: endpoint.path,
       connector,
-      connectorAmbiguous: connector === null,
-      downstreamEndpoint: connector === "http" && (local?.endpoint || httpLocal?.endpoint) || null,
-      schedule: local?.schedule || null,
-      filePath: local?.path || null,
-      destination: local ? (local.queue || local.topic || null) : null,
+      downstreamEndpoint,
+      schedule: (connectivity.find(x => x.schedule) || {}).schedule || null,
+      filePath: (sftp && sftp.path) || null,
+      destination: (mq && (mq.queue || mq.topic)) || null,
       requestFields,
       responseFields: [...new Set([...requestFields, ...(endpoint.method === "POST" ? ["id","status"] : [])])],
       validation: inferValidation(combined, requestFields),
