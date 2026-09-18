@@ -63,6 +63,8 @@
         </executions>
         <configuration>
           <munit.runtimeversion>${app.runtime}</munit.runtimeversion>
+          <enableSurefireReports>true</enableSurefireReports>
+          <skipAfterFailure>false</skipAfterFailure>
           <coverage>
             <runCoverage>true</runCoverage>
             <failBuild>false</failBuild>
