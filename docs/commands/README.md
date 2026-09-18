@@ -11,6 +11,7 @@
 | `muleforge test` | Run project tests |
 | `muleforge clean` | Clean build output |
 | `muleforge doctor` | Check local prerequisites |
+| `muleforge self-test` | Run local generation + contract + verification + audit smoke gates |
 | `muleforge explain` | Explain the generated project and flows |
 
 ## Typical workflow
