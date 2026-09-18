@@ -74,6 +74,25 @@
   </build>
   <profiles>
     <profile>
+      <id>onprem</id>
+      <activation><property><name>muleforge.onprem</name><value>true</value></property></activation>
+      <build><plugins><plugin>
+        <groupId>org.mule.tools.maven</groupId>
+        <artifactId>mule-maven-plugin</artifactId>
+        <version>${mule.maven.plugin.version}</version>
+        <extensions>true</extensions>
+        <configuration><armDeployment>
+          <uri>${anypoint.uri}</uri>
+          <muleVersion>${app.runtime}</muleVersion>
+          <server>muleforge-anypoint</server>
+          <applicationName>${anypoint.applicationName}</applicationName>
+          <target>${anypoint.target}</target>
+          <targetType>${anypoint.targetType}</targetType>
+          <environment>${anypoint.environment}</environment>
+        </armDeployment></configuration>
+      </plugin></plugins></build>
+    </profile>
+    <profile>
       <id>cloudhub</id>
       <activation><property><name>muleforge.cloudhub</name><value>true</value></property></activation>
       <build><plugins><plugin>
