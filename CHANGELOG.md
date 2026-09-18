@@ -1,6 +1,14 @@
+## 0.9.7
+
+- Added detailed RAML request/response field schema generation from requirement fields.
+- Added Basic Authentication contract support to generated RAML security bindings.
+- Corrected generated MUnit matcher syntax to use the documented MunitTools expressions.
+- Corrected generated MUnit connector mocks to use the documented then-return payload structure.
+- Strengthened release readiness so package-lock root metadata must exactly match package.json.
+
 ## 0.9.6
 
-- Added operation policy validation for retries, pagination, idempotency, transactions and security modes.
+- Added operation policy validation for retries, pagination, idempotency, transactions and security.
 - Added RAML contract generation for security, pagination, idempotency and documented error responses.
 - Added generated-flow policy hooks for idempotency, pagination and transaction review boundaries.
 - Added a gated release packaging workflow and expanded release-readiness checks.
@@ -10,7 +18,25 @@
 - Added operation-derived MUnit scenario planning and connector-error coverage.
 - Enabled Surefire reporting in generated MUnit projects.
 
-## 0.9.4\n\n- Added connector integrity auditing across Maven dependencies, XML namespaces, connector configurations and generated operations.\n- Added `muleforge connector-check`.\n- Added `muleforge sync-docs` for documentation and traceability synchronization.\n- Fixed generated native configurations and Snowflake namespace/schema support for connector-aware flows.\n\n## 0.9.3\n\n- Added on-premises Runtime Manager (`armDeployment`) Maven profile and workflow.\n- Added on-premises deployment regression coverage.\n\n## 0.9.2\n\n- Added CloudHub 1.0 and Runtime Fabric Maven deployment profiles.\n- Added target-aware deployment workflows and deployment matrix.\n- Added deployment target validation and release-version safety checks.\n\n## Unreleased
+## 0.9.4
+
+- Added connector integrity auditing across Maven dependencies, XML namespaces, connector configurations and generated operations.
+- Added `muleforge connector-check`.
+- Added `muleforge sync-docs` for documentation and traceability synchronization.
+- Fixed generated native configurations and Snowflake namespace/schema support for connector-aware flows.
+
+## 0.9.3
+
+- Added on-premises Runtime Manager (`armDeployment`) Maven profile and workflow.
+- Added on-premises deployment regression coverage.
+
+## 0.9.2
+
+- Added CloudHub 1.0 and Runtime Fabric Maven deployment profiles.
+- Added target-aware deployment workflows and deployment matrix.
+- Added deployment target validation and release-version safety checks.
+
+## Unreleased
 
 - Added a manual GitHub Actions runtime-validation workflow that generates the reference Mule project and can execute Maven/MUnit tests and packaging with an approved `MAVEN_SETTINGS_XML` secret.
 - Added runtime validation documentation and report/JAR artifact collection.
@@ -41,7 +67,15 @@
 - Deepened quality/security audit checks.
 - Added enhancement tests.
 
-# 0.7.0\n\n- Added machine-readable requirement-to-asset traceability.\n- Added generated `docs/11-traceability.md`.\n- Added `muleforge audit` quality/security hygiene gate.\n- Added `muleforge trace` command.\n- Verification now requires traceability assets for generated projects.\n\n# Changelog
+# 0.7.0
+
+- Added machine-readable requirement-to-asset traceability.
+- Added generated `docs/11-traceability.md`.
+- Added `muleforge audit` quality/security hygiene gate.
+- Added `muleforge trace` command.
+- Verification now requires traceability assets for generated projects.
+
+# Changelog
 
 All notable MuleForge changes are documented here.
 
