@@ -31,11 +31,43 @@ function validate(file = "muleforge.yaml") { const report = verifyProject(file);
 function mvn(args) { try { execFileSync(process.platform === "win32" ? "mvn.cmd" : "mvn", args, { stdio: "inherit" }); } catch (e) { process.exitCode = e.status || 1; } }
 function doctor() {
   console.log("\n🚀 MuleForge Doctor\n");
+
+  const resolveCommand = (name, fallback = null) => {
+    if (process.platform !== "win32") return name;
+    if (fallback && fs.existsSync(fallback)) return fallback;
+
+    const pathEntries = String(process.env.PATH || "")
+      .split(path.delimiter)
+      .filter(Boolean);
+
+    const candidates = [name];
+    if (!path.extname(name)) candidates.push(`${name}.exe`, `${name}.cmd`, `${name}.bat`);
+
+    for (const entry of pathEntries) {
+      for (const candidate of candidates) {
+        const full = path.join(entry, candidate);
+        if (fs.existsSync(full)) return full;
+      }
+    }
+
+    return null;
+  };
+
   const commands = process.platform === "win32"
-    ? { node: "node.exe", java: "java.exe", mvn: "mvn.cmd", git: "git.exe" }
+    ? {
+        node: process.execPath,
+        java: resolveCommand("java", process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, "bin", "java.exe") : null),
+        mvn: resolveCommand("mvn", process.env.MAVEN_HOME ? path.join(process.env.MAVEN_HOME, "bin", "mvn.cmd") : null),
+        git: resolveCommand("git")
+      }
     : { node: "node", java: "java", mvn: "mvn", git: "git" };
 
   for (const [name, command] of Object.entries(commands)) {
+    if (!command) {
+      console.log(`✖ ${name} not found`);
+      continue;
+    }
+
     try {
       execFileSync(command, ["--version"], { stdio: "inherit" });
       console.log(`✔ ${name}`);
