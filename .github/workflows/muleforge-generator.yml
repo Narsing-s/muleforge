@@ -203,6 +203,7 @@ EOF
 
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
           echo "mode=questions" >> "$GITHUB_OUTPUT"
+
       - name: Generate Mule project
         env:
           PROJECT_NAME: ${{ inputs.project_name }}
