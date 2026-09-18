@@ -68,3 +68,25 @@ test("does not silently assign multiple connectors to an operation", () => {
   );
   assert.ok(model.conflicts.some(x => x.type === "operation-routing" && x.resolutionRequired === true));
 });
+
+test("keeps connector and downstream evidence scoped to each operation", () => {
+  const docs = [
+    {
+      name: "integration.md",
+      type: "md",
+      text: [
+        "POST /files Process files using SFTP host sftp.example.com path /inbound.",
+        "Send files to https://files.example.com/v1/import.",
+        "POST /messages Publish messages to IBM MQ host mq.example.com queue CUSTOMER.OUT.",
+        "Send messages to https://messages.example.com/v1/publish."
+      ].join("\n")
+    }
+  ];
+  const model = analyzeRequirementDocument(docs[0].text, docs[0].name, docs);
+  assert.equal(model.operations.length, 2);
+  assert.equal(model.operations[0].connector, "sftp");
+  assert.equal(model.operations[0].downstreamEndpoint, "https://files.example.com/v1/import");
+  assert.equal(model.operations[1].connector, "ibm-mq");
+  assert.equal(model.operations[1].destination, "CUSTOMER.OUT");
+  assert.equal(model.operations[1].downstreamEndpoint, "https://messages.example.com/v1/publish");
+});
