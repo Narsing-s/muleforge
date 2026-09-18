@@ -20,7 +20,7 @@ function auditProject(file = 'muleforge.yaml') {
   add('Unique method/path pairs', new Set(routes).size === routes.length, 'The same HTTP method/path pair should not be generated twice.');
   const secret = /(?:password|client[_-]?secret|access[_-]?token|api[_-]?key)\s*[:=]\s*["']?(?!\$\{|\*{3,}|<[^>]+>)[A-Za-z0-9_\-./+=]{8,}/i;
   const leaked = [];
-  function walk(dir) { if (!fs.existsSync(dir)) return; for (const e of fs.readdirSync(dir,{withFileTypes:true})) { const f=path.join(dir,e.name); if(['target','.git','node_modules'].includes(e.name)) continue; if(e.isDirectory()) walk(f); else if(/\.(xml|yaml|yml|json|dwl|md|js|properties)$/.test(e.name) && secret.test(fs.readFileSync(f,'utf8'))) leaked.push(path.relative(root,f); } }
+  function walk(dir) { if (!fs.existsSync(dir)) return; for (const e of fs.readdirSync(dir,{withFileTypes:true})) { const f=path.join(dir,e.name); if(['target','.git','node_modules'].includes(e.name)) continue; if(e.isDirectory()) walk(f); else if(/\.(xml|yaml|yml|json|dwl|md|js|properties)$/.test(e.name) && secret.test(fs.readFileSync(f,'utf8'))) leaked.push(path.relative(root,f)); } }
   walk(root);
   add('Secret hygiene', leaked.length === 0, leaked.length ? 'Potential hard-coded secret in: ' + leaked.join(', ') : 'No obvious hard-coded secrets detected.');
   if ((config.deployment || {}).target === 'none') warnings.push('Deployment target is not selected; deployment assets remain environment-neutral.');
