@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: muleforge
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: commit
