@@ -45,6 +45,9 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   checks.push(result("No unresolved document conflicts", !Array.isArray(config.conflicts) || config.conflicts.length === 0, "Conflicting source documents must be resolved before generation is considered ready."));
   checks.push(result("Required connectivity configuration", !Array.isArray(config.missingConfigurations) || config.missingConfigurations.length === 0, "Required non-secret connectivity values must be explicitly resolved; credentials may remain environment placeholders."));
   checks.push(result("Operation connector mapping", operations.every(op => (op.connector || !(Array.isArray(config.connectors) && config.connectors.length)) && !op.connectorAmbiguous), "Every analyzed operation must have one unambiguous connector mapping; legacy/reference configs without explicit connector metadata use HTTP as the default source."));
+  const supportedConnectors = new Set(["http", "database", "snowflake", "sftp", "ibm-mq", "anypoint-mq", "object-store"]);
+  const unsupportedOperations = operations.filter(op => op.connector && !supportedConnectors.has(String(op.connector).toLowerCase().replace(/_/g, "-")));
+  checks.push(result("Supported operation connectors", unsupportedOperations.length === 0, unsupportedOperations.length ? "Unsupported connectors cannot be silently replaced with generic business flows: " + unsupportedOperations.map(op => op.connector).join(", ") : "Every operation uses a supported generated connector."));
   checks.push(result("Maven project", Boolean(pom && /<project[\s>]/.test(pom)), "pom.xml must contain a Maven project."));
   for (const connector of (config.connectors || []).map(v => String(v).toLowerCase().replace(/_/g, "-"))) {
     if (connector === "http") continue;
@@ -82,8 +85,8 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
         .map(field => String(item[field]));
       if (values.length) checks.push(result(
         'Explicit connectivity values ' + type,
-        values.every(value => mule.includes(value)),
-        'Every explicit non-secret connectivity value from the requirement package must appear in the generated Mule configuration.'
+        values.every(value => mule.includes(value) || application.includes(value)),
+        'Every explicit non-secret connectivity value from the requirement package must appear in the generated Mule configuration or application.yaml.'
       ));
     }
     const connectorIds = new Set((config.connectors || []).map(v => String(v).toLowerCase().replace(/_/g, "-")));
