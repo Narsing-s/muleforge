@@ -39,7 +39,37 @@ function validateContract(file = "muleforge.yaml") {
   return { valid: errors.length === 0, errors, warnings, operationCount: ops.length };
 }
 
-module.exports = { validateContract, validateDeployment };
+function validateOperationPolicies(operations = []) {
+  const errors = [];
+  const warnings = [];
+  for (const op of operations) {
+    const name = String(op.name || op.path || "operation");
+    const method = String(op.method || "").toUpperCase();
+    if (op.retry != null) {
+      if (typeof op.retry !== "object") errors.push(`${name}: retry must be an object.`);
+      else {
+        if (op.retry.maxRetries != null && (!Number.isInteger(Number(op.retry.maxRetries)) || Number(op.retry.maxRetries) < 1)) errors.push(`${name}: retry.maxRetries must be a positive integer.`);
+        if (op.retry.millisBetweenRetries != null && (!Number.isInteger(Number(op.retry.millisBetweenRetries)) || Number(op.retry.millisBetweenRetries) < 0)) errors.push(`${name}: retry.millisBetweenRetries must be a non-negative integer.`);
+      }
+    }
+    if (op.pagination) {
+      if (!["GET"].includes(method)) errors.push(`${name}: pagination is supported only for GET operations.`);
+      if (typeof op.pagination !== "object") errors.push(`${name}: pagination must be an object.`);
+      else {
+        if (op.pagination.defaultPageSize != null && Number(op.pagination.defaultPageSize) < 1) errors.push(`${name}: pagination.defaultPageSize must be positive.`);
+        if (op.pagination.maxPageSize != null && Number(op.pagination.maxPageSize) < 1) errors.push(`${name}: pagination.maxPageSize must be positive.`);
+        if (Number(op.pagination.defaultPageSize) > Number(op.pagination.maxPageSize)) errors.push(`${name}: pagination.defaultPageSize cannot exceed maxPageSize.`);
+      }
+    }
+    if (op.idempotency && !["POST","PUT","PATCH"].includes(method)) errors.push(`${name}: idempotency is intended for POST, PUT or PATCH.`);
+    if (op.transaction && !["POST","PUT","PATCH","DELETE"].includes(method)) errors.push(`${name}: transaction is intended for write operations.`);
+    if (op.security && !["none","client-id","oauth2","basic"].includes(String(op.security).toLowerCase())) errors.push(`${name}: unsupported security mode.`);
+    if (op.idempotency === true) warnings.push(`${name}: idempotency is enabled; configure a persistent store for production-scale deduplication.`);
+  }
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+module.exports = { validateContract, validateDeployment, validateOperationPolicies };
 
 
 function validateDeployment(deployment = {}) {
