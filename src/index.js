@@ -141,7 +141,7 @@ program.command("self-test").description("Run local generation, contract, verifi
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-self-test-"));
   try {
     const root = path.join(temp, "self-test"); fs.mkdirSync(root, { recursive: true });
-    const model = { requirement: "Self-test requirement", project: { name: "self-test", artifactId: "self-test", groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" }, api: { name: "Self Test", version: "v1", basePath: "/api/v1" }, connectors: ["http"], operations: [{ name: "health", method: "GET", path: "/health", responseFields: ["status"], successStatus: 200 }], testing: { munit: true }, deployment: { target: "none" } };
+    const model = { requirement: "Self-test requirement", project: { name: "self-test", artifactId: "self-test", groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" }, api: { name: "Self Test", version: "v1", basePath: "/api/v1" }, connectors: ["http"], operations: [{ name: "health", method: "GET", path: "/health", connector: "http", responseFields: ["status"], successStatus: 200 }], testing: { munit: true }, deployment: { target: "none" } };
     const cfg = path.join(root, "muleforge.yaml"); write(cfg, YAML.stringify(model)); generateProject(cfg, { copyDesktop: false });
     const contract = validateContract(cfg), verification = verifyProject(cfg), audit = auditProject(cfg);
     if (!contract.valid || !verification.ready || !audit.ready) { printReport(verification); printAudit(audit); throw new Error("Self-test quality gates failed."); }
