@@ -3,7 +3,6 @@ const path = require("path");
 const readline = require("readline/promises");
 const { stdin, stdout } = require("process");
 const YAML = require("yaml");
-const os = require("os");
 const { spawnSync } = require("child_process");
 const { buildRequirementModel, missingQuestions, writeDocumentation } = require("./requirement-model");
 
