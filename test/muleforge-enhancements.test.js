@@ -109,3 +109,11 @@ test("on-premises deployment workflow uses Runtime Manager armDeployment", () =>
   assert.match(workflow, /ANYPOINT_TARGET_TYPE/);
   assert.match(workflow, /-DmuleDeploy/);
 });
+
+
+test("connector-generated flows include shared correlation and policy hooks", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/connector-flow-generator.js"), "utf8");
+  assert.match(source, /correlationId/);
+  assert.match(source, /Idempotency-Key/);
+  assert.match(source, /queryParams\.page/);
+});
