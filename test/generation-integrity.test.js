@@ -31,4 +31,6 @@ test("snapshot diff reports added and removed project files", () => {
 test("release-check is exposed by the CLI", () => {
   const index = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
   assert.match(index, /release-check \[directory\]/);
+  assert.match(index, /runtime-validation\.yml/);
+  assert.match(index, /docs.*cicd.*runtime-validation\.md/);
 });
