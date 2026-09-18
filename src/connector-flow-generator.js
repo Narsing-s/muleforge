@@ -1,5 +1,5 @@
 function generatedErrorHandler() {
-  return `    <error-handler>
+  return `    <error-handler>\n      <on-error-continue type="OS:KEY_ALREADY_EXISTS" logException="false">\n        <set-variable variableName="httpStatus" value="409"/>\n        <set-payload value="#[{ status: 'FAILED', code: 'IDEMPOTENCY_DUPLICATE', message: 'The Idempotency-Key has already been processed or is currently in progress' }]" mimeType="application/json"/>\n      </on-error-continue>
       <on-error-propagate type="CONNECTIVITY" logException="true">
         <set-variable variableName="httpStatus" value="503"/>
         <set-payload value="#[{ status: 'FAILED', code: 'DEPENDENCY_ERROR', message: error.description default 'Dependency unavailable' }]" mimeType="application/json"/>
@@ -48,7 +48,7 @@ function source(op, data, endpoint, method, status) {
     </choice>`);
   if (op.pagination) policy.push(`    <set-variable variableName="page" value="#[(attributes.queryParams.page default 1) as Number]" />
     <set-variable variableName="pageSize" value="#[(attributes.queryParams.pageSize default ${Number(op.pagination.defaultPageSize || 20)}) as Number]" />`);
-  if (op.transaction) policy.push(`    <logger level="INFO" message="Transactional policy requested; review transaction boundary before production use" />`);
+  if (op.transaction) policy.push(`    <try transactionalAction="ALWAYS_BEGIN" transactionType="LOCAL">`);
   return `    <http:listener config-ref="HTTP_Listener_config" path="${esc(endpoint)}" allowedMethods="${method}">
       <http:response statusCode="#[vars.httpStatus default ${status}]">
         <http:headers><![CDATA[#[{ 'x-correlation-id': vars.correlationId default uuid() }]]]></http:headers>
@@ -65,7 +65,8 @@ function params(fields = []) {
 }
 
 function withErrorHandler(body) {
-  return `${body}\n${generatedErrorHandler()}\n  </flow>\n`;
+  const closeTransaction = body.includes('<try transactionalAction="ALWAYS_BEGIN"') ? "    </try>\n" : "";
+  return `${body}\n${closeTransaction}${generatedErrorHandler()}\n  </flow>\n`;
 }
 
 function connectorFlow(op, data) {
@@ -111,9 +112,10 @@ output application/json
 { status: "SUCCESS", data: payload }]]></ee:set-payload></ee:message></ee:transform>`);
     }
     const where = op.where || (fields[0] || 'ID') + ' = :' + (fields[0] || 'id');
+    const pagination = op.pagination ? ` LIMIT ${Number(op.pagination.maxPageSize || 100)} OFFSET ${Number(op.pagination.defaultPageSize || 20)} * (${Number(op.pagination.defaultPage || 1)} - 1)` : "";
     return withErrorHandler(`  <flow name="${name}">
 ${source(op, data, endpoint, method, status)}    <snowflake:select config-ref="Snowflake_Config" doc:name="Select ${esc(table)}">
-      <snowflake:sql><![CDATA[SELECT * FROM ${table} WHERE ${esc(where)}]]></snowflake:sql>
+      <snowflake:sql><![CDATA[SELECT *, COUNT(*) OVER() AS TOTAL_COUNT FROM ${table} WHERE ${esc(where)}${pagination}]]></snowflake:sql>
       <snowflake:input-parameters><![CDATA[#[${JSON.stringify(op.parameters || {})}]]]></snowflake:input-parameters>
     </snowflake:select>
     <set-variable variableName="httpStatus" value="${status}" />`);
@@ -139,6 +141,7 @@ output application/json
     }
     const pathParameter = String(op.path || '').match(/\{([^}]+)\}/)?.[1] || null;
     const lookupField = op.lookupField || pathParameter || (fields.find(f => /(?:id|number)$/i.test(String(f))) || 'ID');
+    const pagination = op.pagination ? ` LIMIT ${Number(op.pagination.maxPageSize || 100)} OFFSET ${Number(op.pagination.defaultPageSize || 20)} * (${Number(op.pagination.defaultPage || 1)} - 1)` : "";
     const parameterName = op.parameterName || pathParameter || lookupField;
     const where = op.where || String(lookupField).toUpperCase() + ' = :' + parameterName;
     const valueExpression = '#[attributes.uriParams.' + parameterName + ' default payload.' + parameterName + ' default null]';
