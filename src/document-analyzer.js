@@ -227,12 +227,23 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     };
   });
 
-  if (!operations.length && connectorIds.length) operations.push({
-    name: "integration-process", method: "POST", path: "/process",
-    connector: connectorIds.length === 1 ? connectorIds[0] : null,
-    connectorAmbiguous: connectorIds.length !== 1, requestFields: [], responseFields: [],
-    validation: [], successStatus: 200, errors
-  });
+  if (!operations.length && connectorIds.length) {
+    const nonHttp = connectorIds.filter(x => x !== "http");
+    const httpLocal = connectivity.find(x => x.type === "http" && x.endpoint) || null;
+    operations.push({
+      name: "integration-process",
+      method: "POST",
+      path: "/process",
+      connector: nonHttp.length === 1 ? nonHttp[0] : (connectorIds.length === 1 ? connectorIds[0] : null),
+      connectorAmbiguous: nonHttp.length > 1,
+      downstreamEndpoint: httpLocal?.endpoint || null,
+      requestFields: [],
+      responseFields: [],
+      validation: [],
+      successStatus: 200,
+      errors
+    });
+  }
 
   const operationConflicts = operations.filter(op => op.connectorAmbiguous).map(op => ({
     type: "operation-connector",
