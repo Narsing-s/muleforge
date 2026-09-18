@@ -7,7 +7,7 @@ api:
 
 {{#if hasSnowflake}}
 snowflake:
-  account: ${snowflake.account}
+  accountName: ${snowflake.accountName}
   warehouse: ${snowflake.warehouse}
   database: ${snowflake.database}
   schema: ${snowflake.schema}
@@ -33,10 +33,12 @@ anypointmq:
 {{/if}}
 
 {{#if hasDatabase}}
+{{#unless hasSnowflake}}
 database:
   url: ${db.url}
   user: ${db.user}
   password: ${db.password}
+{{/unless}}
 {{/if}}
 
 {{#if hasSftp}}
