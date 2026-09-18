@@ -160,18 +160,18 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   // Keep operation-to-connector mapping local to the requirement evidence.
   // Never silently attach the first detected connector to every API operation.
   function evidenceForOperation(endpoint) {
-    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
+    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\]/g, "\\const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");");
     const marker = new RegExp("\\b" + endpoint.method + "\\s+" + escapedPath + "\\b", "i");
     const hit = marker.exec(combined);
     if (!hit) return [];
     const window = combined.slice(Math.max(0, hit.index - 700), Math.min(combined.length, hit.index + hit[0].length + 1200));
     const patterns = {
-      "ibm-mq": "ibm\\\\s*mq|websphere\\\\s*mq|queue\\\\s*manager",
-      "anypoint-mq": "anypoint\\\\s*mq",
-      sftp: "\\\\bsftp\\\\b|secure\\\\s+file\\\\s+transfer",
-      snowflake: "\\\\bsnowflake\\\\b",
-      database: "\\\\b(mysql|postgres(?:ql)?|oracle|database|sql)\\\\b",
-      "object-store": "object\\\\s*store|objectstore"
+      "ibm-mq": "ibm\\s*mq|websphere\\s*mq|queue\\s*manager",
+      "anypoint-mq": "anypoint\\s*mq",
+      sftp: "\\bsftp\\b|secure\\s+file\\s+transfer",
+      snowflake: "\\bsnowflake\\b",
+      database: "\\b(mysql|postgres(?:ql)?|oracle|database|sql)\\b",
+      "object-store": "object\\s*store|objectstore"
     };
     return connectivity.filter(c => c.type !== "http" && patterns[c.type] && new RegExp(patterns[c.type], "i").test(window));
   }
