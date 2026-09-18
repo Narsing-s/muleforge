@@ -58,7 +58,7 @@ function copyProjectToDesktop(root) {
   if (!desktop) return null;
   const desktopRoot = path.join(desktop, path.basename(root));
   if (path.resolve(desktopRoot) === path.resolve(root)) return desktopRoot;
-  if (fs.existsSync(desktopRoot)) return desktopRoot;
+  if (fs.existsSync(desktopRoot)) fs.rmSync(desktopRoot, { recursive: true, force: true });
   fs.cpSync(root, desktopRoot, { recursive: true });
   return desktopRoot;
 }
