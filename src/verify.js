@@ -48,7 +48,13 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   checks.push(result("Maven project", Boolean(pom && /<project[\s>]/.test(pom)), "pom.xml must contain a Maven project."));
   for (const connector of (config.connectors || []).map(v => String(v).toLowerCase().replace(/_/g, "-"))) {
     if (connector === "http") continue;
-    const dependencyPattern = connector === "ibm-mq" ? /mule-ibm-mq-connector/ : connector === "anypoint-mq" ? /mule-anypoint-mq-connector/ : connector === "sftp" ? /mule-sftp-connector/ : connector === "database" || connector === "snowflake" ? /mule-db-connector/ : null;
+    const dependencyPattern =
+      connector === "ibm-mq" ? /mule-ibm-mq-connector/ :
+      connector === "anypoint-mq" ? /mule-anypoint-mq-connector/ :
+      connector === "sftp" ? /mule-sftp-connector/ :
+      connector === "snowflake" ? /mule-snowflake-connector/ :
+      connector === "database" ? /mule-db-connector/ :
+      null;
     if (dependencyPattern) checks.push(result("Maven dependency " + connector, dependencyPattern.test(pom), "pom.xml must include the " + connector + " connector dependency."));
   }
   checks.push(result("Mule artifact", exists(root, "mule-artifact.json"), "mule-artifact.json is required."));
@@ -75,7 +81,14 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     checks.push(result("Mule XML declaration", mule.startsWith("<?xml"), "Mule XML should contain an XML declaration."));
     checks.push(result("Mule root", /<mule\b/.test(mule) && /<\/mule>\s*$/.test(mule), "Mule XML must have a mule root element."));
   checks.push(result("No escaped-newline artifacts", !mule.includes("\\n"), "Generated Mule XML must contain real line breaks, not literal \\n text."));
-  checks.push(result("Flow error handling", (mule.match(/<error-handler>/g) || []).length >= operations.length, "Every generated operation flow must contain an error handler."));
+    const flowBlocks = [...mule.matchAll(/<flow\\b[^>]*name="([^"]+)"[^>]*>[\\s\\S]*?<\\/flow>/g)];
+    const flowNames = new Set(flowBlocks.map(m => m[1]));
+    const operationFlowsChecked = operations.map(op => ({
+      name: `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`,
+      block: flowBlocks.find(m => m[1] === `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`)?.[0] || ""
+    }));
+    checks.push(result("Flow error handling", operationFlowsChecked.every(x => /<error-handler>/.test(x.block)), "Every generated operation flow must contain its own error handler."));
+    checks.push(result("Generated operation flow names", operationFlowsChecked.every(x => flowNames.has(x.name)), "Every configured operation must map to a generated Mule flow."));
     checks.push(result("HTTP listener config", /<http:listener-config\b/.test(mule), "An HTTP listener configuration is expected for HTTP APIs."));
     for (const op of operations) {
       const expectedPath = `${api.basePath || ""}${op.path || ""}`;
