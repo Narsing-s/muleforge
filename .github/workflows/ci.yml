@@ -21,7 +21,18 @@ jobs:
       - name: Install dependencies
         run: |
           npm cache clean --force
-          for i in 1 2 3 4 5; do rm -rf ~/.npm/_cacache/tmp/* || true; npm cache verify || true; if npm ci --prefer-online --registry=https://registry.npmjs.org --fetch-retries=8 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=30000; then exit 0; fi; echo "npm ci attempt $i failed; retrying with a fresh cache"; rm -rf ~/.npm/_cacache; sleep $((i * 3)); done; exit 1
+          for registry in https://registry.npmjs.org https://registry.yarnpkg.com; do
+            for i in 1 2 3 4 5; do
+              rm -rf ~/.npm/_cacache/tmp/* || true
+              npm cache verify || true
+              if npm ci --prefer-online --registry="$registry" --replace-registry-host=always --fetch-retries=8 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=30000; then exit 0; fi
+              echo "npm ci attempt $i failed against $registry; retrying with a fresh cache"
+              rm -rf ~/.npm/_cacache
+              sleep $((i * 3))
+            done
+            echo "npm ci failed against $registry; trying the next registry"
+          done
+          exit 1
       - run: npm test
       - run: node src/index.js --help
 
@@ -38,7 +49,12 @@ jobs:
       - name: Install dependencies
         run: |
           npm cache clean --force
-          npm ci --prefer-online --fetch-retries=5 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=20000
+          for registry in https://registry.npmjs.org https://registry.yarnpkg.com; do
+            if npm ci --prefer-online --registry="$registry" --replace-registry-host=always --fetch-retries=8 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=30000; then exit 0; fi
+            echo "npm ci failed against $registry; clearing cache and trying the next registry"
+            rm -rf ~/.npm/_cacache
+          done
+          exit 1
       - name: Verify reference project
         run: node src/index.js verify customer-api
       - name: Upload generated project metadata
