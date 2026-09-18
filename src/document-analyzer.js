@@ -120,8 +120,10 @@ function inferConnectivity(text, source) {
     const schedule = text.match(/(?:every|each)\s+(\d+)\s*(minutes?|hours?|seconds?|days?)/i) || text.match(/cron(?: expression)?\s*[:=]\s*([^\n]+)/i);
     const host = text.match(/(?:host|hostname|server)\s*(?:is|=|:)??\s*["']?([A-Za-z0-9._-]+)/i);
     const port = text.match(/(?:port)\s*(?:is|=|:)\s*(\d{2,5})/i);
+    const queueManager = text.match(/(?:queue\s*manager|queuemanager|QM)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
+    const channel = text.match(/(?:channel)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
     const auth = /oauth2|oauth 2/i.test(text) ? "oauth2" : /basic auth|basic authentication/i.test(text) ? "basic" : /client credentials/i.test(text) ? "client-credentials" : /api[- ]?key/i.test(text) ? "apikey" : /username.*password|user.*password/i.test(text) ? "username-password" : null;
-    out.push({ type, explicit: true, endpoint: endpoint ? endpoint.replace(/[.,;)]+$/, "") : null, path: p ? p[1].replace(/[.,;)]+$/, "") : null, queue: q ? q[1] : null, topic: topic ? topic[1] : null, host: host ? host[1] : null, port: port ? Number(port[1]) : null, schedule: schedule ? schedule[1] : null, auth, source: source || "requirement" });
+    out.push({ type, explicit: true, endpoint: endpoint ? endpoint.replace(/[.,;)]+$/, "") : null, path: p ? p[1].replace(/[.,;)]+$/, "") : null, queue: q ? q[1] : null, topic: topic ? topic[1] : null, host: host ? host[1] : null, port: port ? Number(port[1]) : null, queueManager: queueManager ? queueManager[1] : null, channel: channel ? channel[1] : null, schedule: schedule ? schedule[1] : null, auth, source: source || "requirement" });
   }
   return out;
 }
