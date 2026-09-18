@@ -96,6 +96,8 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     checks.push(result("No escaped-newline artifacts", !mule.includes("\\n"), "Generated Mule XML must contain real line breaks, not literal \\n text."));
     const flowBlocks = [...mule.matchAll(/<flow\b[^>]*name="([^"]+)"[^>]*>[\s\S]*?<\/flow>/g)];
     const flowNames = new Set(flowBlocks.map(m => m[1]));
+    const expectedOperationFlowNames = operations.map(op => artifactId + "-" + String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-") + "-flow");
+    checks.push(result("Unique generated operation flow names", new Set(expectedOperationFlowNames).size === expectedOperationFlowNames.length, "Operation names must remain unique after Mule flow-name sanitization."));
     const operationFlowsChecked = operations.map(op => ({
       name: `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`,
       block: flowBlocks.find(m => m[1] === `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`)?.[0] || ""
