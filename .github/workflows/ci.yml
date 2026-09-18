@@ -82,6 +82,20 @@ jobs:
       - name: Generated Maven project gate
         if: success()
         run: test -f customer-api/pom.xml && test -f customer-api/mule-artifact.json
+      - name: Run generated Maven tests
+        if: ${{ inputs.run_maven == true }}
+        working-directory: customer-api
+        env:
+          MAVEN_SETTINGS_XML: ${{ secrets.MAVEN_SETTINGS_XML }}
+        run: |
+          if [ -z "$MAVEN_SETTINGS_XML" ]; then
+            echo "::error::MAVEN_SETTINGS_XML is required when run_maven=true."
+            exit 1
+          fi
+          mkdir -p "$HOME/.m2"
+          printf '%s' "$MAVEN_SETTINGS_XML" > "$HOME/.m2/settings.xml"
+          mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false test -Dmunit.coverage.failBuild=false
+
       - name: Quality audit
         run: node src/index.js audit customer-api/muleforge.yaml
       - name: Upload generated project metadata
