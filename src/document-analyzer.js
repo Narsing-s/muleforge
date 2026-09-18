@@ -227,7 +227,17 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     }));
   }
 
+  function explicitConnectorForOperation(endpoint) {
+    const window = operationSection(endpoint);
+    const match = window.match(/(?:connector|integration|source|uses)\s*:\s*(http|database|mysql|postgres|postgresql|oracle|snowflake|sftp|ibm[- ]?mq|anypoint[- ]?mq|object[- ]?store|file|email|jms|kafka|salesforce)\b/i);
+    if (!match) return null;
+    const value = match[1].toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-");
+    return value === "mysql" || value === "postgres" || value === "postgresql" || value === "oracle" ? "database" : value;
+  }
+
   function operationConnector(endpoint) {
+    const explicit = explicitConnectorForOperation(endpoint);
+    if (explicit) return explicit;
     const nonHttp = [...new Set(connectivity.filter(c => c.type !== "http").map(c => c.type))];
     if (nonHttp.length === 0) return "http";
     const local = [...new Set(evidenceForOperation(endpoint).map(c => c.type))];
@@ -237,7 +247,9 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
 
   function operationConnectivity(endpoint, type) {
     const local = evidenceForOperation(endpoint).filter(c => c.type === type);
-    return local.length === 1 ? local[0] : null;
+    if (local.length === 1) return local[0];
+    const global = connectivity.filter(c => c.type === type);
+    return global.length === 1 ? global[0] : null;
   }
 
   const operations = endpoints.map(endpoint => {
