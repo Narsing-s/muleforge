@@ -1,4 +1,4 @@
-## 0.9.2\n\n- Added CloudHub 1.0 and Runtime Fabric Maven deployment profiles.\n- Added target-aware deployment workflows and deployment matrix.\n- Added deployment target validation and release-version safety checks.\n\n## Unreleased
+## 0.9.3\n\n- Added on-premises Runtime Manager (`armDeployment`) Maven profile and workflow.\n- Added on-premises deployment regression coverage.\n\n## 0.9.2\n\n- Added CloudHub 1.0 and Runtime Fabric Maven deployment profiles.\n- Added target-aware deployment workflows and deployment matrix.\n- Added deployment target validation and release-version safety checks.\n\n## Unreleased
 
 - Added a manual GitHub Actions runtime-validation workflow that generates the reference Mule project and can execute Maven/MUnit tests and packaging with an approved `MAVEN_SETTINGS_XML` secret.
 - Added runtime validation documentation and report/JAR artifact collection.
