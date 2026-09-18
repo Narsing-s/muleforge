@@ -185,6 +185,7 @@ function releaseCheck(directory = ".") {
   add("generator template", fs.existsSync(path.join(root, "templates", "pom.xml.hbs")), "Generated Maven template is required.");
   add("connector audit", fs.existsSync(path.join(root, "src", "connector-audit.js")), "Connector integrity audit is required.");
   add("MUnit scenario generator", fs.existsSync(path.join(root, "src", "munit-generator.js")), "MUnit scenario generation is required.");
+  add("RAML schema generator", fs.existsSync(path.join(root, "src", "schema-generator.js")), "Detailed RAML request/response schema generation is required.");
   add("gitignore", fs.existsSync(path.join(root, ".gitignore")), ".gitignore is required.");
   const forbidden = [];
   const scan = dir => {
@@ -273,7 +274,7 @@ program.command("self-test").description("Run local generation, contract, connec
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-self-test-"));
   try {
     const root = path.join(temp, "self-test"); fs.mkdirSync(root, { recursive: true });
-    const model = { requirement: "Self-test requirement", project: { name: "self-test", artifactId: "self-test", groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" }, api: { name: "Self Test", version: "v1", basePath: "/api/v1" }, connectors: ["http"], operations: [{ name: "health", method: "GET", path: "/health", connector: "http", responseFields: ["status"], successStatus: 200 }], testing: { munit: true }, deployment: { target: "none" } };
+    const model = { requirement: "Self-test requirement", project: { name: "self-test", artifactId: "self-test", groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" }, api: { name: "Self Test", version: "v1", basePath: "/api/v1" }, connectors: ["http"], operations: [{ name: "health", method: "GET", path: "/health", connector: "http", requestFields: [{ name: "name", type: "string", required: true }, { name: "email", type: "string" }], responseFields: ["status"], successStatus: 200 }], testing: { munit: true }, deployment: { target: "none" } };
     const cfg = path.join(root, "muleforge.yaml"); write(cfg, YAML.stringify(model)); generateProject(cfg, { copyDesktop: false });
     const contract = validateContract(cfg), deployment = validateDeployment(model.deployment || {}), policies = validateOperationPolicies(model.operations || []), connectors = auditConnectors(cfg), verification = verifyProject(cfg), audit = auditProject(cfg);
     if (!contract.valid || !deployment.valid || !policies.valid || !connectors.ready || !verification.ready || !audit.ready) { printReport(verification); printAudit(audit); throw new Error("Self-test quality gates failed."); }
