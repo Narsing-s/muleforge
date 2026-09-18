@@ -13,7 +13,12 @@ function genericFlow(op, data) {
   const endpoint = `${data.basePath}${op.path}`;
   const status = Number(op.successStatus || (String(op.method).toUpperCase() === "POST" ? 201 : 200));
   const correlation = `    <set-variable variableName="correlationId" value="#[attributes.headers.'x-correlation-id' default uuid()]" />`;
-  const body = `      <ee:transform doc:name="Validate and normalize request"><ee:message><ee:set-payload><![CDATA[%dw 2.0
+  const policyPrelude = [];
+  if (op.idempotency) policyPrelude.push('      <set-variable variableName="idempotencyKey" value="#[attributes.headers.\'Idempotency-Key\' default null]" />\n      <choice doc:name="Validate Idempotency-Key">\n        <when expression="#[isEmpty(vars.idempotencyKey default \'\')]">\n          <set-variable variableName="httpStatus" value="400" />\n          <raise-error type="VALIDATION:VALIDATION" description="Idempotency-Key header is required" />\n        </when>\n      </choice>');
+  if (op.pagination) policyPrelude.push('      <set-variable variableName="page" value="#[(attributes.queryParams.page default 1) as Number]" />\n      <set-variable variableName="pageSize" value="#[(attributes.queryParams.pageSize default ' + Number(20) + ') as Number]" />');
+  if (op.transaction) policyPrelude.push('      <logger level="INFO" message="Transactional policy requested; review transaction boundary before production use" />');
+  const body = `\${policyPrelude.join("\\n")}
+      <ee:transform doc:name="Validate and normalize request"><ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 ${dwValidation(op.validation)}]]></ee:set-payload></ee:message></ee:transform>
