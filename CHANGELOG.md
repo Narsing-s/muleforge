@@ -1,3 +1,8 @@
+## 0.9.5
+
+- Added operation-derived MUnit scenario planning and connector-error coverage.
+- Enabled Surefire reporting in generated MUnit projects.
+
 ## 0.9.4\n\n- Added connector integrity auditing across Maven dependencies, XML namespaces, connector configurations and generated operations.\n- Added `muleforge connector-check`.\n- Added `muleforge sync-docs` for documentation and traceability synchronization.\n- Fixed generated native configurations and Snowflake namespace/schema support for connector-aware flows.\n\n## 0.9.3\n\n- Added on-premises Runtime Manager (`armDeployment`) Maven profile and workflow.\n- Added on-premises deployment regression coverage.\n\n## 0.9.2\n\n- Added CloudHub 1.0 and Runtime Fabric Maven deployment profiles.\n- Added target-aware deployment workflows and deployment matrix.\n- Added deployment target validation and release-version safety checks.\n\n## Unreleased
 
 - Added a manual GitHub Actions runtime-validation workflow that generates the reference Mule project and can execute Maven/MUnit tests and packaging with an approved `MAVEN_SETTINGS_XML` secret.
