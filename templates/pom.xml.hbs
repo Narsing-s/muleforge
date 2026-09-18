@@ -7,32 +7,16 @@
   <properties>
     <app.runtime>{{muleRuntime}}</app.runtime>
     <mule.maven.plugin.version>4.3.0</mule.maven.plugin.version>
+    <munit.version>3.7.4</munit.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <repositories>
-    <repository>
-      <id>anypoint-exchange</id>
-      <name>Anypoint Exchange</name>
-      <url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
-    </repository>
-    <repository>
-      <id>mulesoft-releases</id>
-      <name>MuleSoft Releases Repository</name>
-      <url>https://repository.mulesoft.org/releases/</url>
-    </repository>
-    <repository>
-      <id>mulesoft-public</id>
-      <name>MuleSoft Public Repository</name>
-      <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
-    </repository>
+    <repository><id>anypoint-exchange</id><name>Anypoint Exchange</name><url>https://maven.anypoint.mulesoft.com/api/v3/maven</url></repository>
+    <repository><id>mulesoft-releases</id><name>MuleSoft Releases Repository</name><url>https://repository.mulesoft.org/releases/</url></repository>
+    <repository><id>mulesoft-public</id><name>MuleSoft Public Repository</name><url>https://repository.mulesoft.org/nexus/content/repositories/public/</url></repository>
   </repositories>
   <pluginRepositories>
-    <pluginRepository>
-      <id>mulesoft-releases</id>
-      <name>MuleSoft Releases Repository</name>
-      <url>https://repository.mulesoft.org/releases/</url>
-      <snapshots><enabled>false</enabled></snapshots>
-    </pluginRepository>
+    <pluginRepository><id>mulesoft-releases</id><name>MuleSoft Releases Repository</name><url>https://repository.mulesoft.org/releases/</url><snapshots><enabled>false</enabled></snapshots></pluginRepository>
   </pluginRepositories>
   <dependencies>
     {{#each connectorDependencies}}
@@ -52,30 +36,25 @@
         <version>${mule.maven.plugin.version}</version>
         <extensions>true</extensions>
       </plugin>
+      <plugin>
+        <groupId>com.mulesoft.munit.tools</groupId>
+        <artifactId>munit-maven-plugin</artifactId>
+        <version>${munit.version}</version>
+        <executions>
+          <execution>
+            <id>test</id>
+            <phase>test</phase>
+            <goals><goal>test</goal><goal>coverage-report</goal></goals>
+          </execution>
+        </executions>
+        <configuration>
+          <coverage>
+            <runCoverage>true</runCoverage>
+            <failBuild>false</failBuild>
+            <formats><format>html</format><format>json</format></formats>
+          </coverage>
+        </configuration>
+      </plugin>
     </plugins>
-    <plugin>
-      <groupId>com.mulesoft.munit.tools</groupId>
-      <artifactId>munit-maven-plugin</artifactId>
-      <version>${munit.version}</version>
-      <executions>
-        <execution>
-          <id>test</id>
-          <phase>test</phase>
-          <goals>
-            <goal>test</goal>
-            <goal>coverage-report</goal>
-          </goals>
-        </execution>
-      </executions>
-      <configuration>
-        <coverage>
-          <runCoverage>true</runCoverage>
-          <formats>
-            <format>html</format>
-            <format>json</format>
-          </formats>
-        </coverage>
-      </configuration>
-    </plugin>
   </build>
 </project>
