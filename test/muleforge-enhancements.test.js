@@ -75,3 +75,25 @@ test("CloudHub 2 deployment workflow uses Maven deployment and secret settings",
   assert.match(workflow, /-DmuleDeploy/);
   assert.match(workflow, /ANYPOINT_TARGET/);
 });
+
+
+test("deployment validator accepts supported targets and rejects CloudHub 2 snapshots", () => {
+  const { validateDeployment } = require("../src/deployment-validator");
+  assert.equal(validateDeployment({ project: { name: "x", version: "1.0.0" }, deployment: { target: "cloudhub" } }).valid, true);
+  const bad = validateDeployment({ project: { name: "x", version: "1.0.0-SNAPSHOT" }, deployment: { target: "cloudhub2" } });
+  assert.equal(bad.valid, false);
+  assert.ok(bad.errors.some(x => x.includes("SNAPSHOT")));
+});
+
+test("deployment target workflow generation covers CloudHub and Runtime Fabric", () => {
+  const { deploymentArtifacts } = require("../src/deployment-artifacts");
+  const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-deploy-targets-"));
+  deploymentArtifacts(root, { deployment: { target: "cloudhub" } }, { artifactId: "sample", java: "17" });
+  const ch = fs.readFileSync(path.join(root, ".github/workflows/deploy-cloudhub.yml"), "utf8");
+  const rtf = fs.readFileSync(path.join(root, ".github/workflows/deploy-rtf.yml"), "utf8");
+  assert.match(ch, /muleforge\.cloudhub=true/);
+  assert.match(ch, /-DmuleDeploy/);
+  assert.match(ch, /MAVEN_SETTINGS_XML/);
+  assert.match(rtf, /deployment is not enabled/);
+});
