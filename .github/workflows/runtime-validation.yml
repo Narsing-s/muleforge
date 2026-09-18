@@ -81,6 +81,6 @@ jobs:
           name: muleforge-runtime-validation
           if-no-files-found: warn
           path: |
-            customer-api/target/surefire-reports/**
-            customer-api/target/site/munit/coverage/**
-            customer-api/target/*.jar
+            "**/target/surefire-reports/**"
+            "**/target/site/munit/coverage/**"
+            "**/target/*.jar"
