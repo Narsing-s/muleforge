@@ -7,11 +7,51 @@ on:
   workflow_dispatch:
     inputs:
       requirement_file:
-        description: "Requirement document path under requirements/ (for example requirements/customer-api.md)"
-        required: true
+        description: "Optional requirement document path under requirements/. Leave empty to answer the questions below."
+        required: false
         type: string
       project_name:
-        description: "Optional project/artifact name. Leave empty to infer it from the document."
+        description: "Project name (required when using questions; optional with a document)."
+        required: false
+        type: string
+      api_type:
+        description: "API type, for example System API, Process API, Experience API"
+        required: false
+        type: string
+      base_path:
+        description: "API base path, for example /api/v1"
+        required: false
+        type: string
+      operations:
+        description: "Operations, one per line. Example: POST /customers"
+        required: false
+        type: string
+      request_fields:
+        description: "Request fields, comma-separated"
+        required: false
+        type: string
+      response_fields:
+        description: "Response fields, comma-separated"
+        required: false
+        type: string
+      validation:
+        description: "Validation rules, one per line"
+        required: false
+        type: string
+      errors:
+        description: "Business/error cases, one per line"
+        required: false
+        type: string
+      backend:
+        description: "Backend/connector and details: Snowflake, MySQL, SFTP, IBM MQ, Anypoint MQ, Object Store, HTTP, etc."
+        required: false
+        type: string
+      connectivity:
+        description: "Connection details that are safe to commit, excluding passwords/secrets"
+        required: false
+        type: string
+      additional_requirements:
+        description: "Any other functional or non-functional requirements"
         required: false
         type: string
 
@@ -52,65 +92,101 @@ jobs:
       - name: Install MuleForge
         run: npm ci
 
-      - name: Select requirement documents
-        id: requirements
+      - name: Prepare requirement source
+        id: requirement
         shell: bash
+        env:
+          REQUIREMENT_FILE: ${{ inputs.requirement_file }}
+          PROJECT_NAME: ${{ inputs.project_name }}
+          API_TYPE: ${{ inputs.api_type }}
+          BASE_PATH: ${{ inputs.base_path }}
+          OPERATIONS: ${{ inputs.operations }}
+          REQUEST_FIELDS: ${{ inputs.request_fields }}
+          RESPONSE_FIELDS: ${{ inputs.response_fields }}
+          VALIDATION: ${{ inputs.validation }}
+          ERRORS: ${{ inputs.errors }}
+          BACKEND: ${{ inputs.backend }}
+          CONNECTIVITY: ${{ inputs.connectivity }}
+          ADDITIONAL_REQUIREMENTS: ${{ inputs.additional_requirements }}
         run: |
           set -euo pipefail
 
-          if [ -n "${{ inputs.requirement_file }}" ]; then
-            FILE="${{ inputs.requirement_file }}"
-            test -f "$FILE"
-            echo "files=$FILE" >> "$GITHUB_OUTPUT"
+          if [ -n "$REQUIREMENT_FILE" ]; then
+            test -f "$REQUIREMENT_FILE"
+            echo "file=$REQUIREMENT_FILE" >> "$GITHUB_OUTPUT"
+            echo "mode=document" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          mapfile -t FILES < <(find requirements -type f \( \
-            -iname "*.txt" -o -iname "*.md" -o -iname "*.markdown" -o -iname "*.csv" \
-            -o -iname "*.json" -o -iname "*.yaml" -o -iname "*.yml" -o -iname "*.html" \
-            -o -iname "*.htm" -o -iname "*.pdf" -o -iname "*.docx" -o -iname "*.pptx" -o -iname "*.xlsx" \
-          \) | sort)
-
-          if [ "${#FILES[@]}" -eq 0 ]; then
-            echo "No supported requirement documents were found under requirements/."
-            echo "files=" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ -z "$PROJECT_NAME" ]; then
+            echo "When no requirement document is supplied, project_name is required." >&2
+            exit 1
           fi
 
-          printf '%s\n' "${FILES[@]}" > /tmp/muleforge-requirements.txt
-          echo "files=/tmp/muleforge-requirements.txt" >> "$GITHUB_OUTPUT"
+          if [ -z "$OPERATIONS" ]; then
+            echo "When no requirement document is supplied, operations are required." >&2
+            exit 1
+          fi
 
-      - name: Generate project from requirement
-        if: steps.requirements.outputs.files != ''
+          mkdir -p .muleforge-input
+          cat > ".muleforge-input/$PROJECT_NAME.md" <<EOF
+# MuleForge Requirement
+
+## Project
+Project name: $PROJECT_NAME
+
+## API
+API type: ${API_TYPE:-System API}
+Base path: ${BASE_PATH:-/api/v1}
+
+## Operations
+$OPERATIONS
+
+## Request fields
+$REQUEST_FIELDS
+
+## Response fields
+$RESPONSE_FIELDS
+
+## Validation
+$VALIDATION
+
+## Business and error cases
+$ERRORS
+
+## Backend and connectors
+$BACKEND
+
+## Connectivity
+$CONNECTIVITY
+
+## Additional requirements
+$ADDITIONAL_REQUIREMENTS
+EOF
+
+          echo "file=.muleforge-input/$PROJECT_NAME.md" >> "$GITHUB_OUTPUT"
+          echo "mode=questions" >> "$GITHUB_OUTPUT"
+
+      - name: Generate project
         shell: bash
+        env:
+          PROJECT_NAME: ${{ inputs.project_name }}
         run: |
           set -euo pipefail
+          FILE="${{ steps.requirement.outputs.file }}"
 
-          if [[ "${{ steps.requirements.outputs.files }}" == /tmp/* ]]; then
-            while IFS= read -r FILE; do
-              [ -n "$FILE" ] || continue
-              echo "=== Generating from $FILE ==="
-              if [ -n "${{ inputs.project_name }}" ]; then
-                node src/index.js analyze "$FILE" "${{ inputs.project_name }}"
-                break
-              fi
-              node src/index.js analyze "$FILE"
-            done < "${{ steps.requirements.outputs.files }}"
+          if [ -n "$PROJECT_NAME" ]; then
+            node src/index.js analyze "$FILE" "$PROJECT_NAME"
           else
-            FILE="${{ steps.requirements.outputs.files }}"
-            if [ -n "${{ inputs.project_name }}" ]; then
-              node src/index.js analyze "$FILE" "${{ inputs.project_name }}"
-            else
-              node src/index.js analyze "$FILE"
-            fi
+            node src/index.js analyze "$FILE"
           fi
 
-      - name: Verify generated Mule projects
+      - name: Verify generated project
         shell: bash
         run: |
           set -euo pipefail
-
           FOUND=0
+
           while IFS= read -r CONFIG; do
             [ -n "$CONFIG" ] || continue
             FOUND=1
@@ -122,6 +198,10 @@ jobs:
             echo "No generated Mule project was found."
             exit 1
           fi
+
+      - name: Remove temporary question source
+        if: steps.requirement.outputs.mode == 'questions'
+        run: rm -rf .muleforge-input
 
       - name: Commit generated project
         shell: bash
