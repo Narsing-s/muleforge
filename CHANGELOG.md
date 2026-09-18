@@ -1,3 +1,10 @@
+# 0.8.0
+
+- Expanded enterprise connector catalog and generated flow support.
+- Added existing-project inspection via `muleforge inspect-project`.
+- Deepened quality/security audit checks.
+- Added enhancement tests.
+
 # 0.7.0\n\n- Added machine-readable requirement-to-asset traceability.\n- Added generated `docs/11-traceability.md`.\n- Added `muleforge audit` quality/security hygiene gate.\n- Added `muleforge trace` command.\n- Verification now requires traceability assets for generated projects.\n\n# Changelog
 
 All notable MuleForge changes are documented here.
