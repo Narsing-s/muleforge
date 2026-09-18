@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "generatedBy": "MuleForge",
+  "requirementCount": 0,
+  "operationCount": 2,
+  "requirements": [],
+  "operations": [
+    {"operation":"getCustomer","method":"GET","path":"/customers/{customerId}","connector":"database","targets":["raml","mule","dataweave","munit","postman","documentation"]},
+    {"operation":"createCustomer","method":"POST","path":"/customers","connector":"database","targets":["raml","mule","dataweave","munit","postman","documentation"]}
+  ]
+}
