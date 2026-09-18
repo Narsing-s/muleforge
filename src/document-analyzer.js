@@ -194,7 +194,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
 
   function operationSection(endpoint) {
     const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const marker = new RegExp("\\b" + endpoint.method + "\\s+" + escapedPath + "\\b", "i");
+    const marker = new RegExp("\\b" + endpoint.method + "\\s+" + escapedPath + "(?=\\s|$|[.,;:)])", "i");
     const hit = marker.exec(combined);
     if (!hit) return "";
     const start = hit.index;
