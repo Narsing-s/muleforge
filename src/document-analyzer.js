@@ -133,7 +133,12 @@ function inferConnectivity(text, source) {
     else if (type === "sftp") add(type, { host: hostMatch?.[1] || null, port: portMatch ? Number(portMatch[1]) : null, path: pathMatch?.[1]?.replace(/[.,;)]+$/, "") || null, schedule: scheduleMatch?.[1] || null });
     else if (type === "ibm-mq") add(type, { host: hostMatch?.[1] || null, port: portMatch ? Number(portMatch[1]) : null, queueManager: queueManagerMatch?.[1] || null, channel: channelMatch?.[1] || null, queue: queueMatch?.[1]?.replace(/[.,;)]+$/, "") || null });
     else if (type === "anypoint-mq") add(type, { endpoint, queue: queueMatch?.[1]?.replace(/[.,;)]+$/, "") || null, topic: topicMatch?.[1]?.replace(/[.,;)]+$/, "") || null });
-    else if (type === "database") add(type, { endpoint, host: hostMatch?.[1] || null });
+    else if (type === "database") add(type, {
+      endpoint,
+      host: hostMatch?.[1] || null,
+      port: portMatch ? Number(portMatch[1]) : null,
+      database: databaseNameMatch?.[1] || null
+    });
     else if (type === "snowflake") add(type, {
       endpoint,
       host: hostMatch?.[1] || null,
