@@ -17,6 +17,20 @@ function connectorFlow(op, data) {
   const action = String(op.action || op.connectorAction || '').toLowerCase();
   const status = Number(op.successStatus || (method === 'POST' ? 201 : 200));
 
+  if (connector === 'http' && op.downstreamEndpoint) {
+    const url = esc(op.downstreamEndpoint);
+    return `  <flow name="${name}">
+    <http:listener config-ref="HTTP_Listener_config" path="${esc(endpoint)}" allowedMethods="${method}">
+      <http:response statusCode="#[vars.httpStatus default ${status}]" />
+    </http:listener>
+    <http:request method="${method}" url="${url}" doc:name="Call documented downstream API">
+      <http:headers><![CDATA[#[{}]]]></http:headers>
+    </http:request>
+    <set-variable variableName="httpStatus" value="${status}" />
+  </flow>
+`;
+  }
+
   if (connector === 'database' || connector === 'snowflake') {
     const table = esc(op.table || data.databaseTable || 'CUSTOMER');
     const fields = op.fields || op.requestFields || [];
