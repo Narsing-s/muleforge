@@ -40,6 +40,21 @@ function isCustomerNotFoundScenario(op, data) {
     /customers?\/\{[^}]+\}$/i.test(String(op.path || ""))
   );
 }
+function deriveScenarioPlan(operation = {}) {
+  const scenarios = [
+    { name: "happy path", type: "success", status: operation.successStatus || 200 },
+    { name: "validation failure", type: "validation", status: 400 },
+    { name: "connector failure", type: "connector-error", status: 500 }
+  ];
+  if (operation.method === "GET" && String(operation.path || "").includes("{")) {
+    scenarios.push({ name: "resource not found", type: "not-found", status: 404 });
+  }
+  if (["POST", "PUT", "PATCH"].includes(String(operation.method || "").toUpperCase())) {
+    scenarios.push({ name: "conflict or duplicate", type: "conflict", status: 409 });
+  }
+  return scenarios;
+}
+
 function generateMunit(config, data) {
   const ops = operations(config);
   const tests = [];
