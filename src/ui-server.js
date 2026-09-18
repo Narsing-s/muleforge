@@ -1,7 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { readRequirementDocument, analyzeRequirementDocument } = require("./document-analyzer");
+const { analyzeRequirementDocument } = require("./document-analyzer");
 const { generateUiAssets } = require("./ui-generator");
 const { prepareAndSave } = require("./local-export");
 
@@ -12,8 +12,19 @@ function json(res, status, value) {
 
 function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT || 4173)) {
   const file = path.resolve(__dirname, "../web/index.html");
+  const hosted = Boolean(process.env.PORT);
+
   const server = http.createServer((req, res) => {
-    if (req.method === "GET" && req.url === "/health") {\n      return json(res, 200, { ok: true, service: "muleforge", version: "0.5.0" });\n    }\n\n    if (req.url === "/" || req.url === "/index.html") {
+    if (req.method === "GET" && req.url === "/health") {
+      return json(res, 200, {
+        ok: true,
+        service: "muleforge",
+        version: "0.5.0",
+        mode: hosted ? "hosted" : "local"
+      });
+    }
+
+    if (req.url === "/" || req.url === "/index.html") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       return res.end(fs.readFileSync(file));
     }
@@ -41,6 +52,7 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
               model.api.name = project;
             }
           }
+
           const assets = generateUiAssets(model);
           return json(res, 200, { ok: true, ...assets, model });
         } catch (error) {
@@ -51,6 +63,15 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
     }
 
     if (req.method === "POST" && req.url === "/api/save") {
+      if (hosted) {
+        return json(res, 409, {
+          ok: false,
+          saved: false,
+          error: "Desktop export is available only in MuleForge Local mode.",
+          message: "The hosted server cannot write to a visitor's physical Desktop. Run MuleForge locally for direct Desktop export."
+        });
+      }
+
       let body = "";
       req.setEncoding("utf8");
       req.on("data", chunk => {
@@ -63,6 +84,7 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
           if (!input.model || typeof input.model !== "object") {
             return json(res, 400, { error: "Analyze the requirement before saving." });
           }
+
           const result = prepareAndSave(input.model);
           return json(res, 200, {
             ok: true,
@@ -85,10 +107,14 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
     res.end("Not found");
   });
 
-  server.listen(port, process.env.PORT ? "0.0.0.0" : "127.0.0.1", () => {
+  server.listen(port, hosted ? "0.0.0.0" : "127.0.0.1", () => {
     console.log(`\n⚡ MuleForge UI: http://127.0.0.1:${port}`);
+    console.log(hosted
+      ? "Hosted mode: Desktop export is disabled; use MuleForge Local for direct Desktop export."
+      : "Local mode: Desktop export is available after all verification gates pass.");
     console.log("Press Ctrl+C to stop.\n");
   });
+
   return server;
 }
 
