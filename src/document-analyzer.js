@@ -215,7 +215,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
       path: endpoint.path,
       connector,
       connectorAmbiguous: connector === null,
-      downstreamEndpoint: connector === "http" ? (local?.endpoint || httpLocal?.endpoint || null) : null,
+      downstreamEndpoint: httpLocal?.endpoint || null,
       schedule: local?.schedule || null,
       filePath: local?.path || null,
       destination: local ? (local.queue || local.topic || null) : null,
