@@ -199,7 +199,7 @@ jobs:
           
           ## Additional requirements
           $ADDITIONAL_REQUIREMENTS
-EOF
+          EOF
 
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
           echo "mode=questions" >> "$GITHUB_OUTPUT"
