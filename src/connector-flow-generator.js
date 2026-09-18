@@ -37,7 +37,12 @@ function source(op, data, endpoint, method, status) {
       return `    <scheduler doc:name="Documented schedule"><scheduling-strategy><fixed-frequency frequency="${match[1]}" timeUnit="${unit}"/></scheduling-strategy></scheduler>\n`;
     }
   }
-  return `    <http:listener config-ref="HTTP_Listener_config" path="${esc(endpoint)}" allowedMethods="${method}"><http:response statusCode="#[vars.httpStatus default ${status}]"/></http:listener>\n`;
+  return `    <http:listener config-ref="HTTP_Listener_config" path="${esc(endpoint)}" allowedMethods="${method}">
+      <http:response statusCode="#[vars.httpStatus default ${status}]"/>
+      <http:error-response statusCode="#[vars.httpStatus default 500]">
+        <http:body><![CDATA[#[payload]]]></http:body>
+      </http:error-response>
+    </http:listener>\n`;
 }
 
 function params(fields = []) {
@@ -62,6 +67,9 @@ function connectorFlow(op, data) {
     return withErrorHandler(`  <flow name="${name}">
     <http:listener config-ref="HTTP_Listener_config" path="${esc(endpoint)}" allowedMethods="${method}">
       <http:response statusCode="#[vars.httpStatus default ${status}]" />
+      <http:error-response statusCode="#[vars.httpStatus default 500]">
+        <http:body><![CDATA[#[payload]]]></http:body>
+      </http:error-response>
     </http:listener>
     <http:request method="${method}" url="${url}" doc:name="Call documented downstream API">
       <http:headers><![CDATA[#[{}]]]></http:headers>
