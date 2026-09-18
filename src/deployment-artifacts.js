@@ -9,7 +9,65 @@ function deploymentArtifacts(root, config = {}, data = {}) {
   const target = String((config.deployment || {}).target || 'none').toLowerCase();
   const ch2 = target === 'cloudhub2'
     ? `name: MuleForge CloudHub 2.0 promotion\n\non:\n  workflow_dispatch:\n    inputs:\n      environment:\n        description: Target Anypoint Platform environment\n        required: true\n        type: choice\n        options: [dev, qa, uat, prod]\n\npermissions:\n  contents: read\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    environment: \${{ inputs.environment }}\n    steps:\n      - uses: actions/checkout@v6\n      - uses: actions/setup-java@v5\n        with:\n          distribution: temurin\n          java-version: '${data.java || '17'}'\n          cache: maven\n      - name: Require Maven deployment settings\n        env:\n          MAVEN_SETTINGS_XML: \${{ secrets.MAVEN_SETTINGS_XML }}\n        run: |\n          test -n \"$MAVEN_SETTINGS_XML\" || { echo \"::error::MAVEN_SETTINGS_XML is required.\"; exit 1; }\n          mkdir -p \"$HOME/.m2\"\n          printf '%s' \"$MAVEN_SETTINGS_XML\" > \"$HOME/.m2/settings.xml\"\n      - name: Validate deployment inputs\n        env:\n          ANYPOINT_TARGET: \${{ vars.ANYPOINT_TARGET }}\n          ANYPOINT_APPLICATION_NAME: \${{ vars.ANYPOINT_APPLICATION_NAME }}\n        run: |\n          test -n \"$ANYPOINT_TARGET\" || { echo \"::error::ANYPOINT_TARGET environment variable is required.\"; exit 1; }\n          test -n \"$ANYPOINT_APPLICATION_NAME\" || { echo \"::error::ANYPOINT_APPLICATION_NAME environment variable is required.\"; exit 1; }\n      - name: Build and deploy to CloudHub 2.0\n        env:\n          ANYPOINT_ENVIRONMENT: \${{ inputs.environment }}\n          ANYPOINT_TARGET: \${{ vars.ANYPOINT_TARGET }}\n          ANYPOINT_APPLICATION_NAME: \${{ vars.ANYPOINT_APPLICATION_NAME }}\n          ANYPOINT_URI: \${{ vars.ANYPOINT_URI || 'https://anypoint.mulesoft.com' }}\n        run: |\n          mvn -B -s \"$HOME/.m2/settings.xml\" -Dmuleforge.cloudhub2=true \\\n            -Danypoint.uri=\"$ANYPOINT_URI\" \\\n            -Danypoint.environment=\"$ANYPOINT_ENVIRONMENT\" \\\n            -Danypoint.target=\"$ANYPOINT_TARGET\" \\\n            -Danypoint.applicationName=\"$ANYPOINT_APPLICATION_NAME\" \\\n            clean deploy -DskipTests=false -DmuleDeploy\n`
-    : `name: MuleForge CloudHub 2.0 promotion\n\non:\n  workflow_dispatch:\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v6\n      - name: Deployment not enabled\n        run: echo '${common} CloudHub 2.0 deployment is not enabled in muleforge.yaml (deployment.target is not cloudhub2). Artifact: ${artifact}.'\n`;  const ch1 = target === 'cloudhub' ? `name: MuleForge CloudHub promotion\n\non:\n  workflow_dispatch:\n\npermissions:\n  contents: read\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v6\n      - uses: actions/setup-java@v5\n        with:\n          distribution: temurin\n          java-version: '${data.java || '17'}'\n          cache: maven\n      - name: Require Maven deployment settings\n        env:\n          MAVEN_SETTINGS_XML: \${{ secrets.MAVEN_SETTINGS_XML }}\n        run: |\n          test -n \"$MAVEN_SETTINGS_XML\" || { echo \"::error::MAVEN_SETTINGS_XML is required.\"; exit 1; }\n          mkdir -p \"$HOME/.m2\"\n          printf '%s' \"$MAVEN_SETTINGS_XML\" > \"$HOME/.m2/settings.xml\"\n      - name: Deploy to CloudHub\n        env:\n          ANYPOINT_ENVIRONMENT: \${{ vars.ANYPOINT_ENVIRONMENT }}\n          ANYPOINT_APPLICATION_NAME: \${{ vars.ANYPOINT_APPLICATION_NAME }}\n          ANYPOINT_URI: \${{ vars.ANYPOINT_URI || 'https://anypoint.mulesoft.com' }}\n          ANYPOINT_REGION: \${{ vars.ANYPOINT_REGION || 'us-east-1' }}\n          ANYPOINT_WORKERS: \${{ vars.ANYPOINT_WORKERS || '1' }}\n          ANYPOINT_WORKER_TYPE: \${{ vars.ANYPOINT_WORKER_TYPE || 'MICRO' }}\n        run: |\n          test -n \"$ANYPOINT_ENVIRONMENT\" || { echo \"::error::ANYPOINT_ENVIRONMENT is required.\"; exit 1; }\n          test -n \"$ANYPOINT_APPLICATION_NAME\" || { echo \"::error::ANYPOINT_APPLICATION_NAME is required.\"; exit 1; }\n          mvn -B -s \"$HOME/.m2/settings.xml\" -Dmuleforge.cloudhub=true \\\n            -Danypoint.uri=\"$ANYPOINT_URI\" -Danypoint.environment=\"$ANYPOINT_ENVIRONMENT\" \\\n            -Danypoint.applicationName=\"$ANYPOINT_APPLICATION_NAME\" -Danypoint.region=\"$ANYPOINT_REGION\" \\\n            -Danypoint.workers=\"$ANYPOINT_WORKERS\" -Danypoint.workerType=\"$ANYPOINT_WORKER_TYPE\" \\\n            clean deploy -DskipTests=false -DmuleDeploy\n` : `name: MuleForge CloudHub promotion\n\non:\n  workflow_dispatch:\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v6\n      - name: Deployment not enabled\n        run: echo 'CloudHub deployment is not enabled in muleforge.yaml. Artifact: ${artifact}.'\n`;\n  const rtf = `name: MuleForge Runtime Fabric package\n\non:\n  workflow_dispatch:\n\njobs:\n  package:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-java@v4\n        with:\n          distribution: temurin\n          java-version: '${data.java || '17'}'\n      - name: Verify and package\n        run: mvn -B clean package -DskipTests=false\n      - name: RTF deployment placeholder\n        run: echo '${common} Configure your organization's Runtime Fabric deployment mechanism.'\n`;
+    : `name: MuleForge CloudHub 2.0 promotion\n\non:\n  workflow_dispatch:\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v6\n      - name: Deployment not enabled\n        run: echo '${common} CloudHub 2.0 deployment is not enabled in muleforge.yaml (deployment.target is not cloudhub2). Artifact: ${artifact}.'\n`;  const ch1 = target === 'cloudhub' ? `name: MuleForge CloudHub promotion\n\non:\n  workflow_dispatch:\n\npermissions:\n  contents: read\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v6\n      - uses: actions/setup-java@v5\n        with:\n          distribution: temurin\n          java-version: '${data.java || '17'}'\n          cache: maven\n      - name: Require Maven deployment settings\n        env:\n          MAVEN_SETTINGS_XML: \${{ secrets.MAVEN_SETTINGS_XML }}\n        run: |\n          test -n \"$MAVEN_SETTINGS_XML\" || { echo \"::error::MAVEN_SETTINGS_XML is required.\"; exit 1; }\n          mkdir -p \"$HOME/.m2\"\n          printf '%s' \"$MAVEN_SETTINGS_XML\" > \"$HOME/.m2/settings.xml\"\n      - name: Deploy to CloudHub\n        env:\n          ANYPOINT_ENVIRONMENT: \${{ vars.ANYPOINT_ENVIRONMENT }}\n          ANYPOINT_APPLICATION_NAME: \${{ vars.ANYPOINT_APPLICATION_NAME }}\n          ANYPOINT_URI: \${{ vars.ANYPOINT_URI || 'https://anypoint.mulesoft.com' }}\n          ANYPOINT_REGION: \${{ vars.ANYPOINT_REGION || 'us-east-1' }}\n          ANYPOINT_WORKERS: \${{ vars.ANYPOINT_WORKERS || '1' }}\n          ANYPOINT_WORKER_TYPE: \${{ vars.ANYPOINT_WORKER_TYPE || 'MICRO' }}\n        run: |\n          test -n \"$ANYPOINT_ENVIRONMENT\" || { echo \"::error::ANYPOINT_ENVIRONMENT is required.\"; exit 1; }\n          test -n \"$ANYPOINT_APPLICATION_NAME\" || { echo \"::error::ANYPOINT_APPLICATION_NAME is required.\"; exit 1; }\n          mvn -B -s \"$HOME/.m2/settings.xml\" -Dmuleforge.cloudhub=true \\\n            -Danypoint.uri=\"$ANYPOINT_URI\" -Danypoint.environment=\"$ANYPOINT_ENVIRONMENT\" \\\n            -Danypoint.applicationName=\"$ANYPOINT_APPLICATION_NAME\" -Danypoint.region=\"$ANYPOINT_REGION\" \\\n            -Danypoint.workers=\"$ANYPOINT_WORKERS\" -Danypoint.workerType=\"$ANYPOINT_WORKER_TYPE\" \\\n            clean deploy -DskipTests=false -DmuleDeploy\n` : `name: MuleForge CloudHub promotion\n\non:\n  workflow_dispatch:\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v6\n      - name: Deployment not enabled\n        run: echo 'CloudHub deployment is not enabled in muleforge.yaml. Artifact: ${artifact}.'\n`;\n  const rtf = target === 'rtf'
+    ? [
+        'name: MuleForge Runtime Fabric promotion',
+        '',
+        'on:',
+        '  workflow_dispatch:',
+        '',
+        'permissions:',
+        '  contents: read',
+        '',
+        'jobs:',
+        '  deploy:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - uses: actions/checkout@v6',
+        '      - uses: actions/setup-java@v5',
+        '        with:',
+        '          distribution: temurin',
+        '          java-version: ' + JSON.stringify(data.java || '17'),
+        '          cache: maven',
+        '      - name: Require Maven deployment settings',
+        '        env:',
+        '          MAVEN_SETTINGS_XML: ${{ secrets.MAVEN_SETTINGS_XML }}',
+        '        run: |',
+        '          test -n "$MAVEN_SETTINGS_XML" || { echo "::error::MAVEN_SETTINGS_XML is required."; exit 1; }',
+        '          mkdir -p "$HOME/.m2"',
+        '          printf "%s" "$MAVEN_SETTINGS_XML" > "$HOME/.m2/settings.xml"',
+        '      - name: Deploy to Runtime Fabric',
+        '        env:',
+        '          ANYPOINT_ENVIRONMENT: ${{ vars.ANYPOINT_ENVIRONMENT }}',
+        '          ANYPOINT_TARGET: ${{ vars.ANYPOINT_TARGET }}',
+        '          ANYPOINT_APPLICATION_NAME: ${{ vars.ANYPOINT_APPLICATION_NAME }}',
+        '          ANYPOINT_URI: ${{ vars.ANYPOINT_URI || "https://anypoint.mulesoft.com" }}',
+        '        run: |',
+        '          test -n "$ANYPOINT_ENVIRONMENT" || { echo "::error::ANYPOINT_ENVIRONMENT is required."; exit 1; }',
+        '          test -n "$ANYPOINT_TARGET" || { echo "::error::ANYPOINT_TARGET is required."; exit 1; }',
+        '          test -n "$ANYPOINT_APPLICATION_NAME" || { echo "::error::ANYPOINT_APPLICATION_NAME is required."; exit 1; }',
+        '          mvn -B -s "$HOME/.m2/settings.xml" -Dmuleforge.rtf=true \\',
+        '            -Danypoint.uri="$ANYPOINT_URI" -Danypoint.environment="$ANYPOINT_ENVIRONMENT" \\',
+        '            -Danypoint.target="$ANYPOINT_TARGET" -Danypoint.applicationName="$ANYPOINT_APPLICATION_NAME" \\',
+        '            clean deploy -DskipTests=false -DmuleDeploy'
+      ].join('\\n')
+    : [
+        'name: MuleForge Runtime Fabric promotion',
+        '',
+        'on:',
+        '  workflow_dispatch:',
+        '',
+        'permissions:',
+        '  contents: read',
+        '',
+        'jobs:',
+        '  deploy:',
+        '    runs-on: ubuntu-latest',
+        '    steps:',
+        '      - uses: actions/checkout@v6',
+        '      - name: Deployment not enabled',
+        '        run: echo "Runtime Fabric deployment is not enabled in muleforge.yaml. Artifact: ' + artifact + '."'
+      ].join('\\n');
   fs.writeFileSync(path.join(dir, 'deploy-cloudhub.yml'), ch1, 'utf8');
   fs.writeFileSync(path.join(dir, 'deploy-cloudhub2.yml'), ch2, 'utf8');
   const rtfEnabled = target === 'rtf' ? rtf.replace('Runtime Fabric package','Runtime Fabric promotion').replace('actions/checkout@v4','actions/checkout@v6').replace('actions/setup-java@v4','actions/setup-java@v5').replace('      - name: RTF deployment placeholder\n        run: echo \'${common} Configure your organization\'s Runtime Fabric deployment mechanism.\'','      - name: Deploy to Runtime Fabric\n        env:\n          MAVEN_SETTINGS_XML: \\${{ secrets.MAVEN_SETTINGS_XML }}\n        run: |\n          test -n \"$MAVEN_SETTINGS_XML\" || { echo \"::error::MAVEN_SETTINGS_XML is required.\"; exit 1; }\n          mkdir -p \"$HOME/.m2\"\n          printf \'%s\' \"$MAVEN_SETTINGS_XML\" > \"$HOME/.m2/settings.xml\"\n          mvn -B -s \"$HOME/.m2/settings.xml\" -Dmuleforge.rtf=true -Danypoint.target=\"${ANYPOINT_TARGET}\" -DmuleDeploy clean deploy') : rtf.replace('Runtime Fabric package','Runtime Fabric deployment is not enabled');
