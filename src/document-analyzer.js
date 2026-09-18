@@ -1,73 +1,96 @@
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
+const cp = require("child_process");
 const YAML = require("yaml");
 
 function slug(value) {
   return String(value || "mule-api").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "mule-api";
 }
-
+function cleanText(value) {
+  return String(value || "").replace(/\u0000/g, " ").replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+function command(command, args) {
+  try { return cp.execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }); }
+  catch (_) { return null; }
+}
+function extractOffice(buffer, filename) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-office-"));
+  const archive = path.join(dir, filename);
+  fs.writeFileSync(archive, buffer);
+  try {
+    const ext = path.extname(filename).toLowerCase();
+    const entries = ext === ".docx"
+      ? ["word/document.xml"]
+      : ext === ".pptx"
+        ? ["ppt/slides/slide*.xml", "ppt/notesSlides/notesSlide*.xml"]
+        : ["xl/sharedStrings.xml", "xl/worksheets/sheet*.xml"];
+    const chunks = [];
+    for (const entry of entries) {
+      const a = command("unzip", ["-p", archive, entry]);
+      const b = a || command("tar", ["-xOf", archive, entry]);
+      if (b) chunks.push(b);
+    }
+    if (!chunks.length) throw new Error("Office extraction requires unzip or tar in the MuleForge runtime.");
+    return cleanText(chunks.join("\n").replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"'));
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+function extractDocumentBuffer(buffer, filename = "requirement.txt") {
+  const ext = path.extname(filename).toLowerCase();
+  if ([".txt",".md",".markdown",".csv"].includes(ext)) return { text: cleanText(buffer.toString("utf8")), type: ext.slice(1), source: filename };
+  if ([".html",".htm"].includes(ext)) return { text: cleanText(buffer.toString("utf8").replace(/<[^>]+>/g, " ")), type: "html", source: filename };
+  if (ext === ".json") { const v = JSON.parse(buffer.toString("utf8")); return { text: cleanText(typeof v === "string" ? v : JSON.stringify(v, null, 2)), type: "json", source: filename }; }
+  if ([".yaml",".yml"].includes(ext)) { const v = YAML.parse(buffer.toString("utf8")); return { text: cleanText(YAML.stringify(v)), type: "yaml", source: filename }; }
+  if (ext === ".pdf") {
+    const file = path.join(os.tmpdir(), "muleforge-" + Date.now() + ".pdf"); fs.writeFileSync(file, buffer);
+    try {
+      const text = command("pdftotext", ["-layout", file]);
+      if (!text) throw new Error("PDF extraction is unavailable. Install Poppler/pdftotext for PDF requirements.");
+      return { text: cleanText(text), type: "pdf", source: filename };
+    } finally { fs.rmSync(file, { force: true }); }
+  }
+  if ([".docx",".pptx",".xlsx"].includes(ext)) return { text: extractOffice(buffer, filename), type: ext.slice(1), source: filename };
+  throw new Error("Unsupported requirement document format: " + (ext || "unknown") + ". Supported: PDF, DOCX, PPTX, XLSX, TXT, MD, CSV, JSON, YAML and HTML.");
+}
 function readRequirementDocument(file) {
   const full = path.resolve(file);
-  if (!fs.existsSync(full)) throw new Error(`Requirement document not found: ${file}`);
-  const ext = path.extname(full).toLowerCase();
-  if ([".txt", ".md", ".markdown", ".csv", ".html", ".htm"].includes(ext)) {
-    return fs.readFileSync(full, "utf8").replace(/<[^>]+>/g, " ").replace(/\r/g, "");
-  }
-  if ([".json"].includes(ext)) {
-    const value = JSON.parse(fs.readFileSync(full, "utf8"));
-    return typeof value === "string" ? value : JSON.stringify(value, null, 2);
-  }
-  if ([".yaml", ".yml"].includes(ext)) {
-    const value = YAML.parse(fs.readFileSync(full, "utf8"));
-    return YAML.stringify(value);
-  }
-  throw new Error(`Unsupported requirement document format: ${ext || "unknown"}. Use .txt, .md, .json, .yaml/.yml, or .html. No external service is required.`);
+  if (!fs.existsSync(full)) throw new Error("Requirement document not found: " + file);
+  return extractDocumentBuffer(fs.readFileSync(full), path.basename(full)).text;
 }
-
 function parseEndpoints(text) {
-  const found = [];
-  const re = /\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(\/[^\s,.;:)]+)/gi;
-  let match;
-  while ((match = re.exec(text))) found.push({ method: match[1].toUpperCase(), path: match[2].replace(/[.)]+$/, "") });
-  return [...new Map(found.map(e => [`${e.method} ${e.path}`, e])).values()];
+  const found = [], re = /\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(\/[^\s,.;:)]+)/gi;
+  let m; while ((m = re.exec(text))) found.push({ method: m[1].toUpperCase(), path: m[2].replace(/[.)]+$/, "") });
+  return [...new Map(found.map(e => [e.method + " " + e.path, e])).values()];
 }
-
 function inferProjectName(text, file) {
-  const match = text.match(/(?:project|application|api)\s*(?:name|called|named)\s*[:\-]?\s*["']?([A-Za-z][A-Za-z0-9 _-]{2,60})/i);
-  if (match) return slug(match[1]);
-  const title = String(text).split(/\n/).find(line => /^#\s+/.test(line));
-  if (title) return slug(title.replace(/^#+\s*/, "").replace(/api$/i, ""));
-  return slug(path.basename(file, path.extname(file)));
+  const m = text.match(/(?:project|application|api)\s*(?:name|called|named)\s*[:\-]?\s*["']?([A-Za-z][A-Za-z0-9 _-]{2,60})/i);
+  if (m) return slug(m[1]);
+  const title = String(text).split("\n").find(x => /^#\s+/.test(x));
+  return title ? slug(title.replace(/^#+\s*/, "").replace(/api$/i, "")) : slug(path.basename(file, path.extname(file)));
 }
-
 function inferFields(text, endpoint) {
-  const lower = text.toLowerCase();
-  const common = [];
-  for (const field of ["id", "customerId", "accountId", "name", "firstName", "lastName", "email", "phone", "mobileNumber", "address", "amount", "status", "date", "createdAt", "updatedAt"]) {
-    if (new RegExp(`\\b${field.replace(/[A-Z]/g, m => `[${m.toLowerCase()}${m}]`)}\\b`, "i").test(text)) common.push(field);
+  const fields = [];
+  for (const field of ["id","customerId","accountId","name","firstName","lastName","email","phone","mobileNumber","address","amount","status","date","createdAt","updatedAt"]) {
+    if (new RegExp("\\b" + field.replace(/[A-Z]/g, m => "[" + m.toLowerCase() + m + "]") + "\\b", "i").test(text)) fields.push(field);
   }
-  const fieldLine = text.match(/(?:request|input|payload|fields?)\s*[:\-]\s*([^\n]+)/i);
-  if (fieldLine) common.push(...fieldLine[1].split(/,|\band\b/i).map(v => v.trim().split(/[:(]/)[0].replace(/[^A-Za-z0-9_]/g, "")).filter(Boolean));
-  const unique = [...new Set(common)];
-  const method = String(endpoint.method).toUpperCase();
-  return method === "GET" || method === "DELETE" ? unique.filter(v => /id|Id|status|date|name/i.test(v)) : unique;
+  const line = text.match(/(?:request|input|payload|fields?)\s*[:\-]\s*([^\n]+)/i);
+  if (line) fields.push(...line[1].split(/,|\band\b/i).map(v => v.trim().split(/[:(]/)[0].replace(/[^A-Za-z0-9_]/g, "")).filter(Boolean));
+  const unique = [...new Set(fields)];
+  return /^(GET|DELETE)$/i.test(endpoint.method) ? unique.filter(v => /id|status|date|name/i.test(v)) : unique;
 }
-
 function inferValidation(text, fields) {
   const rules = [];
   for (const field of fields) {
-    if (new RegExp(`${field}[^\\n]{0,60}(required|mandatory|must be provided|cannot be empty)`, "i").test(text) || new RegExp(`(?:required|mandatory)[^\\n]{0,60}${field}`, "i").test(text)) rules.push(`${field} is required`);
-    if (field.toLowerCase().includes("email") && /email/.test(text.toLowerCase())) rules.push("email must be a valid email address");
+    if (new RegExp(field + "[^\\n]{0,60}(required|mandatory|must be provided|cannot be empty)", "i").test(text) || new RegExp("(?:required|mandatory)[^\\n]{0,60}" + field, "i").test(text)) rules.push(field + " is required");
+    if (/email/i.test(field) && /email/i.test(text)) rules.push("email must be a valid email address");
   }
   if (/positive|greater than zero|must be >\s*0/i.test(text)) rules.push("numeric values must be greater than zero");
   return [...new Set(rules)];
 }
-
 function inferErrors(text) {
-  const errors = [];
   const rules = [
     [/not found|does not exist|no customer|no record/i, "Resource not found returns 404"],
-    [/duplicate|already exists|existing email|unique constraint/i, "Duplicate resource returns 409"],
+    [/duplicate|already exists|unique constraint/i, "Duplicate resource returns 409"],
     [/invalid|validation|bad request|required field/i, "Invalid request returns 400"],
     [/unauthorized|authentication required/i, "Unauthorized requests return 401"],
     [/forbidden|not allowed/i, "Forbidden requests return 403"],
@@ -75,52 +98,88 @@ function inferErrors(text) {
     [/connection|unavailable|downstream|dependency/i, "Downstream failure returns 503"],
     [/unexpected|internal error|system error/i, "Unexpected errors return 500"]
   ];
-  for (const [pattern, message] of rules) if (pattern.test(text)) errors.push(message);
-  if (!errors.length) errors.push("Unexpected errors return 500");
-  return [...new Set(errors)];
+  const out = rules.filter(x => x[0].test(text)).map(x => x[1]); return [...new Set(out.length ? out : ["Unexpected errors return 500"])];
 }
-
-function inferConnectors(text) {
-  const lower = text.toLowerCase();
-  const connectors = ["http"];
-  if (/snowflake/.test(lower)) connectors.push("snowflake");
-  else if (/\b(mysql|postgres|postgresql|oracle|database|sql)\b/.test(lower)) connectors.push("database");
-  if (/\bsftp\b|file transfer/.test(lower)) connectors.push("sftp");
-  if (/ibm\s*mq|queue manager/.test(lower)) connectors.push("ibm-mq");
-  if (/anypoint\s*mq/.test(lower)) connectors.push("anypoint-mq");
-  if (/object\s*store|objectstore|cache/.test(lower)) connectors.push("object-store");
-  return [...new Set(connectors)];
+const CONNECTORS = [
+  ["sftp", /\bsftp\b|secure file transfer/i],
+  ["ibm-mq", /ibm\s*mq|websphere\s*mq|queue manager|\bMQ queue\b/i],
+  ["anypoint-mq", /anypoint\s*mq/i],
+  ["snowflake", /\bsnowflake\b/i],
+  ["database", /\b(mysql|postgres|postgresql|oracle|database|sql)\b/i],
+  ["object-store", /object\s*store|objectstore/i],
+  ["http", /\bhttps?\b|\bREST\b|\bHTTP\b|\bAPI\b/i]
+];
+function inferConnectivity(text, source) {
+  const out = [];
+  for (const [type, re] of CONNECTORS) {
+    if (!re.test(text)) continue;
+    const endpoint = (text.match(/https?:\/\/[^\s,)"']+/i) || [])[0] || null;
+    const p = text.match(/(?:path|directory|folder|location)\s*(?:is|=|:)\s*["']?([^\s"']+)/i);
+    const q = text.match(/(?:queue|destination)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._:/-]+)/i);
+    const topic = text.match(/topic\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._:/-]+)/i);
+    const schedule = text.match(/(?:every|each)\s+(\d+)\s*(minutes?|hours?|seconds?|days?)/i) || text.match(/cron(?: expression)?\s*[:=]\s*([^\n]+)/i);
+    const host = text.match(/(?:host|hostname|server)\s*(?:is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
+    const port = text.match(/(?:port)\s*(?:is|=|:)\s*(\d{2,5})/i);
+    const auth = /oauth2|oauth 2/i.test(text) ? "oauth2" : /basic auth|basic authentication/i.test(text) ? "basic" : /client credentials/i.test(text) ? "client-credentials" : /api[- ]?key/i.test(text) ? "apikey" : /username.*password|user.*password/i.test(text) ? "username-password" : null;
+    out.push({ type, explicit: true, endpoint, path: p ? p[1] : null, queue: q ? q[1] : null, topic: topic ? topic[1] : null, host: host ? host[1] : null, port: port ? Number(port[1]) : null, schedule: schedule ? schedule[1] : null, auth, source: source || "requirement" });
+  }
+  return out;
 }
-
-function analyzeRequirementDocument(text, file = "requirement.txt") {
-  const endpoints = parseEndpoints(text);
-  if (!endpoints.length) throw new Error("No HTTP operations were detected. Add endpoints such as GET /customers or POST /customers to the requirement document.");
-  const projectName = inferProjectName(text, file);
-  const errors = inferErrors(text);
+function extractRequirements(text, source) {
+  return cleanText(text).split("\n").map(x => x.trim()).filter(x => x && /\b(must|shall|required|should|need to|needs to|accept|reject|validate|send|receive|store|transform|schedule|invoke|publish|consume)\b/i.test(x))
+    .slice(0, 200).map((value, i) => ({ id: "REQ-" + String(i + 1).padStart(3, "0"), text: value, source, location: { line: i + 1 } }));
+}
+function mergeDocuments(documents) {
+  const seen = new Set(), requirements = [], connectivity = [], conflicts = [];
+  for (const doc of documents) {
+    for (const req of extractRequirements(doc.text, doc.name)) { const key = req.text.toLowerCase(); if (!seen.has(key)) { seen.add(key); requirements.push(req); } }
+    connectivity.push(...inferConnectivity(doc.text, doc.name));
+  }
+  const byType = new Map();
+  for (const c of connectivity) { if (!byType.has(c.type)) byType.set(c.type, []); byType.get(c.type).push(c); }
+  for (const [type, values] of byType) {
+    const endpoints = [...new Set(values.map(v => v.endpoint).filter(Boolean))];
+    const schedules = [...new Set(values.map(v => v.schedule).filter(Boolean))];
+    const paths = [...new Set(values.map(v => v.path).filter(Boolean))];
+    if (endpoints.length > 1 || schedules.length > 1 || paths.length > 1) conflicts.push({ type: "connectivity", connector: type, message: "Conflicting explicit connectivity details across requirement documents.", values, resolutionRequired: true });
+  }
+  return { requirements, connectivity, conflicts };
+}
+function analyzeRequirementDocument(text, file = "requirement.txt", packageDocuments = null) {
+  const docs = packageDocuments && packageDocuments.length ? packageDocuments : [{ name: file, text: cleanText(text), type: path.extname(file).slice(1) || "txt" }];
+  const merged = mergeDocuments(docs);
+  const combined = docs.map(d => d.text).join("\n\n");
+  const endpoints = parseEndpoints(combined);
+  const projectName = inferProjectName(combined, file);
+  const errors = inferErrors(combined);
+  const connectivity = merged.connectivity;
+  const connectorIds = [...new Set(connectivity.map(c => c.type))];
   const operations = endpoints.map(endpoint => {
-    const requestFields = inferFields(text, endpoint);
-    const responseFields = [...new Set([...requestFields, ...(endpoint.method === "POST" ? ["id", "status"] : [])])];
-    return {
-      name: `${endpoint.method.toLowerCase()}${slug(endpoint.path).replace(/-/g, "_")}`,
-      method: endpoint.method,
-      path: endpoint.path,
-      requestFields,
-      responseFields,
-      validation: inferValidation(text, requestFields),
-      successStatus: endpoint.method === "POST" ? 201 : 200,
-      errors
-    };
+    const requestFields = inferFields(combined, endpoint);
+    return { name: endpoint.method.toLowerCase() + slug(endpoint.path).replace(/-/g, "_"), method: endpoint.method, path: endpoint.path, connector: connectorIds.find(x => x !== "http") || "http", requestFields, responseFields: [...new Set([...requestFields, ...(endpoint.method === "POST" ? ["id","status"] : [])])], validation: inferValidation(combined, requestFields), successStatus: endpoint.method === "POST" ? 201 : 200, errors };
   });
+  if (!operations.length && connectorIds.length) operations.push({ name: "integration-process", method: "POST", path: "/process", connector: connectorIds[0], requestFields: [], responseFields: [], validation: [], successStatus: 200, errors });
   return {
-    requirement: text.trim(),
+    requirement: docs.map(d => "### SOURCE: " + d.name + "\n\n" + d.text).join("\n\n"),
+    sourceDocuments: docs.map(d => ({ name: d.name, type: d.type, characters: d.text.length })),
+    requirements: merged.requirements,
     project: { name: projectName, artifactId: projectName, groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" },
     api: { name: projectName, version: "v1", type: "System API", specification: "RAML", basePath: "/api/v1" },
-    connectors: inferConnectors(text),
-    operations,
-    decisions: ["Authentication and deployment credentials are intentionally left as secure-property placeholders.", "Backend connection details are not requested during requirement analysis."],
+    connectors: connectorIds.length ? connectorIds : ["http"],
+    connectivity,
+    conflicts: merged.conflicts,
+    assumptions: ["Explicit connectivity in supplied documents is authoritative.", "Credentials and secrets are never copied into generated source.", "Missing connection values remain placeholders."],
+    missingConfigurations: connectivity.flatMap(c => {
+      const missing = [];
+      if (["sftp","ibm-mq","anypoint-mq","database","snowflake"].includes(c.type) && !c.host && !c.endpoint) missing.push(c.type + " host/endpoint");
+      if (c.type === "sftp" && !c.path) missing.push("sftp path");
+      if (["ibm-mq","anypoint-mq"].includes(c.type) && !c.queue && !c.topic) missing.push(c.type + " queue/destination");
+      return missing.map(item => ({ item, connector: c.type, source: c.source }));
+    }),
+    traceability: merged.requirements.map(r => ({ requirementId: r.id, source: r.source, targets: ["architecture", "implementation", "munit", "postman", "documentation"] })),
+    decisions: ["Document-first generation: explicit requirement connectivity is authoritative.", "Conflicts are surfaced rather than silently resolved."],
     testing: { munit: true },
     deployment: { target: "none" }
   };
 }
-
-module.exports = { readRequirementDocument, analyzeRequirementDocument };
+module.exports = { readRequirementDocument, extractDocumentBuffer, analyzeRequirementDocument, inferConnectivity, extractRequirements };
