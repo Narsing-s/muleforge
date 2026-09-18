@@ -169,36 +169,36 @@ jobs:
           FILE=".muleforge-input/$PROJECT_NAME.md"
 
           cat > "$FILE" <<EOF
-# MuleForge Requirement
-
-Project name: $PROJECT_NAME
-
-API type: ${API_TYPE:-System API}
-Base path: ${BASE_PATH:-/api/v1}
-
-## Operations
-$OPERATIONS
-
-## Request fields
-$REQUEST_FIELDS
-
-## Response fields
-$RESPONSE_FIELDS
-
-## Validation
-$VALIDATION
-
-## Business and error cases
-$ERRORS
-
-## Backend and connectors
-$BACKEND
-
-## Connectivity
-$CONNECTIVITY
-
-## Additional requirements
-$ADDITIONAL_REQUIREMENTS
+          # MuleForge Requirement
+          
+          Project name: $PROJECT_NAME
+          
+          API type: ${API_TYPE:-System API}
+          Base path: ${BASE_PATH:-/api/v1}
+          
+          ## Operations
+          $OPERATIONS
+          
+          ## Request fields
+          $REQUEST_FIELDS
+          
+          ## Response fields
+          $RESPONSE_FIELDS
+          
+          ## Validation
+          $VALIDATION
+          
+          ## Business and error cases
+          $ERRORS
+          
+          ## Backend and connectors
+          $BACKEND
+          
+          ## Connectivity
+          $CONNECTIVITY
+          
+          ## Additional requirements
+          $ADDITIONAL_REQUIREMENTS
 EOF
 
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
