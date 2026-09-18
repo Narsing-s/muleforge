@@ -71,8 +71,8 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     for (const op of operations) {
       const expectedPath = `${api.basePath || ""}${op.path || ""}`;
       const listener = new RegExp(`<http:listener\\b[^>]*path=["']${expectedPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} ["']`, "i");
-      const pathPresent = mule.includes(`path="${expectedPath}"`) || mule.includes(`path='${expectedPath}'`);
-      const methodPresent = mule.includes(`allowedMethods="${String(op.method).toUpperCase()}"`) || mule.includes(`allowedMethods='${String(op.method).toUpperCase()}'`);
+      const pathPresent = op.schedule ? /<scheduler\\b/.test(mule) : (mule.includes(`path="${expectedPath}"`) || mule.includes(`path='${expectedPath}'`));
+      const methodPresent = op.schedule ? true : (mule.includes(`allowedMethods="${String(op.method).toUpperCase()}"`) || mule.includes(`allowedMethods='${String(op.method).toUpperCase()}'`));
       checks.push(result(`Mule operation ${String(op.method).toUpperCase()} ${op.path}`, Boolean(pathPresent && methodPresent), "Generated Mule listener must match the confirmed operation."));
     }
   }
