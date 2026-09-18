@@ -39,4 +39,28 @@ function validateContract(file = "muleforge.yaml") {
   return { valid: errors.length === 0, errors, warnings, operationCount: ops.length };
 }
 
-module.exports = { validateContract };
+module.exports = { validateContract, validateDeployment };
+
+
+function validateDeployment(deployment = {}) {
+  const errors = [];
+  const warnings = [];
+  const target = String(deployment.target || "").toLowerCase();
+  const allowed = ["cloudhub", "cloudhub2", "rtf", "onprem"];
+  if (deployment.target && !allowed.includes(target)) errors.push("deployment.target must be one of: " + allowed.join(", "));
+  const replicas = deployment.replicas ?? deployment.replicaCount;
+  if (replicas != null && (!Number.isInteger(Number(replicas)) || Number(replicas) < 1)) errors.push("deployment.replicas must be a positive integer.");
+  const vCores = deployment.vCores ?? deployment.vcores;
+  if (vCores != null && (!Number.isFinite(Number(vCores)) || Number(vCores) <= 0)) errors.push("deployment.vCores must be greater than zero.");
+  if (target === "cloudhub2" || target === "rtf") {
+    if (!deployment.environment) errors.push(target + " deployment requires environment.");
+    if (!deployment.targetName && !deployment.target) warnings.push("Deployment target name should be supplied through secure environment configuration.");
+  }
+  if (target === "onprem" && deployment.targetType && !["server","serverGroup","cluster"].includes(deployment.targetType)) {
+    errors.push("onprem deployment.targetType must be server, serverGroup, or cluster.");
+  }
+  if (target === "cloudhub2" && deployment.version && /SNAPSHOT$/i.test(String(deployment.version)) && deployment.production === true) {
+    errors.push("CloudHub 2 production deployments must not use SNAPSHOT application versions.");
+  }
+  return { valid: errors.length === 0, errors, warnings };
+}
