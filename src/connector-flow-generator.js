@@ -113,11 +113,12 @@ output application/json
 { status: "SUCCESS", data: payload }]]></ee:set-payload></ee:message></ee:transform>`);
     }
     const where = op.where || (fields[0] || 'ID') + ' = :' + (fields[0] || 'id');
-    const pagination = op.pagination ? ` LIMIT ${Number(op.pagination.maxPageSize || 100)} OFFSET ${Number(op.pagination.defaultPageSize || 20)} * (${Number(op.pagination.defaultPage || 1)} - 1)` : "";
+    const pagination = op.pagination ? " LIMIT :muleforgePageSize OFFSET :muleforgePageOffset" : "";
+    const snowflakeInput = op.pagination ? { ...(op.parameters || {}), muleforgePageSize: "#[vars.pageSize]", muleforgePageOffset: "#[((vars.page - 1) * vars.pageSize)]" } : (op.parameters || {});
     return withErrorHandler(`  <flow name="${name}">
 ${source(op, data, endpoint, method, status)}    <snowflake:select config-ref="Snowflake_Config" doc:name="Select ${esc(table)}">
       <snowflake:sql><![CDATA[SELECT *, COUNT(*) OVER() AS TOTAL_COUNT FROM ${table} WHERE ${esc(where)}${pagination}]]></snowflake:sql>
-      <snowflake:input-parameters><![CDATA[#[${JSON.stringify(op.parameters || {})}]]]></snowflake:input-parameters>
+      <snowflake:input-parameters><![CDATA[#[${JSON.stringify(snowflakeInput)}]]]></snowflake:input-parameters>
     </snowflake:select>
     <set-variable variableName="httpStatus" value="${status}" />`);
   }
@@ -142,13 +143,14 @@ output application/json
     }
     const pathParameter = String(op.path || '').match(/\{([^}]+)\}/)?.[1] || null;
     const lookupField = op.lookupField || pathParameter || (fields.find(f => /(?:id|number)$/i.test(String(f))) || 'ID');
-    const pagination = op.pagination ? ` LIMIT ${Number(op.pagination.maxPageSize || 100)} OFFSET ${Number(op.pagination.defaultPageSize || 20)} * (${Number(op.pagination.defaultPage || 1)} - 1)` : "";
+    const pagination = op.pagination ? " LIMIT :muleforgePageSize OFFSET :muleforgePageOffset" : "";
     const parameterName = op.parameterName || pathParameter || lookupField;
     const where = op.where || String(lookupField).toUpperCase() + ' = :' + parameterName;
     const valueExpression = '#[attributes.uriParams.' + parameterName + ' default payload.' + parameterName + ' default null]';
     const input = op.parameters && Object.keys(op.parameters).length
       ? op.parameters
       : { [parameterName]: valueExpression };
+    const paginationInput = op.pagination ? { ...input, muleforgePageSize: "#[vars.pageSize]", muleforgePageOffset: "#[((vars.page - 1) * vars.pageSize)]" } : input;
 
     if (method === 'DELETE') {
       return withErrorHandler(`  <flow name="${name}">
@@ -174,9 +176,16 @@ ${source(op, data, endpoint, method, status)}    <db:update config-ref="Database
 
     return withErrorHandler(`  <flow name="${name}">
 ${source(op, data, endpoint, method, status)}    <db:select config-ref="Database_Config" doc:name="Select ${esc(table)}">
-      <db:sql><![CDATA[SELECT * FROM ${table} WHERE ${esc(where)}]]></db:sql>
-      <db:input-parameters><![CDATA[#[${JSON.stringify(input)}]]]></db:input-parameters>
+      <db:sql><![CDATA[SELECT *, COUNT(*) OVER() AS TOTAL_COUNT FROM ${table} WHERE ${esc(where)}${pagination}]]></db:sql>
+      <db:input-parameters><![CDATA[#[${JSON.stringify(paginationInput)}]]]></db:input-parameters>
     </db:select>
+    ${op.pagination ? `<ee:transform doc:name="Build pagination response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var rows = payload default []
+var total = if (isEmpty(rows)) 0 else (rows[0].TOTAL_COUNT default 0)
+var data = rows map ((row) -> row - "TOTAL_COUNT")
+---
+{ data: data, page: vars.page, pageSize: vars.pageSize, total: total, hasNext: (vars.page * vars.pageSize) < total }]]></ee:set-payload></ee:message></ee:transform>` : ""}
     <set-variable variableName="httpStatus" value="${status}" />`);
   }
   if (connector === 'anypoint-mq') {
