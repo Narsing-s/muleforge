@@ -18,7 +18,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install dependencies\n        run: |\n          npm cache clean --force\n          npm ci --prefer-online --fetch-retries=5 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=20000
+      - name: Install dependencies
+        run: |
+          npm cache clean --force
+          npm ci --prefer-online --fetch-retries=5 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=20000
       - run: npm test
       - run: node src/index.js --help
 
@@ -32,7 +35,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install dependencies\n        run: |\n          npm cache clean --force\n          npm ci --prefer-online --fetch-retries=5 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=20000
+      - name: Install dependencies
+        run: |
+          npm cache clean --force
+          npm ci --prefer-online --fetch-retries=5 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=20000
       - name: Verify reference project
         run: node src/index.js verify customer-api
       - name: Upload generated project metadata
