@@ -247,6 +247,8 @@ The generated `docs/` folder describes the specific application. The MuleForge r
 - MUnit scaffolding
 - Automatic generated-project documentation
 - Detailed RAML request/response schema generation
+- Persistent idempotency reservation and transaction-aware generation
+- Runtime database/Snowflake pagination response metadata
 - Connector-aware MUnit test scaffolding with documented matcher syntax
 - Requirement/project verification
 - Maven build and test integration
