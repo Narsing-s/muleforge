@@ -1,3 +1,12 @@
+# 0.9.0
+
+- Added a local `muleforge self-test` smoke gate covering generation, contract validation, verification and audit.
+- Fixed duplicate Database connector configuration in generated Mule XML.
+- Fixed generated application CI so it no longer assumes the MuleForge CLI is installed in the generated project.
+- Strengthened API contract validation for operation names, HTTP methods, paths and success status codes.
+- Expanded traceability with generated asset paths and on-disk evidence.
+- Expanded the quality audit to cover traceability evidence, Postman assets and environment property files.
+
 # 0.8.0
 
 - Expanded enterprise connector catalog and generated flow support.
