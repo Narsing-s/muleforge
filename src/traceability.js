@@ -3,7 +3,7 @@ const path = require('path');
 
 function buildTraceability(config = {}, root = null) {
   const operations = Array.isArray(config.operations) ? config.operations : [];
-  const assets = (op) => { const id = String(op.name || `${op.method}-${op.path}`).replace(/[^A-Za-z0-9_-]/g, '-'); const artifactId = String((config.project || {}).artifactId || (config.project || {}).name || 'mule-api'); return { raml: `src/main/resources/api/${artifactId}.raml`, mule: `src/main/mule/${artifactId}.xml`, dataweave: [`src/main/resources/dwl/${id}-request.dwl`, `src/main/resources/dwl/${id}-response.dwl`], munit: `src/test/munit/${artifactId}-test.xml`, postman: `postman/${artifactId}.collection.json`, documentation: 'docs/' }; };
+  const assets = (op) => { const id = String(op.name || `${op.method}-${op.path}`).replace(/[^A-Za-z0-9_-]/g, '-').toLowerCase(); const artifactId = String((config.project || {}).artifactId || (config.project || {}).name || 'mule-api'); return { raml: `src/main/resources/api/${artifactId}.raml`, mule: `src/main/mule/${artifactId}.xml`, dataweave: [`src/main/resources/dwl/${id}-request.dwl`, `src/main/resources/dwl/${id}-response.dwl`], munit: `src/test/munit/${artifactId}-test.xml`, postman: `postman/${artifactId}.collection.json`, documentation: 'docs/' }; };
   const requirements = Array.isArray(config.requirements) ? config.requirements : [];
   return {
     version: '1.0', generatedBy: 'MuleForge', requirementCount: requirements.length, operationCount: operations.length,
