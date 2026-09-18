@@ -21,7 +21,7 @@ const { auditProject, printAudit } = require("./quality-audit");
 const { deploymentArtifacts } = require("./deployment-artifacts");
 const { inspectProject, printInspection } = require("./project-inspector");
 const { validateContract } = require("./contract-validator");
-const { validateDeployment } = require("./contract-validator");
+const { validateDeployment, validateOperationPolicies } = require("./contract-validator");
 const { auditConnectors } = require("./connector-audit");
 const { repairProject } = require("./repair");
 const { snapshot, diffSnapshots } = require("./diff");
@@ -108,6 +108,14 @@ function syncDocs(file = "muleforge.yaml") {
   console.log("✔ Documentation and traceability synchronized with muleforge.yaml");
 }
 function mvn(args) { try { execFileSync(process.platform === "win32" ? "mvn.cmd" : "mvn", args, { stdio: "inherit" }); } catch (e) { process.exitCode = e.status || 1; } }
+
+function policyCheck(configFile = "muleforge.yaml") {
+  const config = loadConfig(configFile);
+  const result = validateOperationPolicies(config.operations || []);
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.valid) process.exitCode = 1;
+  return result;
+}
 
 function deploymentCheck(configFile = "muleforge.yaml") {
   const config = loadConfig(configFile);
