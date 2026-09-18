@@ -177,7 +177,7 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge create` | Start requirement-driven project creation |
 | `muleforge init <name>` | Initialize a project/configuration |
 | `muleforge generate` | Generate files from `muleforge.yaml` |
-| `muleforge validate` | Validate generated project quality |
+| `muleforge validate` | Run verification, contract, deployment, policy, connector and quality gates |
 | `muleforge verify` | Check requirement-to-project coverage |
 | `muleforge verify --build` | Verify and run Maven tests when static checks pass |
 | `muleforge test` | Run Maven tests |
@@ -185,7 +185,12 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge clean` | Clean Maven output |
 | `muleforge doctor` | Check local development tools |
 | `muleforge runtime-check` | Check Java, Maven and Mule project prerequisites |
-| `muleforge release-check` | Check release-readiness and required quality artifacts || `muleforge deployment-check` | Validate deployment target and release settings || `muleforge connector-check` | Verify connector dependencies, namespaces, configs and generated operations || `muleforge sync-docs` | Synchronize application documentation and traceability from the project model |
+| `muleforge release-check` | Check release-readiness and required quality artifacts |
+| `muleforge deployment-check [config]` | Validate deployment target and release settings |
+| `muleforge policy-check [config]` | Validate retry, pagination, idempotency, transaction and security policies |
+| `muleforge connector-check [config]` | Verify connector dependencies, namespaces, configs and generated operations |
+| `muleforge sync-docs [config]` | Synchronize application documentation and traceability |
+
 
 Run:
 
