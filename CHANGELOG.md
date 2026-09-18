@@ -1,3 +1,12 @@
+## 0.9.8
+
+- Added persistent Object Store idempotency reservations for idempotent generated operations.
+- Added duplicate-idempotency handling with HTTP 409 response scaffolding.
+- Added real Mule transaction boundaries for transaction-enabled generated business and connector flows.
+- Added runtime database/Snowflake pagination parameters, total-count metadata and has-next response metadata.
+- Added generated MUnit scenarios for idempotency duplicates and pagination.
+- Added connector failure mocks using MUnit error responses.
+
 ## 0.9.7
 
 - Added detailed RAML request/response field schema generation from requirement fields.
