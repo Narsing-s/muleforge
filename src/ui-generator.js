@@ -108,9 +108,11 @@ function generateConnectivityConfigs(d) {
 function generateMuleXml(config, d) {
   const prop = name => "$" + "{" + name + "}";
   const db = config.database || {};
-  const snowflakeConfig = d.hasSnowflake
-    ? '\n  <snowflake:snowflake-config name="Snowflake_Config" doc:name="Snowflake Config"><snowflake:snowflake-connection accountName="' + (db.accountName || prop("snowflake.accountName")) + '" warehouse="' + (db.warehouse || prop("snowflake.warehouse")) + '" database="' + (db.database || prop("snowflake.database")) + '" schema="' + (db.schema || prop("snowflake.schema")) + '" user="' + (db.user || prop("snowflake.user")) + '" password="' + (db.password || prop("snowflake.password")) + '" role="' + (db.role || prop("snowflake.role")) + '"/></snowflake:snowflake-config>\n'
-    : "";
+  const snowflake = (config.connectivity || []).find(x => x.type === "snowflake") || {};
+  const snowflakeConfig
+    = d.hasSnowflake
+      ? '\n  <snowflake:snowflake-config name="Snowflake_Config" doc:name="Snowflake Config"><snowflake:snowflake-connection accountName="' + (db.accountName || snowflake.accountName || prop("snowflake.accountName")) + '" warehouse="' + (db.warehouse || snowflake.warehouse || prop("snowflake.warehouse")) + '" database="' + (db.database || snowflake.database || prop("snowflake.database")) + '" schema="' + (db.schema || snowflake.schema || prop("snowflake.schema")) + '" user="' + (db.user || snowflake.user || prop("snowflake.user")) + '" password="' + (db.password || snowflake.password || prop("snowflake.password")) + '" role="' + (db.role || snowflake.role || prop("snowflake.role")) + '"/></snowflake:snowflake-config>\n'
+      : "";
   const databaseConfig = d.hasDatabase && !d.hasSnowflake
     ? '\n  <db:config name="Database_Config"><db:generic-connection url="' + (db.url || prop("db.url")) + '" user="' + (db.user || prop("db.user")) + '" password="' + (db.password || prop("db.password")) + '" /></db:config>\n'
     : "";
