@@ -188,7 +188,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const connectorIds = [...new Set(connectivity.map(c => c.type))];
 
   function operationSection(endpoint) {
-    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
+    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\]/g, "\\    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");");
     const marker = new RegExp("\\b" + endpoint.method + "\\s+" + escapedPath + "\\b", "i");
     const hit = marker.exec(combined);
     if (!hit) return "";
@@ -227,9 +227,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
 
   function operationConnectivity(endpoint, type) {
     const local = evidenceForOperation(endpoint).filter(c => c.type === type);
-    if (local.length === 1) return local[0];
-    const global = connectivity.filter(c => c.type === type);
-    return global.length === 1 ? global[0] : null;
+    return local.length === 1 ? local[0] : null;
   }
 
   const operations = endpoints.map(endpoint => {
