@@ -49,6 +49,14 @@ function buildConnectorDependencies(config = {}, versions = {}) {
   if (snowflake || selected.some(value => normalizeConnector(value) === "snowflake")) {
     dependencies.push({ groupId: "net.snowflake", artifactId: "snowflake-jdbc", version: versions.snowflakeJdbc || "3.18.0", classifier: null });
   }
+  const dbType = String(config.database?.type || "").toLowerCase();
+  const jdbcDrivers = {
+    mysql: { groupId: "com.mysql", artifactId: "mysql-connector-j", version: versions.mysqlJdbc || "9.4.0" },
+    postgres: { groupId: "org.postgresql", artifactId: "postgresql", version: versions.postgresJdbc || "42.7.7" },
+    postgresql: { groupId: "org.postgresql", artifactId: "postgresql", version: versions.postgresJdbc || "42.7.7" },
+    oracle: { groupId: "com.oracle.database.jdbc", artifactId: "ojdbc11", version: versions.oracleJdbc || "23.8.0" }
+  };
+  if (jdbcDrivers[dbType]) dependencies.push({ ...jdbcDrivers[dbType], classifier: null });
   return dependencies;
 }
 
