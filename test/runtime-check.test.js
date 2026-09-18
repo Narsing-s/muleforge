@@ -8,7 +8,7 @@ const { execFileSync } = require("node:child_process");
 test("runtime-check command is documented in CLI source", () => {
   const source = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
   assert.match(source, /runtime-check \[directory\]/);
-  assert.match(source, /Maven repository access and credentials/);
+  assert.match(source, /MuleSoft repository access and credentials/);
 });
 
 test("generated POM uses a Mule Maven plugin that supports runtimeVersion", () => {
