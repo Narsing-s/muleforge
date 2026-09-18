@@ -41,3 +41,22 @@ test("preserves explicit Anypoint MQ endpoint and destination", () => {
   assert.equal(found[0].endpoint, "https://mq.example.com/api/v1");
   assert.equal(found[0].queue, "CUSTOMER.OUT");
 });
+
+
+test("does not silently map multiple connectors to an unrelated operation", () => {
+  const docs = [
+    { name: "api.md", type: "md", text: "POST /customers creates a customer." },
+    { name: "integration.md", type: "md", text: "The integration also uses SFTP host files.example.com path /inbound and publishes to IBM MQ queue CUSTOMER.IN." }
+  ];
+  const model = analyzeRequirementDocument(docs.map(x => x.text).join("\n"), "api.md", docs);
+  assert.equal(model.operations[0].connector, null);
+  assert.equal(model.operations[0].connectorAmbiguous, true);
+  assert.ok(model.conflicts.some(x => x.type === "operation-connector"));
+});
+
+test("maps a single explicit connector without inventing a second connector", () => {
+  const text = "POST /customers receives a request and publishes it to IBM MQ queue CUSTOMER.IN on queue manager QM1 channel DEV.ADMIN.SVRCONN.";
+  const model = analyzeRequirementDocument(text, "mq.md");
+  assert.equal(model.operations[0].connector, "ibm-mq");
+  assert.equal(model.operations[0].destination, "CUSTOMER.IN");
+});
