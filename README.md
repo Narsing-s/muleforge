@@ -348,6 +348,6 @@ PDF extraction uses `pdftotext` when available; DOCX/PPTX/XLSX extraction uses t
 
 ## 🔍 Quality and traceability
 
-Generated projects now include a machine-readable `muleforge-traceability.json` manifest and `docs/11-traceability.md`. Run `muleforge trace` to regenerate them and `muleforge audit` to check requirement completeness, duplicate operations, generated assets and obvious hard-coded secrets.
+Generated projects now include a machine-readable `muleforge-traceability.json` manifest and `docs/11-traceability.md`. Run `muleforge trace` to regenerate them and `muleforge self-test` before release; `muleforge audit` to check requirement completeness, duplicate operations, generated assets and obvious hard-coded secrets.
 
 These additions are additive: the existing generation, verification, Maven and Desktop-save workflow remains unchanged.
