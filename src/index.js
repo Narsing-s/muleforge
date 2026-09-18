@@ -125,6 +125,8 @@ function releaseCheck(directory = ".") {
   add("runtime validation docs", fs.existsSync(path.join(root, "docs", "cicd", "runtime-validation.md")), "Runtime validation documentation is required.");
   add("tests", fs.existsSync(path.join(root, "test")), "Automated tests are required.");
   add("generator template", fs.existsSync(path.join(root, "templates", "pom.xml.hbs")), "Generated Maven template is required.");
+  add("connector audit", fs.existsSync(path.join(root, "src", "connector-audit.js")), "Connector integrity audit is required.");
+  add("MUnit scenario generator", fs.existsSync(path.join(root, "src", "munit-generator.js")), "MUnit scenario generation is required.");
   add("gitignore", fs.existsSync(path.join(root, ".gitignore")), ".gitignore is required.");
   const forbidden = [];
   const scan = dir => {
