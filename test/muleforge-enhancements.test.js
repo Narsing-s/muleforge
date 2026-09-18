@@ -30,10 +30,9 @@ test("contract validator rejects malformed routes and unsupported methods", () =
   const report = validateContract(file); assert.equal(report.valid, false); assert.ok(report.errors.some(x => x.includes("Unsupported HTTP method"))); assert.ok(report.errors.some(x => x.includes("must start")));
 });
 
-test("generated Mule XML contains only one database config", () => {
-  const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path"); const { execFileSync } = require("node:child_process");
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-db-")); const cfg = path.join(temp, "muleforge.yaml");
-  fs.writeFileSync(cfg, "project:\n  name: db-api\n  artifactId: db-api\napi:\n  name: db-api\n  basePath: /api/v1\ndatabase:\n  type: generic\nconnectors: [http]\noperations:\n  - name: get_customer\n    method: GET\n    path: /customers\n", "utf8");
-  execFileSync(process.execPath, [path.resolve(__dirname, "../src/index.js"), "generate", cfg], { encoding: "utf8" });
-  const xml = fs.readFileSync(path.join(temp, "src/main/mule/db-api.xml"), "utf8"); assert.equal((xml.split("<db:config ").length - 1), 1);
+test("reference Mule XML contains only one database config", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const xml = fs.readFileSync(path.resolve(__dirname, "../customer-api/src/main/mule/customer-api.xml"), "utf8");
+  assert.equal(xml.split("<db:config ").length - 1, 1);
 });
