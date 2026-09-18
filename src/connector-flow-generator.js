@@ -149,7 +149,7 @@ ${source(op, data, endpoint, method, status)}    <ibm-mq:publish config-ref="IBM
 
   if (connector === 'sftp') {
     const filePath = esc(op.filePath || op.path || '${sftp.filePath}');
-    const sftpAction = action || (method === 'POST' || method === 'PUT' ? 'write' : 'read');
+    const sftpAction = action || 'read';
     const operation = sftpAction === 'write'
       ? `    <sftp:write config-ref="SFTP_Config" path="${filePath}" doc:name="Write file" />`
       : sftpAction === 'list'
