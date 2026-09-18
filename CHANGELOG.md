@@ -1,3 +1,10 @@
+## Unreleased
+
+- Added a manual GitHub Actions runtime-validation workflow that generates the reference Mule project and can execute Maven/MUnit tests and packaging with an approved `MAVEN_SETTINGS_XML` secret.
+- Added runtime validation documentation and report/JAR artifact collection.
+- Extended `muleforge release-check` to require the runtime validation workflow and documentation.
+- Added regression coverage for the new release-readiness requirements.
+
 # 0.9.1
 
 - Updated generated MUnit configuration to use the current `munit.runtimeversion` property.
