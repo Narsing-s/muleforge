@@ -81,8 +81,8 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     if (connectorIds.has("anypoint-mq")) checks.push(result("Anypoint MQ configuration", /<anypoint-mq:config\b/.test(mule) && /<anypoint-mq:publish\b/.test(mule), "Anypoint MQ selection requires a generated configuration and publish operation."));
     checks.push(result("Mule XML declaration", mule.startsWith("<?xml"), "Mule XML should contain an XML declaration."));
     checks.push(result("Mule root", /<mule\b/.test(mule) && /<\/mule>\s*$/.test(mule), "Mule XML must have a mule root element."));
-  checks.push(result("No escaped-newline artifacts", !mule.includes("\\n"), "Generated Mule XML must contain real line breaks, not literal \\n text."));
-    const flowBlocks = [...mule.matchAll(/<flow\\b[^>]*name="([^"]+)"[^>]*>[\\s\\S]*?<\\/flow>/g)];
+    checks.push(result("No escaped-newline artifacts", !mule.includes("\\n"), "Generated Mule XML must contain real line breaks, not literal \\n text."));
+    const flowBlocks = [...mule.matchAll(/<flow\b[^>]*name="([^"]+)"[^>]*>[\s\S]*?<\/flow>/g)];
     const flowNames = new Set(flowBlocks.map(m => m[1]));
     const operationFlowsChecked = operations.map(op => ({
       name: `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`,
