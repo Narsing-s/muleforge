@@ -66,13 +66,21 @@ jobs:
 
       - name: Run generated Maven/MUnit tests
         if: ${{ inputs.skip_maven == false }}
-        working-directory: customer-api
-        run: mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false clean test -Dmunit.coverage.failBuild=false
+        env:
+          PROJECT_MODEL: ${{ inputs.project }}
+        run: |
+          PROJECT_DIR="$(dirname "$PROJECT_MODEL")"
+          cd "$PROJECT_DIR"
+          mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false clean test -Dmunit.coverage.failBuild=false
 
       - name: Package generated Mule application
         if: ${{ inputs.skip_maven == false }}
-        working-directory: customer-api
-        run: mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false package -Dmunit.coverage.failBuild=false
+        env:
+          PROJECT_MODEL: ${{ inputs.project }}
+        run: |
+          PROJECT_DIR="$(dirname "$PROJECT_MODEL")"
+          cd "$PROJECT_DIR"
+          mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false package -Dmunit.coverage.failBuild=false
 
       - name: Upload generated runtime reports
         if: ${{ always() && inputs.skip_maven == false }}
