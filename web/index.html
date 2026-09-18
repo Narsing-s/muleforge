@@ -30,6 +30,7 @@
 <script>
 let result=null;
 let analyzedFingerprint='';
+let requestedResolutions=[];
 const buttons=document.querySelectorAll('.nav button'),sections=document.querySelectorAll('.section');
 buttons.forEach(b=>b.onclick=()=>{buttons.forEach(x=>x.classList.remove('active'));sections.forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active')});
 const esc=s=>String(s??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));
@@ -39,12 +40,44 @@ document.getElementById('req').addEventListener('input',()=>{if(result)invalidat
 document.getElementById('file').addEventListener('change',()=>{renderFileList();if(result)invalidateAnalysis()});
 function renderFileList(){const files=[...document.getElementById('file').files];document.getElementById('fileList').innerHTML=files.length?files.map(f=>'📄 '+esc(f.name)+' <span class="muted">('+Math.round(f.size/1024)+' KB)</span>').join('<br>'):'No documents selected.'}
 renderFileList();
-async function analyze(){const status=document.getElementById('status'),btn=document.getElementById('analyzeBtn'),files=[...document.getElementById('file').files];let text=document.getElementById('req').value.trim();if(files.reduce((n,f)=>n+f.size,0)>20*1024*1024){status.innerHTML='<span class="danger">✗ Requirement package is larger than 20 MB.</span>';return}if(!text&&!files.length){status.innerHTML='<span class="danger">✗ Upload one or more requirement documents or paste text.</span>';return}btn.disabled=true;status.textContent='Extracting and deeply analyzing the complete requirement package…';try{const documents=[];for(const file of files){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));documents.push({name:file.name,base64:btoa(binary)})}if(text)documents.unshift({name:'pasted-requirement.txt',text});const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({documents})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Analysis failed');result=data;analyzedFingerprint=currentFingerprint();render(data);document.getElementById('saveBtn').disabled=!data.model || (data.model.conflicts||[]).length>0;document.getElementById('saveNotice').innerHTML=(data.model.conflicts||[]).length?'⚠ Desktop export is blocked until requirement-document conflicts are resolved.':'🔒 Desktop export is gated: generation, verification, Maven tests and packaging must all pass before the complete project is handed to your Desktop.';status.innerHTML='<span class="ok">✓ Analysis complete — all assets are available directly in the UI. Nothing has been saved yet.</span>';document.querySelector('[data-tab="overview"]').click()}catch(e){status.innerHTML='<span class="danger">✗ '+esc(e.message)+'</span>'}finally{btn.disabled=false}}
+async function analyze(){const status=document.getElementById('status'),btn=document.getElementById('analyzeBtn'),files=[...document.getElementById('file').files];let text=document.getElementById('req').value.trim();if(files.reduce((n,f)=>n+f.size,0)>20*1024*1024){status.innerHTML='<span class="danger">✗ Requirement package is larger than 20 MB.</span>';return}if(!text&&!files.length){status.innerHTML='<span class="danger">✗ Upload one or more requirement documents or paste text.</span>';return}btn.disabled=true;status.textContent='Extracting and deeply analyzing the complete requirement package…';try{const documents=[];for(const file of files){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));documents.push({name:file.name,base64:btoa(binary)})}if(text)documents.unshift({name:'pasted-requirement.txt',text});const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({documents,resolutions:requestedResolutions})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Analysis failed');result=data;requestedResolutions=[];analyzedFingerprint=currentFingerprint();render(data);document.getElementById('saveBtn').disabled=!data.model || (data.model.conflicts||[]).length>0;document.getElementById('saveNotice').innerHTML=(data.model.conflicts||[]).length?'⚠ Desktop export is blocked until requirement-document conflicts are resolved.':'🔒 Desktop export is gated: generation, verification, Maven tests and packaging must all pass before the complete project is handed to your Desktop.';status.innerHTML='<span class="ok">✓ Analysis complete — all assets are available directly in the UI. Nothing has been saved yet.</span>';document.querySelector('[data-tab="overview"]').click()}catch(e){status.innerHTML='<span class="danger">✗ '+esc(e.message)+'</span>'}finally{btn.disabled=false}}
+async function resolveConflicts(){
+  const selections=[...document.querySelectorAll('#conflictResolver select')].map(select=>({
+    type:select.dataset.resolutionType,
+    connector:select.dataset.connector,
+    field:select.dataset.field,
+    operation:select.dataset.operation,
+    value:select.value
+  }));
+  if(!selections.length)return;
+  requestedResolutions=selections;
+  document.getElementById('status').textContent='Applying explicit conflict resolutions and regenerating the solution…';
+  await analyze();
+}
 async function saveToDesktop(){if(!result||!result.model)return;if(currentFingerprint()!==analyzedFingerprint){invalidateAnalysis();return}const status=document.getElementById('status'),btn=document.getElementById('saveBtn');btn.disabled=true;btn.textContent='⏳ Running verification + Maven workflow…';status.innerHTML='<span class="muted">Staging project temporarily → static verification → Maven tests → Maven package → Desktop save. Nothing is saved before all gates pass.</span>';try{const r=await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:result.model})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'Save workflow failed');status.innerHTML='<span class="ok">✓ Workflow successful. Complete generated project saved to: '+esc(data.path)+'</span>';document.getElementById('saveNotice').innerHTML='<span class="ok">✓ Saved only after all verification, Maven test and package gates passed.</span>';btn.textContent='✓ Saved to Desktop';}catch(e){status.innerHTML='<span class="danger">✗ '+esc(e.message)+'</span>';document.getElementById('saveNotice').innerHTML='<span class="danger">✗ Nothing was saved because the workflow did not pass.</span>';btn.disabled=false;btn.textContent='✓ Verify Workflow & Save to Desktop';}}function render(data){
   const s=data.summary||{}, ops=s.operations||[], m=data.model||{};
   const docs=m.sourceDocuments||[], con=m.connectivity||[], reqs=m.requirements||[], missing=m.missingConfigurations||[], conflicts=m.conflicts||[];
   const conflictHtml=conflicts.length
-    ? '<div class="notice"><span class="danger">⚠ '+conflicts.length+' connectivity conflict(s) require resolution.</span></div>'
+    ? '<div id="conflictResolver" class="notice"><div class="danger">⚠ '+conflicts.length+' conflict(s) require an explicit resolution before Desktop export.</div>'+
+      conflicts.map((conflict,ci)=>{
+        if(conflict.type==='connectivity'){
+          return '<div class="op" style="margin-top:10px"><b>'+esc(conflict.connector)+'</b><div class="muted">'+esc(conflict.message)+'</div>'+
+            (conflict.differences||[]).map((d,di)=>{
+              const options=[...new Set(d.values||[])];
+              return '<label style="display:block;margin-top:8px">'+esc(d.field)+': <select data-resolution-type="connectivity" data-connector="'+esc(conflict.connector)+'" data-field="'+esc(d.field)+'">'+
+                options.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+
+              '</select></label>';
+            }).join('')+'</div>';
+        }
+        if(conflict.type==='operation-connector'){
+          return '<div class="op" style="margin-top:10px"><b>'+esc(conflict.operation)+'</b><div class="muted">'+esc(conflict.message)+'</div>'+
+            '<label style="display:block;margin-top:8px">Connector: <select data-resolution-type="operation-connector" data-operation="'+esc(conflict.operation)+'">'+
+            (conflict.candidates||[]).map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+
+            '</select></label></div>';
+        }
+        return '<div class="op" style="margin-top:10px">'+esc(conflict.message)+'</div>';
+      }).join('')+
+      '<button class="primary" style="margin-top:12px" onclick="resolveConflicts()">Apply selections & regenerate</button></div>'
     : '<div class="notice"><span class="ok">✓ No connectivity conflicts detected.</span></div>';
   const connectivityHtml=con.length
     ? con.map(x=>'<div class="op"><span class="method">'+esc(x.type)+'</span><span class="muted">'+esc(x.endpoint||x.host||x.path||x.queue||x.topic||'document-specified')+'</span><span class="pill">'+esc(x.auth||'auth not specified')+'</span></div>').join('')
