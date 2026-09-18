@@ -164,6 +164,12 @@ See [CI/CD documentation](docs/cicd/README.md) and [GitHub Actions guidance](doc
 
 > CloudHub, CloudHub 2.0, Runtime Fabric and on-premises deployment helpers remain roadmap items. Do not put Anypoint credentials directly into generated workflow files.
 
+## 💾 Local Desktop export workflow
+
+The local Web UI now keeps generated output in a temporary staging directory until the complete generation workflow passes. The **Verify Workflow & Save to Desktop** action runs static requirement verification, Maven tests and a Maven package gate first. Only after every gate succeeds is the complete generated project copied to the user's existing `Desktop` folder. If any gate fails, nothing is copied or overwritten.
+
+This is intentionally local: no generated project is uploaded to a remote service and no Anypoint credentials are required for the export workflow. The browser UI cannot directly write arbitrary desktop paths, so the local MuleForge Node server performs the final filesystem copy.
+
 ## 🛠️ CLI commands
 
 | Command | Purpose |
