@@ -58,3 +58,20 @@ test("generated MUnit keeps the customer not-found scenario only for the impleme
   assert.match(xml, /name="getCustomer-not-found-test"/);
   assert.match(xml, /processor="db:select"/);
 });
+
+
+test("CloudHub 2 deployment workflow uses Maven deployment and secret settings", () => {
+  const { generateGithubActions } = require("../src/production");
+  const { deploymentArtifacts } = require("../src/deployment-artifacts");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-deploy-"));
+  deploymentArtifacts(root, { deployment: { target: "cloudhub2" } }, { artifactId: "sample", java: "17" });
+  const workflow = fs.readFileSync(path.join(root, ".github/workflows/deploy-cloudhub2.yml"), "utf8");
+  assert.match(workflow, /MAVEN_SETTINGS_XML/);
+  assert.match(workflow, /mvn -B/);
+  assert.match(workflow, /-Dmuleforge\.cloudhub2=true/);
+  assert.match(workflow, /-DmuleDeploy/);
+  assert.match(workflow, /ANYPOINT_TARGET/);
+});
