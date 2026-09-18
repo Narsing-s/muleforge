@@ -84,24 +84,24 @@ function connectorFlow(op, data) {
       const names = fields.length ? fields : ['name', 'email'];
       const cols = names.map(x => esc(x.toUpperCase())).join(', ');
       const values = names.map(x => ':' + x).join(', ');
-      return withErrorHandler(\`  <flow name="\${name}">
-\${source(op, data, endpoint, method, status)}    <snowflake:insert config-ref="Snowflake_Config" doc:name="Insert \${esc(table)}">
-      <snowflake:sql><![CDATA[INSERT INTO \${table} (\${cols}) VALUES (\${values})]]></snowflake:sql>
-      <snowflake:input-parameters><![CDATA[#[{ \${params(names)} }]]]></snowflake:input-parameters>
+      return withErrorHandler(`  <flow name="${name}">
+${source(op, data, endpoint, method, status)}    <snowflake:insert config-ref="Snowflake_Config" doc:name="Insert ${esc(table)}">
+      <snowflake:sql><![CDATA[INSERT INTO ${table} (${cols}) VALUES (${values})]]></snowflake:sql>
+      <snowflake:input-parameters><![CDATA[#[{ ${params(names)} }]]]></snowflake:input-parameters>
     </snowflake:insert>
-    <set-variable variableName="httpStatus" value="\${status}" />
+    <set-variable variableName="httpStatus" value="${status}" />
     <ee:transform doc:name="Response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{ status: "SUCCESS", data: payload }]]></ee:set-payload></ee:message></ee:transform>\`);
+{ status: "SUCCESS", data: payload }]]></ee:set-payload></ee:message></ee:transform>`);
     }
     const where = op.where || (fields[0] || 'ID') + ' = :' + (fields[0] || 'id');
-    return withErrorHandler(\`  <flow name="\${name}">
-\${source(op, data, endpoint, method, status)}    <snowflake:select config-ref="Snowflake_Config" doc:name="Select \${esc(table)}">
-      <snowflake:sql><![CDATA[SELECT * FROM \${table} WHERE \${esc(where)}]]></snowflake:sql>
-      <snowflake:input-parameters><![CDATA[#[\${JSON.stringify(op.parameters || {})}]]]></snowflake:input-parameters>
+    return withErrorHandler(`  <flow name="${name}">
+${source(op, data, endpoint, method, status)}    <snowflake:select config-ref="Snowflake_Config" doc:name="Select ${esc(table)}">
+      <snowflake:sql><![CDATA[SELECT * FROM ${table} WHERE ${esc(where)}]]></snowflake:sql>
+      <snowflake:input-parameters><![CDATA[#[${JSON.stringify(op.parameters || {})}]]]></snowflake:input-parameters>
     </snowflake:select>
-    <set-variable variableName="httpStatus" value="\${status}" />\`);
+    <set-variable variableName="httpStatus" value="${status}" />`);
   }
 
   if (connector === 'database') {
@@ -111,24 +111,24 @@ output application/json
       const names = fields.length ? fields : ['name', 'email'];
       const cols = names.map(x => esc(x.toUpperCase())).join(', ');
       const binds = names.map(x => ':' + x).join(', ');
-      return withErrorHandler(\`  <flow name="\${name}">
-\${source(op, data, endpoint, method, status)}    <db:insert config-ref="Database_Config" doc:name="Insert \${esc(table)}">
-      <db:sql><![CDATA[INSERT INTO \${table} (\${cols}) VALUES (\${binds})]]></db:sql>
-      <db:input-parameters><![CDATA[#[{ \${params(names)} }]]]></db:input-parameters>
+      return withErrorHandler(`  <flow name="${name}">
+${source(op, data, endpoint, method, status)}    <db:insert config-ref="Database_Config" doc:name="Insert ${esc(table)}">
+      <db:sql><![CDATA[INSERT INTO ${table} (${cols}) VALUES (${binds})]]></db:sql>
+      <db:input-parameters><![CDATA[#[{ ${params(names)} }]]]></db:input-parameters>
     </db:insert>
-    <set-variable variableName="httpStatus" value="\${status}" />
+    <set-variable variableName="httpStatus" value="${status}" />
     <ee:transform doc:name="Response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{ status: "SUCCESS", data: payload }]]></ee:set-payload></ee:message></ee:transform>\`);
+{ status: "SUCCESS", data: payload }]]></ee:set-payload></ee:message></ee:transform>`);
     }
     const where = op.where || (fields[0] || 'ID') + ' = :' + (fields[0] || 'id');
-    return withErrorHandler(\`  <flow name="\${name}">
-\${source(op, data, endpoint, method, status)}    <db:select config-ref="Database_Config" doc:name="Select \${esc(table)}">
-      <db:sql><![CDATA[SELECT * FROM \${table} WHERE \${esc(where)}]]></db:sql>
-      <db:input-parameters><![CDATA[#[\${JSON.stringify(op.parameters || {})}]]]></db:input-parameters>
+    return withErrorHandler(`  <flow name="${name}">
+${source(op, data, endpoint, method, status)}    <db:select config-ref="Database_Config" doc:name="Select ${esc(table)}">
+      <db:sql><![CDATA[SELECT * FROM ${table} WHERE ${esc(where)}]]></db:sql>
+      <db:input-parameters><![CDATA[#[${JSON.stringify(op.parameters || {})}]]]></db:input-parameters>
     </db:select>
-    <set-variable variableName="httpStatus" value="\${status}" />\`);
+    <set-variable variableName="httpStatus" value="${status}" />`);
   }
   if (connector === 'anypoint-mq') {
     const destination = esc(op.destination || '${anypointmq.destination}');
