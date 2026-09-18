@@ -188,7 +188,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const connectorIds = [...new Set(connectivity.map(c => c.type))];
 
   function operationSection(endpoint) {
-    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\]/g, "\\    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");");
+    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const marker = new RegExp("\\b" + endpoint.method + "\\s+" + escapedPath + "\\b", "i");
     const hit = marker.exec(combined);
     if (!hit) return "";
