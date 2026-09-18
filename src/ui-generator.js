@@ -75,13 +75,31 @@ function schemas(d) {
   return base.join(" ");
 }
 
+function generateConnectivityConfigs(d) {
+  const byType = new Map();
+  for (const item of d.connectivity || []) if (!byType.has(item.type)) byType.set(item.type, item);
+  const out = [];
+  const sftp = byType.get("sftp");
+  if (sftp) {
+    const host = xmlEscape(sftp.host || "\${sftp.host}");
+    const port = sftp.port || "\${sftp.port}";
+    const working = xmlEscape(sftp.path || "\${sftp.workingDir}");
+    out.push(\`  <sftp:config name="SFTP_Config" doc:name="SFTP Config"><sftp:connection host="\${host}" port="\${port}" username="\${sftp.user || "\${sftp.user}"}" password="\${sftp.password || "\${sftp.password}"}" workingDir="\${working}"/></sftp:config>\\n\`);
+  }
+  const mq = byType.get("ibm-mq");
+  if (mq) out.push(\`  <!-- IBM MQ queue: \${xmlEscape(mq.queue || mq.topic || "\${ibmmq.queue}")}; credentials remain secure-property placeholders. -->\\n\`);
+  const amq = byType.get("anypoint-mq");
+  if (amq) out.push(\`  <!-- Anypoint MQ destination: \${xmlEscape(amq.queue || amq.topic || "\${anypointmq.destination}")}; credentials remain secure-property placeholders. -->\\n\`);
+  return out.join("");
+}
 function generateMuleXml(config, d) {
   const databaseConfig = d.hasDatabase
-    ? `\n  <db:config name="Database_Config"><db:generic-connection url="\${db.url}" driverClassName="${d.hasSnowflake ? "net.snowflake.client.jdbc.SnowflakeDriver" : ""}" user="\${db.user}" password="\${db.password}" /></db:config>\n`
+    ? \`\\n  <db:config name="Database_Config"><db:generic-connection url="\${db.url}" driverClassName="\${d.hasSnowflake ? "net.snowflake.client.jdbc.SnowflakeDriver" : ""}" user="\${db.user}" password="\${db.password}" /></db:config>\\n\`
     : "";
-  const header = `<?xml version="1.0" encoding="UTF-8"?>\n<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ${namespaces(d)} xsi:schemaLocation="${schemas(d)}">\n  <http:listener-config name="HTTP_Listener_config"><http:listener-connection host="0.0.0.0" port="\${http.port}" /></http:listener-config>${databaseConfig}`;
+  const connectivityConfigs = generateConnectivityConfigs(d);
+  const header = \`<?xml version="1.0" encoding="UTF-8"?>\\n<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \${namespaces(d)} xsi:schemaLocation="\${schemas(d)}">\\n  <http:listener-config name="HTTP_Listener_config"><http:listener-connection host="0.0.0.0" port="\\\${http.port}" /></http:listener-config>\\n\${connectivityConfigs}\${databaseConfig}\`;
   const flows = (config.operations || []).map(op => connectorFlow(op, d)).filter(Boolean);
-  return `${header}${flows.length ? flows.join("\n") : generateBusinessFlows(config, d)}</mule>\n`;
+  return \`\${header}\${flows.length ? flows.join("\\n") : generateBusinessFlows(config, d)}</mule>\\n\`;
 }
 
 function scenarioText(model) {
