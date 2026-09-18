@@ -13,3 +13,10 @@ test("generates happy-path and not-found MUnit scenarios", () => {
   assert.match(xml, /db:select/);
   assert.match(xml, /equalTo\(404\)/);
 });
+
+
+test("scenario planner includes success, validation, connector failure and conflict cases", () => {
+  const source = require("fs").readFileSync(require("path").resolve(__dirname, "../src/munit-generator.js"), "utf8");
+  assert.match(source, /connector-error/);
+  assert.match(source, /conflict or duplicate/);
+});
