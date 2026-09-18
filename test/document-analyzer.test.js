@@ -28,8 +28,16 @@ test("surfaces conflicting explicit connectivity across documents", () => {
 });
 
 test("connector detection is explicit rather than default-only", () => {
-  const found = inferConnectivity("Publish to IBM MQ queue CUSTOMER.IN and authenticate with client credentials.", "mq.md");
+  const found = inferConnectivity("Publish to IBM MQ host mq.example.com port 1414 queue manager QM1 channel DEV.ADMIN.SVRCONN queue CUSTOMER.IN and authenticate with client credentials.", "mq.md");
   assert.equal(found[0].type, "ibm-mq");
   assert.equal(found[0].queue, "CUSTOMER.IN");
   assert.equal(found[0].auth, "client-credentials");
+  assert.equal(found[0].queueManager, "QM1");
+  assert.equal(found[0].channel, "DEV.ADMIN.SVRCONN");
+});
+
+test("preserves explicit Anypoint MQ endpoint and destination", () => {
+  const found = inferConnectivity("Publish to Anypoint MQ endpoint https://mq.example.com/api/v1 destination CUSTOMER.OUT.", "mq.md");
+  assert.equal(found[0].endpoint, "https://mq.example.com/api/v1");
+  assert.equal(found[0].queue, "CUSTOMER.OUT");
 });
