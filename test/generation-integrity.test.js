@@ -8,7 +8,7 @@ const { snapshot, diffSnapshots } = require("../src/diff");
 test("generated POM keeps Mule and MUnit plugins inside build/plugins", () => {
   const pom = fs.readFileSync(path.resolve(__dirname, "../templates/pom.xml.hbs"), "utf8");
   assert.match(pom, /<munit\.version>3\.7\.4<\/munit\.version>/);
-  assert.match(pom, /<plugins>[\\s\\S]*mule-maven-plugin[\\s\\S]*munit-maven-plugin[\\s\\S]*<\/plugins>/);
+  assert.match(pom, /<plugins>[\s\S]*mule-maven-plugin[\s\S]*munit-maven-plugin[\s\S]*<\/plugins>/);
   assert.equal((pom.match(/<plugins>/g) || []).length, 1);
 });
 
