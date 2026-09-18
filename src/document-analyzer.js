@@ -112,19 +112,19 @@ const CONNECTORS = [
 function inferConnectivity(text, source) {
   const out = [];
   const endpoint = (text.match(/(?:https?|jdbc):\/\/[^\s,)"']+/i) || [])[0]?.replace(/[.,;)]+$/, "") || null;
-  const pathMatch = text.match(/(?:path|directory|folder|location)\s*(?:is|=|:)\s*["']?([^\s"']+)/i);
-  const queueMatch = text.match(/(?:queue|destination)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._:/-]+)/i);
-  const topicMatch = text.match(/topic\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._:/-]+)/i);
+  const pathMatch = text.match(/(?:path|directory|folder|location)\s*(?:(?:is|=|:)\s*)?["']?([^\s"']+)/i);
+  const queueMatch = text.match(/(?:queue|destination)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._:/-]+)/i);
+  const topicMatch = text.match(/topic\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._:/-]+)/i);
   const scheduleMatch = text.match(/(?:every|each)\s+(\d+\s*(?:minutes?|hours?|seconds?|days?))/i) || text.match(/cron(?: expression)?\s*[:=]\s*([^\n]+)/i);
   const hostMatch = text.match(/(?:host|hostname|server)\s*(?:is|=|:)?\s*["']?([A-Za-z0-9._-]+)/i);
   const portMatch = text.match(/(?:port)\s*(?:is|=|:)\s*(\d{2,5})/i);
-  const queueManagerMatch = text.match(/(?:queue\s*manager|queuemanager|QM)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
-  const channelMatch = text.match(/(?:channel)\s*(?:name|is|:)\s*["']?([A-Za-z0-9._-]+)/i);
-  const accountNameMatch = text.match(/(?:account(?:\s*name)?|accountName)\s*(?:is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
-  const warehouseMatch = text.match(/(?:warehouse)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
-  const databaseNameMatch = text.match(/(?:database|db)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
-  const schemaMatch = text.match(/(?:schema)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
-  const roleMatch = text.match(/(?:role)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
+  const queueManagerMatch = text.match(/(?:queue\s*manager|queuemanager|QM)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
+  const channelMatch = text.match(/(?:channel)\s*(?:(?:name|is|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
+  const accountNameMatch = text.match(/(?:account(?:\s*name)?|accountName)\s*(?:(?:is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
+  const warehouseMatch = text.match(/(?:warehouse)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
+  const databaseNameMatch = text.match(/(?:database|db)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
+  const schemaMatch = text.match(/(?:schema)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
+  const roleMatch = text.match(/(?:role)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const auth = /oauth2|oauth 2/i.test(text) ? "oauth2" : /basic auth|basic authentication/i.test(text) ? "basic" : /client credentials/i.test(text) ? "client-credentials" : /api[- ]?key/i.test(text) ? "apikey" : /username.*password|user.*password/i.test(text) ? "username-password" : null;
   const add = (type, values) => out.push({ type, explicit: true, ...values, auth, source: source || "requirement" });
   for (const [type, re] of CONNECTORS) {
@@ -274,7 +274,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   }
 
   const operationConflicts = operations.filter(op => op.connectorAmbiguous).map(op => ({
-    type: "operation-connector",
+    type: "operation-routing",
     operation: op.method + " " + op.path,
     candidates: [...new Set(connectivity.filter(c => c.type !== "http").map(c => c.type))],
     message: "Multiple non-HTTP connectors are present and the documents do not identify which connector belongs to this operation.",
