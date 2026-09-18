@@ -113,7 +113,7 @@ function inferConnectivity(text, source) {
   const out = [];
   const endpoint = (text.match(/(?:https?|jdbc):\/\/[^\s,)"']+/i) || [])[0]?.replace(/[.,;)]+$/, "") || null;
   const pathMatch = text.match(/(?:path|directory|folder|location)\s*(?:(?:is|=|:)\s*)?["']?([^\s"']+)/i);
-  const queueMatch = text.match(/(?:queue|destination)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._:/-]+)/i);
+  const queueMatch = text.match(/(?:queue(?!\s*manager)|destination)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._:/-]+)/i);
   const topicMatch = text.match(/topic\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._:/-]+)/i);
   const scheduleMatch = text.match(/(?:every|each)\s+(\d+\s*(?:minutes?|hours?|seconds?|days?))/i) || text.match(/cron(?: expression)?\s*[:=]\s*([^\n]+)/i);
   const hostMatch = text.match(/(?:host|hostname|server)\s*(?:is|=|:)?\s*["']?([A-Za-z0-9._-]+)/i);
@@ -132,7 +132,7 @@ function inferConnectivity(text, source) {
     if (type === "http") add(type, { endpoint });
     else if (type === "sftp") add(type, { host: hostMatch?.[1] || null, port: portMatch ? Number(portMatch[1]) : null, path: pathMatch?.[1]?.replace(/[.,;)]+$/, "") || null, schedule: scheduleMatch?.[1] || null });
     else if (type === "ibm-mq") add(type, { host: hostMatch?.[1] || null, port: portMatch ? Number(portMatch[1]) : null, queueManager: queueManagerMatch?.[1] || null, channel: channelMatch?.[1] || null, queue: queueMatch?.[1] || null });
-    else if (type === "anypoint-mq") add(type, { endpoint, queue: queueMatch?.[1] || null, topic: topicMatch?.[1] || null });
+    else if (type === "anypoint-mq") add(type, { endpoint, queue: queueMatch?.[1]?.replace(/[.,;)]+$/, "") || null, topic: topicMatch?.[1]?.replace(/[.,;)]+$/, "") || null });
     else if (type === "database") add(type, { endpoint, host: hostMatch?.[1] || null });
     else if (type === "snowflake") add(type, {
       endpoint,
@@ -141,7 +141,7 @@ function inferConnectivity(text, source) {
       warehouse: warehouseMatch?.[1] || null,
       database: databaseNameMatch?.[1] || null,
       schema: schemaMatch?.[1] || null,
-      role: roleMatch?.[1] || null
+      role: roleMatch?.[1]?.replace(/[.,;)]+$/, "") || null
     });
     else add(type, {});
   }
@@ -305,6 +305,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     api: { name: projectName, version: "v1", type: "System API", specification: "RAML", basePath: "/api/v1" },
     connectors: connectorIds.length ? connectorIds : ["http"],
     connectivity,
+    operations,
     conflicts: [...merged.conflicts, ...operationConflicts],
     assumptions: ["Explicit connectivity in supplied documents is authoritative.", "Credentials and secrets are never copied into generated source.", "Missing connection values remain placeholders until explicitly resolved."],
     missingConfigurations,
