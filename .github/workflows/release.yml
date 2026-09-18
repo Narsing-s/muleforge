@@ -1,0 +1,42 @@
+name: MuleForge Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Test
+        run: npm test
+      - name: Self-test
+        run: node src/index.js self-test
+      - name: Release readiness
+        run: node src/index.js release-check .
+      - name: Package
+        run: npm pack
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: muleforge-package
+          path: "*.tgz"
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: "*.tgz"
