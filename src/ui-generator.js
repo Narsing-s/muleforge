@@ -26,6 +26,9 @@ function context(config) {
     connectors,
     hasSnowflake: snowflake,
     hasDatabase: Boolean(db.type) || snowflake || connectors.some(c => c.id === "database"),
+    hasSftp: connectors.some(c => c.id === "sftp"),
+    hasIbmMq: connectors.some(c => c.id === "ibm-mq"),
+    hasAnypointMq: connectors.some(c => c.id === "anypoint-mq"),
     databaseType: db.type || (snowflake ? "snowflake" : ""),
     databaseTable: db.table || "CUSTOMER",
     java: p.java || "17",
@@ -93,12 +96,12 @@ function generateConnectivityConfigs(d) {
     const port = mq.port || prop("ibmmq.port");
     const qm = xmlEscape(mq.queueManager || prop("ibmmq.queueManager"));
     const channel = xmlEscape(mq.channel || prop("ibmmq.channel"));
-    out.push(`  <ibm-mq:config name="IBM_MQ_Config" doc:name="IBM MQ Config"><ibm-mq:ibm-mq-connection username="${prop("ibmmq.username")}" password="${prop("ibmmq.password")}"><ibm-mq:connection-mode><ibm-mq:client host="${host}" port="${port}" queueManager="${qm}" channel="${channel}" /></ibm-mq:connection-mode></ibm-mq:ibm-mq-connection></ibm-mq:config>\\n`);
+    out.push(`  <ibm-mq:config name="IBM_MQ_Config" doc:name="IBM MQ Config"><ibm-mq:ibm-mq-connection username="${prop("ibmmq.username")}" password="${prop("ibmmq.password")}"><ibm-mq:connection-mode><ibm-mq:client host="${host}" port="${port}" queueManager="${qm}" channel="${channel}" /></ibm-mq:connection-mode></ibm-mq:ibm-mq-connection></ibm-mq:config>\n`);
   }
   const amq = byType.get("anypoint-mq");
   if (amq) {
     const url = xmlEscape(amq.endpoint || prop("anypointmq.url"));
-    out.push(`  <anypoint-mq:config name="Anypoint_MQ_Config" doc:name="Anypoint MQ Config"><anypoint-mq:connection url="${url}" clientId="${prop("anypointmq.clientId")}" clientSecret="${prop("anypointmq.clientSecret")}" /></anypoint-mq:config>\\n`);
+    out.push(`  <anypoint-mq:config name="Anypoint_MQ_Config" doc:name="Anypoint MQ Config"><anypoint-mq:connection url="${url}" clientId="${prop("anypointmq.clientId")}" clientSecret="${prop("anypointmq.clientSecret")}" /></anypoint-mq:config>\n`);
   }
   return out.join("");
 }
