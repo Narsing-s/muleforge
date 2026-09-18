@@ -13,8 +13,8 @@ jobs:
     name: CLI tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -36,14 +36,16 @@ jobs:
           exit 1
       - run: npm test
       - run: node src/index.js --help
+      - name: Run local self-test
+        run: node src/index.js self-test
 
   generated-project:
     name: Generated project quality gate
     runs-on: ubuntu-latest
     needs: cli-tests
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -57,8 +59,12 @@ jobs:
             rm -rf ~/.npm/_cacache
           done
           exit 1
+      - name: Contract gate
+        run: node src/index.js contract-check customer-api/muleforge.yaml
       - name: Verify reference project
         run: node src/index.js verify customer-api/muleforge.yaml
+      - name: Quality audit
+        run: node src/index.js audit customer-api/muleforge.yaml
       - name: Upload generated project metadata
         uses: actions/upload-artifact@v4
         with:
@@ -72,7 +78,7 @@ jobs:
     name: Secret hygiene
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Check common hard-coded secret patterns
         shell: bash
         run: |
