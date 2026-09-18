@@ -34,7 +34,7 @@ function processorMocks(op, data) {
   for (const processor of connectorProcessors[connector] || []) add(processor);
   return mocks.length ? `\n${mocks.join("\n")}` : "";
 }
-function failureMocks(op, data) {
+function buildFailureMocks(op, data) {
   const connector = String(op.connector || "").toLowerCase().replace(/_/g, "-");
   const processors = [];
   if (data.hasDatabase) processors.push("db:select", "db:insert");
@@ -89,7 +89,7 @@ function generateMunit(config, data) {
     const method = String(op.method || "GET").toUpperCase();
     const success = Number(op.successStatus || (method === "POST" ? 201 : 200));
     const mocks = processorMocks(op, data);
-    const failureMocks = failureMocks(op, data);
+    const failureMocks = buildFailureMocks(op, data);
     tests.push(`  <munit:test name="${testName(op, "happy-path")}">
     <munit:behavior>${mocks}
     </munit:behavior>
