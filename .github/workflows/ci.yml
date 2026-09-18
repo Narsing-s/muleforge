@@ -38,6 +38,8 @@ jobs:
       - run: node src/index.js --help
       - name: Run local self-test
         run: node src/index.js self-test
+      - name: Release readiness gate
+        run: node src/index.js release-check .
 
   generated-project:
     name: Generated project quality gate
