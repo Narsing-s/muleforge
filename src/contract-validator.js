@@ -54,7 +54,16 @@ function validateDeployment(deployment = {}) {
   if (vCores != null && (!Number.isFinite(Number(vCores)) || Number(vCores) <= 0)) errors.push("deployment.vCores must be greater than zero.");
   if (target === "cloudhub2" || target === "rtf") {
     if (!deployment.environment) errors.push(target + " deployment requires environment.");
-    if (!deployment.targetName && !deployment.target) warnings.push("Deployment target name should be supplied through secure environment configuration.");
+    if (!deployment.target) errors.push(target + " deployment requires target.");
+  }
+  if (target === "cloudhub2") {
+    const validVCores = [0.1, 0.2, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4];
+    if (vCores != null && !validVCores.includes(Number(vCores))) {
+      errors.push("cloudhub2 deployment.vCores must be one of: " + validVCores.join(", ") + ".");
+    }
+    if (deployment.autoscaling === false && replicas == null) {
+      warnings.push("cloudhub2 deployment with autoscaling disabled should specify replicas.");
+    }
   }
   if (target === "onprem" && deployment.targetType && !["server","serverGroup","cluster"].includes(deployment.targetType)) {
     errors.push("onprem deployment.targetType must be server, serverGroup, or cluster.");
