@@ -41,7 +41,38 @@ function generateEnvironment(environment, data = {}) {
   return out;
 }
 function generateGithubActions(data) {
-  return `name: MuleForge CI\n\non:\n  pull_request:\n  push:\n    branches: [ main ]\n\njobs:\n  verify-build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n      - uses: actions/setup-java@v4\n        with:\n          distribution: temurin\n          java-version: '${data.java}'\n      - name: Install dependencies\n        run: npm ci\n      - name: Verify project\n        run: npx muleforge verify\n      - name: Build with Maven\n        run: mvn -B -DskipTests=false clean package\n`;
+  return `name: Mule application CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '${data.java}'
+          cache: maven
+      - name: Static project gate
+        shell: bash
+        run: |
+          test -f pom.xml
+          test -f mule-artifact.json
+          test -f src/main/resources/application.yaml
+          test -d src/main/mule
+          test -d src/main/resources/api
+          test -d src/test/munit
+      - name: Build and test with Maven
+        run: mvn -B -DskipTests=false clean package
+`;
 }
 function writeProductionArtifacts(root, config, data) {
   const postmanDir = path.join(root, "postman"), envDir = path.join(root, "src/main/resources/properties"), workflowDir = path.join(root, ".github/workflows");
