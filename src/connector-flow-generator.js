@@ -141,9 +141,33 @@ output application/json
     const lookupField = op.lookupField || pathParameter || (fields.find(f => /(?:id|number)$/i.test(String(f))) || 'ID');
     const parameterName = op.parameterName || pathParameter || lookupField;
     const where = op.where || String(lookupField).toUpperCase() + ' = :' + parameterName;
+    const valueExpression = '#[attributes.uriParams.' + parameterName + ' default payload.' + parameterName + ' default null]';
     const input = op.parameters && Object.keys(op.parameters).length
       ? op.parameters
-      : { [parameterName]: '#[attributes.uriParams.' + parameterName + ' default payload.' + parameterName + ' default null]' };
+      : { [parameterName]: valueExpression };
+
+    if (method === 'DELETE') {
+      return withErrorHandler(`  <flow name="${name}">
+${source(op, data, endpoint, method, status)}    <db:delete config-ref="Database_Config" doc:name="Delete ${esc(table)}">
+      <db:sql><![CDATA[DELETE FROM ${table} WHERE ${esc(where)}]]></db:sql>
+      <db:input-parameters><![CDATA[#[${JSON.stringify(input)}]]]></db:input-parameters>
+    </db:delete>
+    <set-variable variableName="httpStatus" value="${status}" />`);
+    }
+
+    if (method === 'PATCH' || method === 'PUT') {
+      const updateFields = fields.filter(field => String(field) !== parameterName && !/^(id|customerId)$/i.test(String(field)));
+      const names = updateFields.length ? updateFields : ['status'];
+      const assignments = names.map(field => `${String(field).toUpperCase()} = :${field}`).join(', ');
+      const updateParams = Object.fromEntries(names.map(field => [field, '#[payload.' + field + ' default attributes.uriParams.' + field + ' default null]']));
+      return withErrorHandler(`  <flow name="${name}">
+${source(op, data, endpoint, method, status)}    <db:update config-ref="Database_Config" doc:name="Update ${esc(table)}">
+      <db:sql><![CDATA[UPDATE ${table} SET ${assignments} WHERE ${esc(where)}]]></db:sql>
+      <db:input-parameters><![CDATA[#[${JSON.stringify({...updateParams, [parameterName]: valueExpression})}]]]></db:input-parameters>
+    </db:update>
+    <set-variable variableName="httpStatus" value="${status}" />`);
+    }
+
     return withErrorHandler(`  <flow name="${name}">
 ${source(op, data, endpoint, method, status)}    <db:select config-ref="Database_Config" doc:name="Select ${esc(table)}">
       <db:sql><![CDATA[SELECT * FROM ${table} WHERE ${esc(where)}]]></db:sql>
