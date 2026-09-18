@@ -15,6 +15,23 @@ snowflake:
   password: ${snowflake.password}
 {{/if}}
 
+{{#if hasIbmMq}}
+ibmmq:
+  host: ${ibmmq.host}
+  port: ${ibmmq.port}
+  queueManager: ${ibmmq.queueManager}
+  channel: ${ibmmq.channel}
+  username: ${ibmmq.username}
+  password: ${ibmmq.password}
+{{/if}}
+
+{{#if hasAnypointMq}}
+anypointmq:
+  url: ${anypointmq.url}
+  clientId: ${anypointmq.clientId}
+  clientSecret: ${anypointmq.clientSecret}
+{{/if}}
+
 {{#if hasDatabase}}
 database:
   url: ${db.url}
