@@ -132,3 +132,28 @@ test("generated MUnit assertions use documented MunitTools matcher expressions",
   assert.match(source, /munit-tools:payload/);
   assert.doesNotMatch(source, /is="equalTo\(/);
 });
+
+test("generated flows include real idempotency reservation and transaction scope", () => {
+  const business = fs.readFileSync(path.resolve(__dirname, "../src/business-generator.js"), "utf8");
+  const connector = fs.readFileSync(path.resolve(__dirname, "../src/connector-flow-generator.js"), "utf8");
+  assert.match(business, /os:store/);
+  assert.match(business, /failIfPresent="true"/);
+  assert.match(business, /transactionalAction="ALWAYS_BEGIN"/);
+  assert.match(connector, /ObjectStore_Config/);
+  assert.match(connector, /OS:KEY_ALREADY_EXISTS/);
+  assert.match(connector, /transactionalAction="ALWAYS_BEGIN"/);
+});
+
+test("generated connector pagination uses runtime page variables and metadata", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/connector-flow-generator.js"), "utf8");
+  assert.match(source, /muleforgePageSize/);
+  assert.match(source, /muleforgePageOffset/);
+  assert.match(source, /hasNext: (vars.page * vars.pageSize) < total/);
+});
+
+test("MUnit generator includes idempotency and pagination scenarios", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/munit-generator.js"), "utf8");
+  assert.match(source, /idempotency-duplicate/);
+  assert.match(source, /OS:KEY_ALREADY_EXISTS/);
+  assert.match(source, /testName(op, "pagination")/);
+});
