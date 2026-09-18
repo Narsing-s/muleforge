@@ -12,7 +12,7 @@ test("muleforge init generates a complete project skeleton", () => {
   runCli(temp, "init", "customer-api");
   const root = path.join(temp, "customer-api");
   for (const file of ["muleforge.yaml", "pom.xml", "mule-artifact.json", "src/main/resources/application.yaml", "src/main/resources/api/customer-api.raml", "src/main/mule/customer-api.xml", "src/test/munit/customer-api-test.xml", "postman/customer-api.collection.json"]) assert.equal(fs.existsSync(path.join(root, file)), true, `missing ${file}`);
-  const pom = fs.readFileSync(path.join(root, "pom.xml"), "utf8"); assert.match(pom, /mulesoft-releases/); assert.match(pom, /<extensions>true<\\/extensions>/);
+  const pom = fs.readFileSync(path.join(root, "pom.xml"), "utf8"); assert.match(pom, /mulesoft-releases/); assert.ok(pom.includes("<extensions>true</extensions>"));
 });
 
 test("document analysis generates end-to-end assets without backend credentials", () => {
