@@ -25,7 +25,8 @@ const { validateDeployment, validateOperationPolicies } = require("./contract-va
 const { auditConnectors } = require("./connector-audit");
 const { repairProject } = require("./repair");
 const { snapshot, diffSnapshots } = require("./diff");
-const VERSION = "0.9.6";
+const { renderProperties } = require("./schema-generator");
+const VERSION = "0.9.7";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
 const render = (template, data) => {
@@ -81,18 +82,31 @@ function generateRaml(config, d) {
     if (securityModes.has("basic")) out += "  basic-auth:\n    type: Basic Authentication\n";
   }
   const groups = new Map();
-  for (const op of config.operations || []) { if (!groups.has(op.path)) groups.set(op.path, []); groups.get(op.path).push(op); }
+  for (const op of config.operations || []) {
+    if (!groups.has(op.path)) groups.set(op.path, []);
+    groups.get(op.path).push(op);
+  }
   for (const [resource, ops] of groups) for (const op of ops) {
-    const code = op.successStatus || (String(op.method).toUpperCase() === "POST" ? 201 : 200);
-    out += `\n${resource}:\n  ${String(op.method).toLowerCase()}:\n    description: ${op.name || `${op.method} ${op.path}`}\n`;
-    if (op.security === "client-id") out += `    securedBy: [client-id-enforcement]\n`;
-    if (op.security === "oauth2") out += `    securedBy: [oauth2]\n`;
+    const method = String(op.method).toLowerCase();
+    const code = op.successStatus || (method === "post" ? 201 : 200);
+    out += `\n${resource}:\n  ${method}:\n    description: ${op.name || `${op.method} ${op.path}`}\n`;
+    if (op.security === "client-id") out += "    securedBy: [client-id-enforcement]\n";
+    if (op.security === "oauth2") out += "    securedBy: [oauth2]\n";
+    if (op.security === "basic") out += "    securedBy: [basic-auth]\n";
     if (op.pagination) out += `    queryParameters:\n      page:\n        type: integer\n        minimum: 1\n        default: ${Number(op.pagination.defaultPage || 1)}\n      pageSize:\n        type: integer\n        minimum: 1\n        maximum: ${Number(op.pagination.maxPageSize || 100)}\n        default: ${Number(op.pagination.defaultPageSize || 20)}\n`;
-    if (op.idempotency) out += `    headers:\n      Idempotency-Key:\n        type: string\n        required: true\n`;
+    if (op.idempotency) out += "    headers:\n      Idempotency-Key:\n        type: string\n        required: true\n";
+    const requestProperties = renderProperties(op.requestFields || [], "            ");
+    if (requestProperties) {
+      out += "    body:\n      application/json:\n        type: object\n        properties:\n";
+      out += requestProperties + "\n";
+    }
     out += `    responses:\n      ${code}:\n        body:\n          application/json:\n            type: object\n`;
+    const responseProperties = renderProperties(op.responseFields || [], "            ");
+    if (responseProperties) out += "            properties:\n" + responseProperties + "\n";
     for (const err of (op.errors || [])) {
-      const status = Number(err.status || err.code || 500);
-      out += `      ${status}:\n        body:\n          application/json:\n            type: object\n`;
+      const status = Number(typeof err === "object" ? (err.status || err.code || 500) : 500);
+      const description = typeof err === "object" && err.description ? String(err.description).replace(/\n/g, " ") : "Error response";
+      out += `      ${status}:\n        description: ${description}\n        body:\n          application/json:\n            type: object\n`;
     }
   }
   return out + "\n";
@@ -158,7 +172,9 @@ function releaseCheck(directory = ".") {
   try { pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")); } catch { add("package.json", false, "package.json must be valid JSON."); }
   add("package version", Boolean(pkg && /^\d+\.\d+\.\d+$/.test(pkg.version || "")), "Package version must use semantic versioning.");
   const lock = fs.existsSync(path.join(root, "package-lock.json")) ? fs.readFileSync(path.join(root, "package-lock.json"), "utf8") : "";
-  add("lockfile version", Boolean(pkg && lock.includes('"version": "' + pkg.version + '"')), "package-lock.json must contain the same package version.");
+  let lockPackageVersion = null;
+  try { lockPackageVersion = JSON.parse(lock).packages?.[""]?.version; } catch {}
+  add("lockfile version", Boolean(pkg && lockPackageVersion === pkg.version), "package-lock.json root package version must match package.json.");
   add("README", fs.existsSync(path.join(root, "README.md")), "README.md is required.");
   add("CHANGELOG", fs.existsSync(path.join(root, "CHANGELOG.md")), "CHANGELOG.md is required.");
   add("CI workflow", fs.existsSync(path.join(root, ".github", "workflows", "ci.yml")), "GitHub Actions CI workflow is required.");
