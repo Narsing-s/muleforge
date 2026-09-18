@@ -23,7 +23,7 @@ const { inspectProject, printInspection } = require("./project-inspector");
 const { validateContract } = require("./contract-validator");
 const { repairProject } = require("./repair");
 const { snapshot, diffSnapshots } = require("./diff");
-const VERSION = "0.9.0";
+const VERSION = "0.9.1";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
 const render = (template, data) => {
