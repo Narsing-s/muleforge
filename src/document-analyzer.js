@@ -124,6 +124,7 @@ function inferConnectivity(text, source) {
   const warehouseMatch = text.match(/(?:warehouse)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
   const databaseNameMatch = text.match(/(?:database|db)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
   const schemaMatch = text.match(/(?:schema)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
+  const roleMatch = text.match(/(?:role)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
   const auth = /oauth2|oauth 2/i.test(text) ? "oauth2" : /basic auth|basic authentication/i.test(text) ? "basic" : /client credentials/i.test(text) ? "client-credentials" : /api[- ]?key/i.test(text) ? "apikey" : /username.*password|user.*password/i.test(text) ? "username-password" : null;
   const add = (type, values) => out.push({ type, explicit: true, ...values, auth, source: source || "requirement" });
   for (const [type, re] of CONNECTORS) {
@@ -139,7 +140,8 @@ function inferConnectivity(text, source) {
       accountName: accountNameMatch?.[1] || null,
       warehouse: warehouseMatch?.[1] || null,
       database: databaseNameMatch?.[1] || null,
-      schema: schemaMatch?.[1] || null
+      schema: schemaMatch?.[1] || null,
+      role: roleMatch?.[1] || null
     });
     else add(type, {});
   }
@@ -158,7 +160,7 @@ function mergeDocuments(documents) {
   const byType = new Map();
   for (const c of connectivity) { if (!byType.has(c.type)) byType.set(c.type, []); byType.get(c.type).push(c); }
   for (const [type, values] of byType) {
-    const fields = ["endpoint", "host", "port", "path", "queue", "topic", "queueManager", "channel", "schedule", "accountName", "warehouse", "database", "schema"];
+    const fields = ["endpoint", "host", "port", "path", "queue", "topic", "queueManager", "channel", "schedule", "accountName", "warehouse", "database", "schema", "role"];
     const differences = fields
       .map(field => ({ field, values: [...new Set(values.map(v => v[field]).filter(v => v !== null && v !== undefined && v !== ""))] }))
       .filter(x => x.values.length > 1);
@@ -287,6 +289,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     if (c.type === "snowflake" && !c.warehouse) missing.push("snowflake warehouse");
     if (c.type === "snowflake" && !c.database) missing.push("snowflake database");
     if (c.type === "snowflake" && !c.schema) missing.push("snowflake schema");
+    if (c.type === "snowflake" && !c.role) missing.push("snowflake role");
     if (c.type === "sftp" && !c.path) missing.push("sftp path");
     if (["ibm-mq", "anypoint-mq"].includes(c.type) && !c.queue && !c.topic) missing.push(c.type + " queue/destination");
     if (c.type === "ibm-mq" && !c.port) missing.push("ibm-mq port");
