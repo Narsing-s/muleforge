@@ -12,9 +12,9 @@ test("follows explicit SFTP, schedule and downstream API details", () => {
   ].join("\n");
   const model = analyzeRequirementDocument(text, "requirements.txt");
   assert.equal(model.connectivity.find(x => x.type === "sftp").host, "sftp.example.com");
-  assert.equal(model.connectivity.find(x => x.type === "sftp").path, "/inbound/customer.");
+  assert.equal(model.connectivity.find(x => x.type === "sftp").path, "/inbound/customer");
   assert.equal(model.connectivity.find(x => x.type === "sftp").schedule, "15 minutes");
-  assert.equal(model.operations[0].downstreamEndpoint, "https://customer.example.com/v1/customers.");
+  assert.equal(model.operations[0].downstreamEndpoint, "https://customer.example.com/v1/customers");
 });
 
 test("surfaces conflicting explicit connectivity across documents", () => {
