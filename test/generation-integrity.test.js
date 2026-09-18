@@ -27,3 +27,8 @@ test("snapshot diff reports added and removed project files", () => {
   assert.deepEqual(diff.removed, ["a.txt"]);
   assert.deepEqual(diff.unchanged, []);
 });
+
+test("release-check is exposed by the CLI", () => {
+  const index = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
+  assert.match(index, /release-check \[directory\]/);
+});
