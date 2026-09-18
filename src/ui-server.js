@@ -67,6 +67,10 @@ function applyResolutions(model, resolutions = []) {
     }
     return true;
   });
+  const unresolvedOperationConflicts = (model.conflicts || []).filter(x => x.type === "operation-connector");
+  model.missingConfigurations = (model.missingConfigurations || []).filter(x =>
+    x.connector !== "ambiguous" || unresolvedOperationConflicts.length
+  );
   model.decisions = [...(model.decisions || []), ...resolutions.map(r => "User-resolved " + r.type + " " + (r.connector || r.operation || "") + " " + (r.field || "") + " to " + r.value)];
   return model;
 }
