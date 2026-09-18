@@ -20,7 +20,7 @@ const { writeTraceability } = require("./traceability");
 const { auditProject, printAudit } = require("./quality-audit");
 const { deploymentArtifacts } = require("./deployment-artifacts");
 const { inspectProject, printInspection } = require("./project-inspector");
-const VERSION = "0.7.0";
+const VERSION = "0.8.0";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
 const render = (template, data) => {
