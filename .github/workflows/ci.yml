@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm cache clean --force
-          npm ci --prefer-online --registry=https://registry.yarnpkg.com --replace-registry-host=always --fetch-retries=5 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=20000
+          for i in 1 2 3 4 5; do rm -rf ~/.npm/_cacache/tmp/* || true; npm cache verify || true; if npm ci --prefer-online --registry=https://registry.npmjs.org --fetch-retries=8 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=30000; then exit 0; fi; echo "npm ci attempt $i failed; retrying with a fresh cache"; rm -rf ~/.npm/_cacache; sleep $((i * 3)); done; exit 1
       - run: npm test
       - run: node src/index.js --help
 
