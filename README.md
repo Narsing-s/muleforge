@@ -246,6 +246,8 @@ The generated `docs/` folder describes the specific application. The MuleForge r
 - Connector-aware Maven dependencies/configuration
 - MUnit scaffolding
 - Automatic generated-project documentation
+- Detailed RAML request/response schema generation
+- Connector-aware MUnit test scaffolding with documented matcher syntax
 - Requirement/project verification
 - Maven build and test integration
 - Local development environment diagnostics
@@ -257,9 +259,9 @@ The generated `docs/` folder describes the specific application. The MuleForge r
 MuleForge is still under active development. In particular:
 
 - Connector-specific business implementations are being expanded.
-- Some generated flows still require developer review and refinement.
+- Some generated business logic still requires developer review for organization-specific semantics.
 - Full runtime validation requires a Mule/Maven environment and, where applicable, real connector credentials.
-- Cloud deployment automation is not yet complete.
+- API Manager policy enforcement and enterprise secret-management integration remain deployment-specific rather than being fabricated into generated application code.
 - The development branch is not a guarantee of production readiness.
 
 Do not deploy generated applications to production solely because `muleforge verify` passes.
@@ -325,8 +327,8 @@ When adding a feature, update the implementation, tests and user documentation t
 - [x] CLI verification
 - [x] Local Web UI
 - [ ] Production-grade requirement-to-flow generation
-- [ ] Connector-specific implementation generation
-- [ ] Requirement-derived MUnit scenarios
+- [x] Connector-specific implementation generation
+- [x] Requirement-derived MUnit scenarios
 - [x] Complete requirement-to-code traceability
 - [x] Automatic documentation synchronization
 - [ ] `muleforge cicd init`
