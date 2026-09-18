@@ -57,3 +57,10 @@ test('generates documented SFTP-to-HTTP end-to-end flow', () => {
   assert.match(xml, /https:\/\/customer\.example\.com\/v1\/customers/);
   assert.match(xml, /<error-handler>/);
 });
+
+test('generated connector XML contains real line breaks only', () => {
+  for (const connector of ['sftp', 'anypoint-mq']) {
+    const xml = connectorFlow({ name: 'process', path: '/process', method: 'POST', connector }, { artifactId: 'api', basePath: '/api/v1' });
+    assert.equal(xml.includes('\\n'), false);
+  }
+});
