@@ -181,18 +181,18 @@ function generateMunit(config, data) {
   </munit:test>`);
     }
   }
+  const objectStoreXml = (config.operations || []).some(o => o.idempotency) ? '\n      xmlns:os="http://www.mulesoft.org/schema/mule/os"' : '';
+  const objectStoreSchema = (config.operations || []).some(o => o.idempotency) ? '\n      http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd' : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:db="http://www.mulesoft.org/schema/mule/db"
       xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
-      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"${(config.operations || []).some(o => o.idempotency) ? `
-      xmlns:os="http://www.mulesoft.org/schema/mule/os"` : ""}
+      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"${objectStoreXml}
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
       http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
       http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
-      http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd${(config.operations || []).some(o => o.idempotency) ? "
-      http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd" : ""}>
+      http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd${objectStoreSchema}>
   <munit:config name="${xmlEscape(data.artifactId)}-test-suite"/>
 ${tests.join("\n")}
 </mule>
