@@ -76,6 +76,19 @@ function generateMunit(config, data) {
       <munit-tools:assert-that expression="#[vars.httpStatus default ${success}]" is="equalTo(${success})"/>
     </munit:validation>
   </munit:test>`);
+    const scenarioPlan = deriveScenarioPlan({ ...op, method });
+    if (scenarioPlan.some(s => s.type === "connector-error")) {
+      tests.push(`  <munit:test name="${testName(op, "connector-error")}">
+    <munit:behavior>${mocks}</munit:behavior>
+    <munit:execution>
+      <munit:set-event><munit:set-payload value="#[{}]"/></munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 500]" is="equalTo(500)"/>
+    </munit:validation>
+  </munit:test>`);
+    }
     if (op.validation && op.validation.length) {
       tests.push(`  <munit:test name="${testName(op, "validation")}">
     <munit:execution>
