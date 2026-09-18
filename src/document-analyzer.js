@@ -290,7 +290,6 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     if (c.type === "snowflake" && !c.warehouse) missing.push("snowflake warehouse");
     if (c.type === "snowflake" && !c.database) missing.push("snowflake database");
     if (c.type === "snowflake" && !c.schema) missing.push("snowflake schema");
-    if (c.type === "snowflake" && !c.role) missing.push("snowflake role");
     if (c.type === "sftp" && !c.path) missing.push("sftp path");
     if (["ibm-mq", "anypoint-mq"].includes(c.type) && !c.queue && !c.topic) missing.push(c.type + " queue/destination");
     if (c.type === "ibm-mq" && !c.port) missing.push("ibm-mq port");
