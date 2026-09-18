@@ -69,6 +69,9 @@ jobs:
         run: node src/index.js verify customer-api/muleforge.yaml
       - name: Connector integrity gate
         run: node src/index.js connector-check customer-api/muleforge.yaml
+
+      - name: Operation policy gate
+        run: node src/index.js policy-check customer-api/muleforge.yaml
       - name: Generated Maven project gate
         if: success()
         run: test -f customer-api/pom.xml && test -f customer-api/mule-artifact.json
