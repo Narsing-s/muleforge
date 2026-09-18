@@ -13,6 +13,21 @@ async function ask(question, fallback = "") {
 }
 
 const list = value => String(value || "").split(/,|\n/).map(v => v.trim()).filter(Boolean);
+
+function normalizeBackendConnectors(value) {
+  const text = String(value || "").toLowerCase();
+  const connectors = ["http"];
+  if (/snowflake/.test(text)) connectors.push("snowflake");
+  else if (/\b(mysql|mariadb|postgres|postgresql|oracle|database|db)\b/.test(text)) connectors.push("database");
+  if (/\b(sftp|file transfer)\b/.test(text)) connectors.push("sftp");
+  if (/ibm\s*mq|queue manager/.test(text)) connectors.push("ibm-mq");
+  if (/anypoint\s*mq/.test(text)) connectors.push("anypoint-mq");
+  if (/object\s*store|objectstore|cache/.test(text)) connectors.push("object-store");
+  if (connectors.length === 1 && text.trim()) {
+    throw new Error(`Unsupported backend/connector description: ${value}. Supported examples: MySQL, PostgreSQL, Oracle, Snowflake, SFTP, IBM MQ, Anypoint MQ, Object Store.`);
+  }
+  return [...new Set(connectors)];
+}
 function parseOperations(value) {
   return list(value).map(item => {
     const m = item.match(/^(GET|POST|PUT|PATCH|DELETE)\s+(\/\S+)$/i);
@@ -44,7 +59,7 @@ async function createProject(requirement) {
     if (item.key === "responseFields") answers.responseFields = list(value);
     if (item.key === "validation") answers.validation = list(value);
     if (item.key === "errors") answers.errors = list(value);
-    if (item.key === "backend") answers.connectors = ["http", ...list(value).map(v => v.toLowerCase().replace(/\s+/g, "-"))];
+    if (item.key === "backend") answers.connectors = normalizeBackendConnectors(value);
     model = buildRequirementModel(requirement, answers);
   }
 
@@ -79,4 +94,4 @@ function registerCreate(program) {
   });
 }
 
-module.exports = { registerCreate, createProject };
+module.exports = { registerCreate, createProject, normalizeBackendConnectors };
