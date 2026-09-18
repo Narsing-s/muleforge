@@ -122,7 +122,7 @@ function inferConnectivity(text, source) {
   const channelMatch = text.match(/(?:channel)\s*(?:(?:name|is|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const accountNameMatch = text.match(/(?:account(?:\s*name)?|accountName)\s*(?:(?:is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const warehouseMatch = text.match(/(?:warehouse)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
-  const databaseNameMatch = text.match(/(?:database|db)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
+  const databaseNameMatch = text.match(/(?:database\s+name|db(?:\s+name)?)\s*(?:(?:is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const schemaMatch = text.match(/(?:schema)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const roleMatch = text.match(/(?:role)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const auth = /oauth2|oauth 2/i.test(text) ? "oauth2" : /basic auth|basic authentication/i.test(text) ? "basic" : /client credentials/i.test(text) ? "client-credentials" : /api[- ]?key/i.test(text) ? "apikey" : /username.*password|user.*password/i.test(text) ? "username-password" : null;
@@ -236,7 +236,8 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   }
 
   const operations = endpoints.map(endpoint => {
-    const requestFields = inferFields(combined, endpoint);
+    const operationText = operationSection(endpoint) || combined;
+    const requestFields = inferFields(operationText, endpoint);
     const connector = operationConnector(endpoint);
     const local = connector ? operationConnectivity(endpoint, connector) : null;
     const httpEvidence = httpEvidenceForOperation(endpoint);
@@ -247,6 +248,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
       method: endpoint.method,
       path: endpoint.path,
       connector,
+      table: /\/products(?:\/|$)/i.test(endpoint.path) ? "PRODUCT" : /\/orders(?:\/|$)/i.test(endpoint.path) ? "ORDERS" : null,
       connectorAmbiguous: connector === null || (connector !== "http" && !local),
       downstreamEndpoint: httpLocal?.endpoint || null,
       schedule: local?.schedule || null,
@@ -308,6 +310,14 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     requirements: merged.requirements,
     project: { name: projectName, artifactId: projectName, groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" },
     api: { name: projectName, version: "v1", type: "System API", specification: "RAML", basePath: "/api/v1" },
+    database: (() => {
+      const db = connectivity.find(c => c.type === "database");
+      if (!db) return undefined;
+      const host = db.host || "localhost";
+      const port = db.port || 3306;
+      const name = db.database || null;
+      return { type: "mysql", url: name ? "jdbc:mysql://" + host + ":" + port + "/" + name : null, host, port, name, table: "CUSTOMER" };
+    })(),
     connectors: connectorIds.length ? connectorIds : ["http"],
     connectivity,
     operations,
