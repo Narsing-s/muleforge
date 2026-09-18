@@ -118,7 +118,7 @@ function inferConnectivity(text, source) {
     const q = text.match(/(?:queue|destination)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._:/-]+)/i);
     const topic = text.match(/topic\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._:/-]+)/i);
     const schedule = text.match(/(?:every|each)\s+(\d+)\s*(minutes?|hours?|seconds?|days?)/i) || text.match(/cron(?: expression)?\s*[:=]\s*([^\n]+)/i);
-    const host = text.match(/(?:host|hostname|server)\s*(?:is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
+    const host = text.match(/(?:host|hostname|server)\s*(?:is|=|:)??\s*["']?([A-Za-z0-9._-]+)/i);
     const port = text.match(/(?:port)\s*(?:is|=|:)\s*(\d{2,5})/i);
     const auth = /oauth2|oauth 2/i.test(text) ? "oauth2" : /basic auth|basic authentication/i.test(text) ? "basic" : /client credentials/i.test(text) ? "client-credentials" : /api[- ]?key/i.test(text) ? "apikey" : /username.*password|user.*password/i.test(text) ? "username-password" : null;
     out.push({ type, explicit: true, endpoint: endpoint ? endpoint.replace(/[.,;)]+$/, "") : null, path: p ? p[1].replace(/[.,;)]+$/, "") : null, queue: q ? q[1] : null, topic: topic ? topic[1] : null, host: host ? host[1] : null, port: port ? Number(port[1]) : null, schedule: schedule ? schedule[1] : null, auth, source: source || "requirement" });
@@ -154,6 +154,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const errors = inferErrors(combined);
   const connectivity = merged.connectivity;
   const connectorIds = [...new Set(connectivity.map(c => c.type))];
+  const httpConnectivity = connectivity.find(x => x.type === "http" && x.endpoint) || null;
   const operations = endpoints.map(endpoint => {
     const requestFields = inferFields(combined, endpoint);
     return { name: endpoint.method.toLowerCase() + slug(endpoint.path).replace(/-/g, "_"), method: endpoint.method, path: endpoint.path, connector: connectorIds.find(x => x !== "http") || "http", downstreamEndpoint: httpConnectivity ? httpConnectivity.endpoint : null, schedule: (connectivity.find(x => x.schedule) || {}).schedule || null, filePath: (connectivity.find(x => x.type === "sftp" && x.path) || {}).path || null, destination: ((connectivity.find(x => (x.type === "ibm-mq" || x.type === "anypoint-mq") && (x.queue || x.topic)) || {}).queue || (connectivity.find(x => (x.type === "ibm-mq" || x.type === "anypoint-mq") && (x.queue || x.topic)) || {}).topic) || null, requestFields, responseFields: [...new Set([...requestFields, ...(endpoint.method === "POST" ? ["id","status"] : [])])], validation: inferValidation(combined, requestFields), successStatus: endpoint.method === "POST" ? 201 : 200, errors };
