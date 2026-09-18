@@ -61,6 +61,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     if (dependencyPattern) checks.push(result("Maven dependency " + connector, dependencyPattern.test(pom), "pom.xml must include the " + connector + " connector dependency."));
   }
   checks.push(result("Mule artifact", exists(root, "mule-artifact.json"), "mule-artifact.json is required."));
+  checks.push(result("Requirement traceability", exists(root, "muleforge-traceability.json") && exists(root, "docs/11-traceability.md"), "Generated projects must include machine-readable and human-readable requirement traceability."));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
   checks.push(result("RAML exists", Boolean(raml), `Expected ${ramlPath}.`));
   checks.push(result("Mule implementation exists", Boolean(mule), `Expected ${mulePath}.`));
