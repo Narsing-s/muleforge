@@ -1,3 +1,10 @@
+## 0.9.6
+
+- Added operation policy validation for retries, pagination, idempotency, transactions and security modes.
+- Added RAML contract generation for security, pagination, idempotency and documented error responses.
+- Added generated-flow policy hooks for idempotency, pagination and transaction review boundaries.
+- Added a gated release packaging workflow and expanded release-readiness checks.
+
 ## 0.9.5
 
 - Added operation-derived MUnit scenario planning and connector-error coverage.
