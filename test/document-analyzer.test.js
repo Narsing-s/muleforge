@@ -126,3 +126,47 @@ test("does not require optional Snowflake role", () => {
   );
   assert.equal(model.missingConfigurations.some(x => x.item === "snowflake role"), false);
 });
+
+
+test("preserves explicit MySQL connectivity and maps database operations", () => {
+  const text = `
+# E-Commerce API
+The application uses a MySQL database.
+Database host: localhost
+Database port: 3306
+Database name: ecommerce
+
+POST /products
+Connector: database
+GET /products
+Connector: database
+GET /products/{productId}
+Connector: database
+POST /orders
+Connector: database
+GET /orders/{orderId}
+Connector: database
+PATCH /orders/{orderId}/status
+Connector: database
+DELETE /orders/{orderId}
+Connector: database
+`;
+  const model = analyzeRequirementDocument(text, "ecommerce-order-api.md");
+  assert.equal(model.conflicts.length, 0);
+  assert.equal(model.database.type, "mysql");
+  assert.equal(model.database.url, "jdbc:mysql://localhost:3306/ecommerce");
+  assert.deepEqual(model.connectivity.find(c => c.type === "database"), {
+    type: "database",
+    explicit: true,
+    endpoint: null,
+    host: "localhost",
+    port: 3306,
+    database: "ecommerce",
+    auth: null,
+    source: "ecommerce-order-api.md"
+  });
+  assert.equal(model.operations.length, 7);
+  assert.ok(model.operations.every(op => op.connector === "database"));
+  assert.equal(model.operations.find(op => op.path === "/products/{productId}").table, "PRODUCT");
+  assert.equal(model.operations.find(op => op.path === "/orders/{orderId}").table, "ORDERS");
+});
