@@ -147,6 +147,22 @@ ${source(op, data, endpoint, method, status)}    <ibm-mq:publish config-ref="IBM
     <set-variable variableName="httpStatus" value="${status}" />`);
   }
 
+  if (connector === 'sftp') {
+    const filePath = esc(op.filePath || op.path || '${sftp.filePath}');
+    const sftpAction = action || (method === 'POST' || method === 'PUT' ? 'write' : 'read');
+    const operation = sftpAction === 'write'
+      ? `    <sftp:write config-ref="SFTP_Config" path="${filePath}" doc:name="Write file" />`
+      : sftpAction === 'list'
+        ? `    <sftp:list config-ref="SFTP_Config" path="${filePath}" doc:name="List files" />`
+        : `    <sftp:read config-ref="SFTP_Config" path="${filePath}" doc:name="Read file" />`;
+    const downstream = op.downstreamEndpoint
+      ? `\n    <http:request method="POST" url="${esc(op.downstreamEndpoint)}" doc:name="Call documented downstream API" />`
+      : '';
+    return withErrorHandler(`  <flow name="${name}">
+${source(op, data, endpoint, method, status)}${operation}${downstream}
+    <set-variable variableName="httpStatus" value="${status}" />`);
+  }
+
   if (connector === 'object-store') {
     return withErrorHandler(`  <flow name="${name}">
 ${source(op, data, endpoint, method, status)}    <os:store key="#[attributes.queryParams.key default 'default']" value="#[payload]" doc:name="Store value" />
