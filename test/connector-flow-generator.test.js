@@ -32,3 +32,12 @@ test('generates IBM MQ publish flow', () => {
   assert.match(xml, /ibm-mq:publish/);
   assert.match(xml, /destination="CUSTOMER.IN"/);
 });
+
+test('adds a standard error handler to every supported connector flow', () => {
+  for (const connector of ['database', 'sftp', 'anypoint-mq', 'ibm-mq', 'object-store']) {
+    const xml = connectorFlow({ name: 'process', path: '/process', method: 'POST', connector }, { artifactId: 'api', basePath: '/api/v1' });
+    assert.match(xml, /<error-handler>/);
+    assert.match(xml, /type="CONNECTIVITY"/);
+    assert.match(xml, /type="ANY"/);
+  }
+});
