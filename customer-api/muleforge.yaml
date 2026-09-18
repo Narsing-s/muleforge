@@ -1,4 +1,5 @@
 # Dedicated MuleForge test project model used by manual CI runs and local verification.
+# CI smoke-test model: HTTP-only so generation does not require external connector credentials.
 requirement: Generate a simple Mule 4 Customer API for testing MuleForge generation and verification.
 project:
   name: muleforge-test-api
