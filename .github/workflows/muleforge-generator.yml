@@ -1,0 +1,219 @@
+name: MuleForge Generator
+
+run-name: "MuleForge Generator - ${{ inputs.project_name || inputs.requirement_file || 'requirement' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      requirement_file:
+        description: "Requirement document path under requirements/ (example: requirements/customer-api.md). Leave empty to use the fields below."
+        required: false
+        type: string
+      project_name:
+        description: "Project name when using the fields below"
+        required: false
+        type: string
+      api_type:
+        description: "API type"
+        required: false
+        default: "System API"
+        type: string
+      base_path:
+        description: "API base path"
+        required: false
+        default: "/api/v1"
+        type: string
+      operations:
+        description: "Operations, one per line (example: POST /customers)"
+        required: false
+        type: string
+      request_fields:
+        description: "Request fields, comma-separated"
+        required: false
+        type: string
+      response_fields:
+        description: "Response fields, comma-separated"
+        required: false
+        type: string
+      validation:
+        description: "Validation rules, one per line"
+        required: false
+        type: string
+      errors:
+        description: "Business/error cases, one per line"
+        required: false
+        type: string
+      backend:
+        description: "Backend/connector details"
+        required: false
+        type: string
+      connectivity:
+        description: "Safe connection details only; never enter passwords/secrets"
+        required: false
+        type: string
+      additional_requirements:
+        description: "Other functional or non-functional requirements"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MuleForge
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install document tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils unzip
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare requirement
+        id: requirement
+        shell: bash
+        env:
+          REQUIREMENT_FILE: ${{ inputs.requirement_file }}
+          PROJECT_NAME: ${{ inputs.project_name }}
+          API_TYPE: ${{ inputs.api_type }}
+          BASE_PATH: ${{ inputs.base_path }}
+          OPERATIONS: ${{ inputs.operations }}
+          REQUEST_FIELDS: ${{ inputs.request_fields }}
+          RESPONSE_FIELDS: ${{ inputs.response_fields }}
+          VALIDATION: ${{ inputs.validation }}
+          ERRORS: ${{ inputs.errors }}
+          BACKEND: ${{ inputs.backend }}
+          CONNECTIVITY: ${{ inputs.connectivity }}
+          ADDITIONAL_REQUIREMENTS: ${{ inputs.additional_requirements }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$REQUIREMENT_FILE" ]; then
+            case "$REQUIREMENT_FILE" in
+              requirements/*) ;;
+              *) echo "requirement_file must be under requirements/." >&2; exit 1 ;;
+            esac
+            test -f "$REQUIREMENT_FILE"
+            echo "file=$REQUIREMENT_FILE" >> "$GITHUB_OUTPUT"
+            echo "mode=document" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "$PROJECT_NAME" ]; then
+            echo "project_name is required when no requirement document is supplied." >&2
+            exit 1
+          fi
+
+          if [ -z "$OPERATIONS" ]; then
+            echo "operations are required when no requirement document is supplied." >&2
+            exit 1
+          fi
+
+          mkdir -p .muleforge-input
+          FILE=".muleforge-input/$PROJECT_NAME.md"
+
+          cat > "$FILE" <<EOF
+# MuleForge Requirement
+
+Project name: $PROJECT_NAME
+
+API type: ${API_TYPE:-System API}
+Base path: ${BASE_PATH:-/api/v1}
+
+## Operations
+$OPERATIONS
+
+## Request fields
+$REQUEST_FIELDS
+
+## Response fields
+$RESPONSE_FIELDS
+
+## Validation
+$VALIDATION
+
+## Business and error cases
+$ERRORS
+
+## Backend and connectors
+$BACKEND
+
+## Connectivity
+$CONNECTIVITY
+
+## Additional requirements
+$ADDITIONAL_REQUIREMENTS
+EOF
+
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "mode=questions" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Mule project
+        env:
+          PROJECT_NAME: ${{ inputs.project_name }}
+        run: |
+          set -euo pipefail
+          FILE="${{ steps.requirement.outputs.file }}"
+          if [ -n "$PROJECT_NAME" ] && [ "${{ steps.requirement.outputs.mode }}" = "questions" ]; then
+            node src/index.js analyze "$FILE" "$PROJECT_NAME"
+          else
+            node src/index.js analyze "$FILE"
+          fi
+
+      - name: Verify generated Mule project
+        shell: bash
+        run: |
+          set -euo pipefail
+          FOUND=0
+          while IFS= read -r CONFIG; do
+            [ -n "$CONFIG" ] || continue
+            FOUND=1
+            echo "=== Verifying $CONFIG ==="
+            node src/index.js verify "$CONFIG"
+          done < <(find . -mindepth 2 -maxdepth 4 -name muleforge.yaml -not -path "./.git/*" -not -path "./node_modules/*" | sort)
+
+          if [ "$FOUND" -eq 0 ]; then
+            echo "No generated Mule project was found."
+            exit 1
+          fi
+
+      - name: Remove temporary question source
+        if: steps.requirement.outputs.mode == 'questions'
+        run: rm -rf .muleforge-input
+
+      - name: Commit generated project
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "muleforge-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A -- requirements . ':!requirements/README.md' '*/pom.xml' '*/mule-artifact.json' '*/muleforge.yaml' '*/README.md' '*/docs' '*/postman' '*/src' '*/.github'
+
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: generate Mule project from requirement"
+          git push
