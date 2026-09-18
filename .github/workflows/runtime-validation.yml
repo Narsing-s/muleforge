@@ -1,0 +1,86 @@
+name: MuleForge Runtime Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Requirement model to generate and validate"
+        required: false
+        default: "customer-api/muleforge.yaml"
+        type: string
+      skip_maven:
+        description: "Run generation/static gates only (do not execute Maven/MUnit)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-validation:
+    name: Generate + Maven/MUnit runtime validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install MuleForge
+        run: npm ci --prefer-online --fetch-retries=8 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=30000
+
+      - name: Generate reference project
+        run: node src/index.js generate "${{ inputs.project }}"
+
+      - name: Static validation
+        run: |
+          node src/index.js contract-check "${{ inputs.project }}"
+          node src/index.js verify "${{ inputs.project }}"
+          node src/index.js audit "${{ inputs.project }}"
+
+      - name: Configure Maven settings
+        if: ${{ inputs.skip_maven == false }}
+        env:
+          MAVEN_SETTINGS_XML: ${{ secrets.MAVEN_SETTINGS_XML }}
+        run: |
+          if [ -z "$MAVEN_SETTINGS_XML" ]; then
+            echo "::error::MAVEN_SETTINGS_XML is required for Maven/MUnit runtime validation."
+            echo "Add a GitHub Actions secret named MAVEN_SETTINGS_XML containing your approved MuleSoft Maven settings.xml."
+            echo "The secret should provide access to the MuleSoft repositories required by the generated project."
+            exit 1
+          fi
+          mkdir -p "$HOME/.m2"
+          printf '%s' "$MAVEN_SETTINGS_XML" > "$HOME/.m2/settings.xml"
+
+      - name: Set up Java
+        if: ${{ inputs.skip_maven == false }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run generated Maven/MUnit tests
+        if: ${{ inputs.skip_maven == false }}
+        working-directory: customer-api
+        run: mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false clean test -Dmunit.coverage.failBuild=false
+
+      - name: Package generated Mule application
+        if: ${{ inputs.skip_maven == false }}
+        working-directory: customer-api
+        run: mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false package -Dmunit.coverage.failBuild=false
+
+      - name: Upload generated runtime reports
+        if: ${{ always() && inputs.skip_maven == false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: muleforge-runtime-validation
+          if-no-files-found: warn
+          path: |
+            customer-api/target/surefire-reports/**
+            customer-api/target/site/munit/coverage/**
+            customer-api/target/*.jar
