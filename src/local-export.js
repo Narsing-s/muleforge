@@ -61,6 +61,7 @@ function listFiles(root) {
 }
 
 function prepareAndSave(model) {
+  if (Array.isArray(model.conflicts) && model.conflicts.length) throw new Error(`Generation is blocked: ${model.conflicts.length} unresolved requirement-document conflict(s). Resolve the conflicts and analyze again.`);
   const desktop = desktopPath();
   if (!desktop) {
     throw new Error("Desktop folder was not found. Nothing was saved.");
