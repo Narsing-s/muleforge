@@ -7,7 +7,7 @@ test("generates happy-path and not-found MUnit scenarios", () => {
     { name: "Create customer", method: "POST", path: "/customers", successStatus: 201 },
     { name: "Get customer", method: "GET", path: "/customers/{customerId}", successStatus: 200 }
   ] };
-  const xml = generateMunit(config, { artifactId: "customer-api", hasDatabase: true });
+  const xml = generateMunit(config, { artifactId: "customer-api", hasDatabase: true, databaseType: "snowflake" });
   assert.match(xml, /Create-customer-happy-path-test/);
   assert.match(xml, /Get-customer-not-found-test/);
   assert.match(xml, /db:select/);
