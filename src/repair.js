@@ -1,0 +1,4 @@
+const fs=require("fs");
+const path=require("path");
+function repairProject(root="."){const base=path.resolve(root);const changes=[];const ensure=(f,c)=>{const p=path.join(base,f);if(!fs.existsSync(p)){fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,c,"utf8");changes.push("Created "+f);}};ensure(".gitignore","target/\n*.log\n.idea/\n.vscode/\n.env\n");ensure("src/main/resources/properties/application-dev.yaml","# Environment-specific values\n");ensure("src/main/resources/properties/application-qa.yaml","# Environment-specific values\n");ensure("src/main/resources/properties/application-uat.yaml","# Environment-specific values\n");ensure("src/main/resources/properties/application-prod.yaml","# Environment-specific values\n");return {changed:changes.length>0,changes};}
+module.exports={repairProject};
