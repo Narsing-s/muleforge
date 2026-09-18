@@ -83,3 +83,28 @@ test("release workflow is gated by tests, self-test and release readiness", () =
   assert.match(workflow, /release-check/);
   assert.match(workflow, /npm pack/);
 });
+
+
+test("operation policy validator rejects invalid reliability and security settings", () => {
+  const { validateOperationPolicies } = require("../src/contract-validator");
+  const result = validateOperationPolicies([
+    { name: "bad", method: "GET", pagination: { defaultPageSize: 200, maxPageSize: 10 }, idempotency: true, security: "unknown" },
+    { name: "retry", method: "POST", retry: { maxRetries: 0, millisBetweenRetries: -1 } }
+  ]);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.length >= 4);
+});
+
+test("RAML generator contains security, pagination, idempotency and error contract support", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
+  assert.match(source, /securitySchemes/);
+  assert.match(source, /Idempotency-Key/);
+  assert.match(source, /queryParameters/);
+  assert.match(source, /op.errors/);
+});
+
+test("self-test includes deployment and policy validation", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
+  assert.match(source, /policies = validateOperationPolicies/);
+  assert.match(source, /validateDeployment\(model\.deployment/);
+});
