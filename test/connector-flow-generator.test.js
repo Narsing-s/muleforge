@@ -64,3 +64,17 @@ test('generated connector XML contains real line breaks only', () => {
     assert.equal(xml.includes('\\n'), false);
   }
 });
+
+test('generates native Snowflake operations', () => {
+  const insertXml = connectorFlow(
+    { name: 'create', path: '/customers', method: 'POST', connector: 'snowflake', requestFields: ['name', 'email'] },
+    { artifactId: 'api', basePath: '/api/v1', databaseTable: 'CUSTOMER' }
+  );
+  assert.match(insertXml, /<snowflake:insert\\b/);
+  assert.match(insertXml, /config-ref="Snowflake_Config"/);
+  const selectXml = connectorFlow(
+    { name: 'get', path: '/customers', method: 'GET', connector: 'snowflake', requestFields: ['id'] },
+    { artifactId: 'api', basePath: '/api/v1', databaseTable: 'CUSTOMER' }
+  );
+  assert.match(selectXml, /<snowflake:select\\b/);
+});
