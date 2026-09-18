@@ -98,16 +98,18 @@ ${source(op, data, endpoint, method, status)}    <db:select config-ref="Database
 
   if (connector === 'sftp') {
     const filePath = esc(op.filePath || '${sftp.filePath}');
-    return withErrorHandler(`  <flow name="${name}">
-${source(op, data, endpoint, method, status)}    <sftp:read config-ref="SFTP_Config" path="${filePath}" doc:name="Read SFTP file" />
-    <set-variable variableName="httpStatus" value="${status}" />`);
+    const downstream = op.downstreamEndpoint
+      ? `\n    <http:request method="POST" url="${esc(op.downstreamEndpoint)}" doc:name="Send to documented downstream API" />`
+      : '';
+    return `  <flow name="${name}">\n${source(op, data, endpoint, method, status)}\n    <sftp:read config-ref="SFTP_Config" path="${filePath}" doc:name="Read SFTP file" />${downstream}\n    <set-variable variableName="httpStatus" value="${status}" />\n    ${generatedErrorHandler()}\n  </flow>\n`;
   }
 
   if (connector === 'anypoint-mq') {
     const destination = esc(op.destination || '${anypointmq.destination}');
-    return withErrorHandler(`  <flow name="${name}">
-${source(op, data, endpoint, method, status)}    <anypoint-mq:publish config-ref="Anypoint_MQ_Config" destination="${destination}" doc:name="Publish message" />
-    <set-variable variableName="httpStatus" value="${status}" />`);
+    const downstream = op.downstreamEndpoint
+      ? `\n    <http:request method="POST" url="${esc(op.downstreamEndpoint)}" doc:name="Call documented downstream API" />`
+      : '';
+    return `  <flow name="${name}">\n${source(op, data, endpoint, method, status)}\n    <anypoint-mq:publish config-ref="Anypoint_MQ_Config" destination="${destination}" doc:name="Publish message" />${downstream}\n    <set-variable variableName="httpStatus" value="${status}" />\n    ${generatedErrorHandler()}\n  </flow>\n`;
   }
 
   if (connector === 'ibm-mq') {
