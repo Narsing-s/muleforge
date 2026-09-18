@@ -91,21 +91,6 @@ async function createProject(requirement) {
     throw new Error("Project generation failed. The project model was saved, but the complete Mule project could not be generated.");
   }
 
-  const desktopCandidates = process.platform === "win32"
-    ? [path.join(os.homedir(), "Desktop"), path.join(os.homedir(), "OneDrive", "Desktop")]
-    : [path.join(os.homedir(), "Desktop")];
-  const desktop = desktopCandidates.find(dir => fs.existsSync(dir));
-  if (desktop) {
-    const desktopRoot = path.join(desktop, model.project.name);
-    if (path.resolve(desktopRoot) !== path.resolve(root)) {
-      if (fs.existsSync(desktopRoot)) throw new Error(`Desktop project already exists: ${desktopRoot}`);
-      fs.cpSync(root, desktopRoot, { recursive: true });
-      console.log(`✔ Desktop project copy: ${desktopRoot}`);
-    }
-  } else {
-    console.log("ℹ Desktop folder not found; project remains in the local project directory.");
-  }
-
   console.log(`✔ Local project: ${root}`);
   console.log("✔ Complete Mule project is ready to open in Anypoint Studio");
   return { confirmed: true, root, model };
