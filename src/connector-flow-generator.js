@@ -45,7 +45,8 @@ function source(op, data, endpoint, method, status) {
         <set-variable variableName="httpStatus" value="400" />
         <raise-error type="VALIDATION:VALIDATION" description="Idempotency-Key header is required" />
       </when>
-    </choice>`);
+    </choice>
+    <os:store config-ref="ObjectStore_Config" key="#[vars.idempotencyKey]" value="#[{ status: 'IN_PROGRESS', correlationId: vars.correlationId }]" failIfPresent="true" />`);
   if (op.pagination) policy.push(`    <set-variable variableName="page" value="#[(attributes.queryParams.page default 1) as Number]" />
     <set-variable variableName="pageSize" value="#[(attributes.queryParams.pageSize default ${Number(op.pagination.defaultPageSize || 20)}) as Number]" />`);
   if (op.transaction) policy.push(`    <try transactionalAction="ALWAYS_BEGIN" transactionType="LOCAL">`);
