@@ -1,9 +1,45 @@
 function xmlEscape(value) {
-  return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+  return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 function safeName(value) { return String(value || "operation").replace(/[^A-Za-z0-9_-]/g, "-"); }
 function operations(config = {}) { return config.operations || []; }
 function testName(op, suffix) { return `${safeName(op.name || `${op.method}-${op.path}`)}-${suffix}-test`; }
+function processorMocks(op, data) {
+  const connector = String(op.connector || "").toLowerCase().replace(/_/g, "-");
+  const mocks = [];
+  const add = (processor, payload = "#[{}]") => mocks.push(`      <munit-tools:mock-when processor="${processor}">
+        <munit-tools:then-return payload="${payload}"/>
+      </munit-tools:mock-when>`);
+  if (data.hasDatabase) {
+    add("db:select", "#[[]]");
+    add("db:insert", "#[{}]");
+  }
+  if (connector === "snowflake") {
+    add("snowflake:select", "#[[]]");
+    add("snowflake:insert", "#[{}]");
+  }
+  const connectorProcessors = {
+    "anypoint-mq": ["anypoint-mq:publish"],
+    "ibm-mq": ["ibm-mq:publish"],
+    sftp: ["sftp:read", "sftp:write", "sftp:list"],
+    "object-store": ["os:store"],
+    file: ["file:read", "file:write"],
+    email: ["email:send"],
+    jms: ["jms:publish"],
+    kafka: ["kafka:publish"],
+    salesforce: ["sfdc:query", "sfdc:create"]
+  };
+  for (const processor of connectorProcessors[connector] || []) add(processor);
+  return mocks.length ? `\n${mocks.join("\n")}` : "";
+}
+function isCustomerNotFoundScenario(op, data) {
+  return Boolean(
+    data.hasDatabase &&
+    String(data.databaseType || "").toLowerCase() === "snowflake" &&
+    String(op.method || "").toUpperCase() === "GET" &&
+    /customers?\/\{[^}]+\}$/i.test(String(op.path || ""))
+  );
+}
 function generateMunit(config, data) {
   const ops = operations(config);
   const tests = [];
@@ -11,17 +47,65 @@ function generateMunit(config, data) {
     const flow = `${data.artifactId}-${safeName(op.name || `${op.method}-${op.path}`)}-flow`;
     const method = String(op.method || "GET").toUpperCase();
     const success = Number(op.successStatus || (method === "POST" ? 201 : 200));
-    const needsDb = Boolean(data.hasDatabase);
-    const mockDb = needsDb ? `\n      <munit-tools:mock-when processor="db:select">\n        <munit-tools:then-return payload="#[[]]"/>\n      </munit-tools:mock-when>\n      <munit-tools:mock-when processor="db:insert">\n        <munit-tools:then-return payload="#[{}]"/>\n      </munit-tools:mock-when>` : "";
-    tests.push(`  <munit:test name="${testName(op, "happy-path")}">\n    <munit:behavior>${mockDb}\n    </munit:behavior>\n    <munit:execution>\n      <munit:set-event>\n        <munit:payload value="#[${method === "GET" ? "{}" : "{ name: 'Test Customer', email: 'test@example.com', mobileNumber: '9999999999' }"}]"/>\n      </munit:set-event>\n      <flow-ref name="${xmlEscape(flow)}"/>\n    </munit:execution>\n    <munit:validation>\n      <munit-tools:assert-that expression="#[vars.httpStatus default ${success}]" is="equalTo(${success})"/>\n    </munit:validation>\n  </munit:test>`);
+    const mocks = processorMocks(op, data);
+    tests.push(`  <munit:test name="${testName(op, "happy-path")}">
+    <munit:behavior>${mocks}
+    </munit:behavior>
+    <munit:execution>
+      <munit:set-event>
+        <munit:payload value="#[${method === "GET" ? "{}" : "{ name: 'Test Customer', email: 'test@example.com', mobileNumber: '9999999999' }"}]"/>
+      </munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default ${success}]" is="equalTo(${success})"/>
+    </munit:validation>
+  </munit:test>`);
     if (op.validation && op.validation.length) {
-      tests.push(`  <munit:test name="${testName(op, "validation")}">\n    <munit:execution>\n      <munit:set-event>\n        <munit:payload value="#[{}]"/>\n      </munit:set-event>\n      <flow-ref name="${xmlEscape(flow)}"/>\n    </munit:execution>\n    <munit:validation>\n      <munit-tools:assert-that expression="#[vars.httpStatus default 400]" is="equalTo(400)"/>\n    </munit:validation>\n  </munit:test>`);
+      tests.push(`  <munit:test name="${testName(op, "validation")}">
+    <munit:execution>
+      <munit:set-event>
+        <munit:payload value="#[{}]"/>
+      </munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 400]" is="equalTo(400)"/>
+    </munit:validation>
+  </munit:test>`);
     }
-    if (method === "GET") {
-      const notFoundMock = needsDb ? `\n      <munit-tools:mock-when processor="db:select">\n        <munit-tools:then-return payload="#[[]]"/>\n      </munit-tools:mock-when>` : "";
-      tests.push(`  <munit:test name="${testName(op, "not-found")}">\n    <munit:behavior>${notFoundMock}\n    </munit:behavior>\n    <munit:execution>\n      <munit:set-event>\n        <munit:attributes value="#[{ uriParams: { customerId: 'missing' } }]"/>\n      </munit:set-event>\n      <flow-ref name="${xmlEscape(flow)}"/>\n    </munit:execution>\n    <munit:validation>\n      <munit-tools:assert-that expression="#[vars.httpStatus default 404]" is="equalTo(404)"/>\n    </munit:validation>\n  </munit:test>`);
+    if (isCustomerNotFoundScenario(op, data)) {
+      tests.push(`  <munit:test name="${testName(op, "not-found")}">
+    <munit:behavior>
+      <munit-tools:mock-when processor="db:select">
+        <munit-tools:then-return payload="#[[]]"/>
+      </munit-tools:mock-when>
+    </munit:behavior>
+    <munit:execution>
+      <munit:set-event>
+        <munit:attributes value="#[{ uriParams: { customerId: 'missing' } }]"/>
+      </munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 404]" is="equalTo(404)"/>
+    </munit:validation>
+  </munit:test>`);
     }
   }
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<mule xmlns="http://www.mulesoft.org/schema/mule/core"\n      xmlns:db="http://www.mulesoft.org/schema/mule/db"\n      xmlns:munit="http://www.mulesoft.org/schema/mule/munit"\n      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"\n      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd\n      http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd\n      http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd\n      http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">\n  <munit:config name="${xmlEscape(data.artifactId)}-test-suite"/>\n${tests.join("\n")}\n</mule>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+      http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+      http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+  <munit:config name="${xmlEscape(data.artifactId)}-test-suite"/>
+${tests.join("\n")}
+</mule>
+`;
 }
 module.exports = { generateMunit };
