@@ -77,7 +77,17 @@ function deploymentArtifacts(root, config = {}, data = {}) {
     '            -Danypoint.workers="$ANYPOINT_WORKERS" -Danypoint.workerType="$ANYPOINT_WORKER_TYPE" \\',
     '            clean deploy -DskipTests=false -DmuleDeploy'
   ].join('\n');
-  const ch2Validation = chValidation.replace('ANYPOINT_ENVIRONMENT: ${{ inputs.environment }}','ANYPOINT_ENVIRONMENT: ${{ inputs.environment }}\n    ANYPOINT_TARGET: ${{ vars.ANYPOINT_TARGET }}').replace('test -n "$ANYPOINT_ENVIRONMENT" || { echo "::error::ANYPOINT_ENVIRONMENT is required."; exit 1; }','test -n "$ANYPOINT_TARGET" || { echo "::error::ANYPOINT_TARGET is required."; exit 1; }\n          test -n "$ANYPOINT_ENVIRONMENT" || { echo "::error::ANYPOINT_ENVIRONMENT is required."; exit 1; }');
+  const ch2Validation = [
+    '      - name: Validate deployment inputs',
+    '        env:',
+    '          ANYPOINT_ENVIRONMENT: ${{ inputs.environment }}',
+    '          ANYPOINT_TARGET: ${{ vars.ANYPOINT_TARGET }}',
+    '          ANYPOINT_APPLICATION_NAME: ${{ vars.ANYPOINT_APPLICATION_NAME }}',
+    '        run: |',
+    '          test -n "$ANYPOINT_APPLICATION_NAME" || { echo "::error::ANYPOINT_APPLICATION_NAME is required."; exit 1; }',
+    '          test -n "$ANYPOINT_ENVIRONMENT" || { echo "::error::ANYPOINT_ENVIRONMENT is required."; exit 1; }',
+    '          test -n "$ANYPOINT_TARGET" || { echo "::error::ANYPOINT_TARGET is required."; exit 1; }'
+  ].join('\\n');
   const ch2Command = chCommand.replace('-Dmuleforge.cloudhub=true','-Dmuleforge.cloudhub2=true').replace('-Danypoint.applicationName="$ANYPOINT_APPLICATION_NAME"', '-Danypoint.target="$ANYPOINT_TARGET" -Danypoint.applicationName="$ANYPOINT_APPLICATION_NAME"');
   const rtfValidation = ch2Validation.replace('ANYPOINT_TARGET: ${{ vars.ANYPOINT_TARGET }}','ANYPOINT_TARGET: ${{ vars.ANYPOINT_TARGET }}');
   const rtfCommand = ch2Command.replace('-Dmuleforge.cloudhub2=true','-Dmuleforge.rtf=true');
