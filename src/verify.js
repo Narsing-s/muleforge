@@ -44,7 +44,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   checks.push(result("Operations defined", operations.length > 0, "At least one confirmed API operation is required."));
   checks.push(result("No unresolved document conflicts", !Array.isArray(config.conflicts) || config.conflicts.length === 0, "Conflicting source documents must be resolved before generation is considered ready."));
   checks.push(result("Required connectivity configuration", !Array.isArray(config.missingConfigurations) || config.missingConfigurations.length === 0, "Required non-secret connectivity values must be explicitly resolved; credentials may remain environment placeholders."));
-  checks.push(result("Operation connector mapping", operations.every(op => op.connector && !op.connectorAmbiguous), "Every operation must have one unambiguous connector mapping before generation is considered ready."));
+  checks.push(result("Operation connector mapping", operations.every(op => (op.connector || !(Array.isArray(config.connectors) && config.connectors.length)) && !op.connectorAmbiguous), "Every analyzed operation must have one unambiguous connector mapping; legacy/reference configs without explicit connector metadata use HTTP as the default source."));
   checks.push(result("Maven project", Boolean(pom && /<project[\s>]/.test(pom)), "pom.xml must contain a Maven project."));
   checks.push(result("Mule artifact", exists(root, "mule-artifact.json"), "mule-artifact.json is required."));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
