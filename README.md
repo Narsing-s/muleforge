@@ -162,7 +162,7 @@ PROD approval
 
 See [CI/CD documentation](docs/cicd/README.md), [GitHub Actions guidance](docs/cicd/github-actions.md), and [runtime validation](docs/cicd/runtime-validation.md).
 
-> CloudHub, CloudHub 2.0, Runtime Fabric and on-premises deployment helpers remain roadmap items. Do not put Anypoint credentials directly into generated workflow files.
+> Deployment helpers are now generated for CloudHub 1.0, CloudHub 2.0 and Runtime Fabric. They are target-aware templates and require organization-specific Anypoint permissions plus secure Maven settings. Do not put Anypoint credentials directly into generated workflow files.
 
 ## 💾 Local Desktop export workflow
 
@@ -185,7 +185,7 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge clean` | Clean Maven output |
 | `muleforge doctor` | Check local development tools |
 | `muleforge runtime-check` | Check Java, Maven and Mule project prerequisites |
-| `muleforge release-check` | Check release-readiness and required quality artifacts |
+| `muleforge release-check` | Check release-readiness and required quality artifacts |\n| `muleforge deployment-check` | Validate deployment target and release settings |
 
 Run:
 
@@ -325,8 +325,9 @@ When adding a feature, update the implementation, tests and user documentation t
 - [ ] Complete requirement-to-code traceability
 - [ ] Automatic documentation synchronization
 - [ ] `muleforge cicd init`
-- [ ] CloudHub and CloudHub 2.0 deployment helpers
-- [ ] Runtime Fabric deployment helpers
+- [x] CloudHub and CloudHub 2.0 deployment helpers
+- [x] Runtime Fabric deployment helpers
+- [x] Deployment target validation and release safety checks
 - [ ] Public npm release
 - [ ] Stable `1.0.0` release
 
