@@ -148,12 +148,12 @@ test("generated connector pagination uses runtime page variables and metadata", 
   const source = fs.readFileSync(path.resolve(__dirname, "../src/connector-flow-generator.js"), "utf8");
   assert.match(source, /muleforgePageSize/);
   assert.match(source, /muleforgePageOffset/);
-  assert.match(source, /hasNext: \(vars\.page \* vars\.pageSize\) < total/);
+  assert.ok(source.includes("hasNext: (vars.page * vars.pageSize) < total"));
 });
 
 test("MUnit generator includes idempotency and pagination scenarios", () => {
   const source = fs.readFileSync(path.resolve(__dirname, "../src/munit-generator.js"), "utf8");
   assert.match(source, /idempotency-duplicate/);
   assert.match(source, /OS:KEY_ALREADY_EXISTS/);
-  assert.match(source, /testName\(op, "pagination"\)/);
+  assert.ok(source.includes('testName(op, "pagination")'));
 });
