@@ -156,10 +156,60 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const errors = inferErrors(combined);
   const connectivity = merged.connectivity;
   const connectorIds = [...new Set(connectivity.map(c => c.type))];
-  const httpConnectivity = connectivity.find(x => x.type === "http" && x.endpoint) || null;
+
+  // Keep operation-to-connector mapping local to the requirement evidence.
+  // Never silently attach the first detected connector to every API operation.
+  function evidenceForOperation(endpoint) {
+    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
+    const marker = new RegExp("\\b" + endpoint.method + "\\s+" + escapedPath + "\\b", "i");
+    const hit = marker.exec(combined);
+    if (!hit) return [];
+    const window = combined.slice(Math.max(0, hit.index - 700), Math.min(combined.length, hit.index + hit[0].length + 1200));
+    const patterns = {
+      "ibm-mq": "ibm\\\\s*mq|websphere\\\\s*mq|queue\\\\s*manager",
+      "anypoint-mq": "anypoint\\\\s*mq",
+      sftp: "\\\\bsftp\\\\b|secure\\\\s+file\\\\s+transfer",
+      snowflake: "\\\\bsnowflake\\\\b",
+      database: "\\\\b(mysql|postgres(?:ql)?|oracle|database|sql)\\\\b",
+      "object-store": "object\\\\s*store|objectstore"
+    };
+    return connectivity.filter(c => c.type !== "http" && patterns[c.type] && new RegExp(patterns[c.type], "i").test(window));
+  }
+
+  function operationConnector(endpoint) {
+    const nonHttp = [...new Set(connectivity.filter(c => c.type !== "http").map(c => c.type))];
+    if (nonHttp.length === 0) return "http";
+    if (nonHttp.length === 1) return nonHttp[0];
+    const local = [...new Set(evidenceForOperation(endpoint).map(c => c.type))];
+    return local.length === 1 ? local[0] : null;
+  }
+
+  function operationConnectivity(type) {
+    const local = connectivity.filter(c => c.type === type);
+    return local.length === 1 ? local[0] : local[0] || null;
+  }
+
   const operations = endpoints.map(endpoint => {
     const requestFields = inferFields(combined, endpoint);
-    return { name: endpoint.method.toLowerCase() + slug(endpoint.path).replace(/-/g, "_"), method: endpoint.method, path: endpoint.path, connector: connectorIds.find(x => x !== "http") || "http", downstreamEndpoint: httpConnectivity ? httpConnectivity.endpoint : null, schedule: (connectivity.find(x => x.schedule) || {}).schedule || null, filePath: (connectivity.find(x => x.type === "sftp" && x.path) || {}).path || null, destination: ((connectivity.find(x => (x.type === "ibm-mq" || x.type === "anypoint-mq") && (x.queue || x.topic)) || {}).queue || (connectivity.find(x => (x.type === "ibm-mq" || x.type === "anypoint-mq") && (x.queue || x.topic)) || {}).topic) || null, requestFields, responseFields: [...new Set([...requestFields, ...(endpoint.method === "POST" ? ["id","status"] : [])])], validation: inferValidation(combined, requestFields), successStatus: endpoint.method === "POST" ? 201 : 200, errors };
+    const connector = operationConnector(endpoint);
+    const local = connector ? operationConnectivity(connector) : null;
+    const httpLocal = connectivity.find(x => x.type === "http" && x.endpoint) || null;
+    return {
+      name: endpoint.method.toLowerCase() + slug(endpoint.path).replace(/-/g, "_"),
+      method: endpoint.method,
+      path: endpoint.path,
+      connector,
+      connectorAmbiguous: connector === null,
+      downstreamEndpoint: connector === "http" && (local?.endpoint || httpLocal?.endpoint) || null,
+      schedule: local?.schedule || null,
+      filePath: local?.path || null,
+      destination: local ? (local.queue || local.topic || null) : null,
+      requestFields,
+      responseFields: [...new Set([...requestFields, ...(endpoint.method === "POST" ? ["id","status"] : [])])],
+      validation: inferValidation(combined, requestFields),
+      successStatus: endpoint.method === "POST" ? 201 : 200,
+      errors
+    };
   });
   if (!operations.length && connectorIds.length) operations.push({ name: "integration-process", method: "POST", path: "/process", connector: connectorIds[0], requestFields: [], responseFields: [], validation: [], successStatus: 200, errors });
   return {
@@ -170,15 +220,17 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     api: { name: projectName, version: "v1", type: "System API", specification: "RAML", basePath: "/api/v1" },
     connectors: connectorIds.length ? connectorIds : ["http"],
     connectivity,
-    conflicts: merged.conflicts,
+    conflicts: [...merged.conflicts, ...operations.filter(op => op.connectorAmbiguous).map(op => ({ type: "operation-connector", operation: `${op.method} ${op.path}`, message: "Multiple non-HTTP connectors are present and the documents do not identify which connector belongs to this operation.", resolutionRequired: true }))],
     assumptions: ["Explicit connectivity in supplied documents is authoritative.", "Credentials and secrets are never copied into generated source.", "Missing connection values remain placeholders."],
-    missingConfigurations: connectivity.flatMap(c => {
+    missingConfigurations: [
       const missing = [];
       if (["sftp","ibm-mq","anypoint-mq","database","snowflake"].includes(c.type) && !c.host && !c.endpoint) missing.push(c.type + " host/endpoint");
       if (c.type === "sftp" && !c.path) missing.push("sftp path");
       if (["ibm-mq","anypoint-mq"].includes(c.type) && !c.queue && !c.topic) missing.push(c.type + " queue/destination");
       return missing.map(item => ({ item, connector: c.type, source: c.source }));
     }),
+      ...operations.filter(op => op.connectorAmbiguous).map(op => ({ item: `connector mapping for ${op.method} ${op.path}`, connector: "ambiguous", source: "requirement package" }))
+    ],
     traceability: merged.requirements.map(r => ({ requirementId: r.id, source: r.source, targets: ["architecture", "implementation", "munit", "postman", "documentation"] })),
     decisions: ["Document-first generation: explicit requirement connectivity is authoritative.", "Conflicts are surfaced rather than silently resolved."],
     testing: { munit: true },
