@@ -70,11 +70,31 @@ test('generates native Snowflake operations', () => {
     { name: 'create', path: '/customers', method: 'POST', connector: 'snowflake', requestFields: ['name', 'email'] },
     { artifactId: 'api', basePath: '/api/v1', databaseTable: 'CUSTOMER' }
   );
-  assert.match(insertXml, /<snowflake:insert\\b/);
+  assert.match(insertXml, /<snowflake:insert\b/);
   assert.match(insertXml, /config-ref="Snowflake_Config"/);
   const selectXml = connectorFlow(
     { name: 'get', path: '/customers', method: 'GET', connector: 'snowflake', requestFields: ['id'] },
     { artifactId: 'api', basePath: '/api/v1', databaseTable: 'CUSTOMER' }
   );
-  assert.match(selectXml, /<snowflake:select\\b/);
+  assert.match(selectXml, /<snowflake:select\b/);
+});
+
+
+test('generates an explicit HTTP error response for propagated connector failures', () => {
+  const xml = connectorFlow(
+    { name: 'publish', path: '/messages', method: 'POST', connector: 'ibm-mq', destination: 'CUSTOMER.IN' },
+    { artifactId: 'mq-api', basePath: '/api/v1' }
+  );
+  assert.match(xml, /<http:error-response/);
+  assert.match(xml, /<http:body><!\[CDATA\[#\[payload\]\]\]><\/http:body>/);
+});
+
+test('does not silently generate a generic flow for an unsupported connector', () => {
+  assert.equal(
+    connectorFlow(
+      { name: 'process', path: '/process', method: 'POST', connector: 'kafka' },
+      { artifactId: 'api', basePath: '/api/v1' }
+    ),
+    null
+  );
 });
