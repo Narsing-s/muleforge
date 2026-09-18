@@ -38,6 +38,39 @@ function normalizeDocuments(input) {
   const filename = path.basename(String(input.filename || "requirement.txt"));
   return [{ name: filename, type: path.extname(filename).slice(1) || "txt", text }];
 }
+function applyResolutions(model, resolutions = []) {
+  if (!Array.isArray(resolutions) || !resolutions.length) return model;
+  for (const resolution of resolutions) {
+    if (!resolution || !resolution.type || !resolution.value) continue;
+    if (resolution.type === "connectivity") {
+      const items = (model.connectivity || []).filter(x => x.type === resolution.connector);
+      for (const item of items) item[resolution.field] = resolution.value;
+    }
+    if (resolution.type === "operation-connector") {
+      const op = (model.operations || []).find(x => (x.method + " " + x.path) === resolution.operation);
+      if (op) {
+        op.connector = resolution.value;
+        op.connectorAmbiguous = false;
+        op.resolution = "user-selected";
+      }
+    }
+  }
+  model.conflicts = (model.conflicts || []).filter(conflict => {
+    if (conflict.type === "connectivity") {
+      return (conflict.differences || []).some(diff => {
+        const selected = resolutions.find(r => r.type === "connectivity" && r.connector === conflict.connector && r.field === diff.field);
+        return !selected;
+      });
+    }
+    if (conflict.type === "operation-connector") {
+      return !resolutions.some(r => r.type === "operation-connector" && r.operation === conflict.operation);
+    }
+    return true;
+  });
+  model.decisions = [...(model.decisions || []), ...resolutions.map(r => "User-resolved " + r.type + " " + (r.connector || r.operation || "") + " " + (r.field || "") + " to " + r.value)];
+  return model;
+}
+
 function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT || 4173)) {
   const file = path.resolve(__dirname, "../web/index.html");
   const hosted = Boolean(process.env.PORT);
@@ -51,7 +84,10 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
       try {
         const input = JSON.parse(await readBody(req));
         const docs = normalizeDocuments(input);
-        const model = analyzeRequirementDocument(docs.map(d => d.text).join("\n\n"), docs[0].name, docs);
+        const model = applyResolutions(
+          analyzeRequirementDocument(docs.map(d => d.text).join("\n\n"), docs[0].name, docs),
+          input.resolutions
+        );
         if (input.projectName) {
           const project = String(input.projectName).trim().replace(/[^A-Za-z0-9._-]/g, "-");
           if (project) { model.project.name = project; model.project.artifactId = project; model.api.name = project; }
