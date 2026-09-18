@@ -174,12 +174,20 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const connectivity = merged.connectivity;
   const connectorIds = [...new Set(connectivity.map(c => c.type))];
 
-  function evidenceForOperation(endpoint) {
-    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function operationSection(endpoint) {
+    const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
     const marker = new RegExp("\\b" + endpoint.method + "\\s+" + escapedPath + "\\b", "i");
     const hit = marker.exec(combined);
-    if (!hit) return [];
-    const window = combined.slice(Math.max(0, hit.index - 700), Math.min(combined.length, hit.index + hit[0].length + 1200));
+    if (!hit) return "";
+    const start = hit.index;
+    const all = /\\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\s+\\/[^\\s,.;:)]+/gi;
+    all.lastIndex = start + hit[0].length;
+    const next = all.exec(combined);
+    return combined.slice(start, next ? next.index : Math.min(combined.length, start + 2500));
+  }
+
+  function evidenceForOperation(endpoint) {
+    const window = operationSection(endpoint);
     const patterns = {
       "ibm-mq": "ibm\\s*mq|websphere\\s*mq|queue\\s*manager",
       "anypoint-mq": "anypoint\\s*mq",
@@ -191,30 +199,39 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     return connectivity.filter(c => c.type !== "http" && patterns[c.type] && new RegExp(patterns[c.type], "i").test(window));
   }
 
+  function httpEvidenceForOperation(endpoint) {
+    const window = operationSection(endpoint);
+    return connectivity.filter(c => c.type === "http" && c.endpoint && new RegExp("https?://", "i").test(window));
+  }
+
   function operationConnector(endpoint) {
     const nonHttp = [...new Set(connectivity.filter(c => c.type !== "http").map(c => c.type))];
     if (nonHttp.length === 0) return "http";
-    if (nonHttp.length === 1) return nonHttp[0];
     const local = [...new Set(evidenceForOperation(endpoint).map(c => c.type))];
-    return local.length === 1 ? local[0] : null;
+    if (local.length === 1) return local[0];
+    return nonHttp.length === 1 ? nonHttp[0] : null;
   }
 
-  function operationConnectivity(type) {
-    const local = connectivity.filter(c => c.type === type);
-    return local.length === 1 ? local[0] : local[0] || null;
+  function operationConnectivity(endpoint, type) {
+    const local = evidenceForOperation(endpoint).filter(c => c.type === type);
+    if (local.length === 1) return local[0];
+    const global = connectivity.filter(c => c.type === type);
+    return global.length === 1 ? global[0] : null;
   }
 
   const operations = endpoints.map(endpoint => {
     const requestFields = inferFields(combined, endpoint);
     const connector = operationConnector(endpoint);
-    const local = connector ? operationConnectivity(connector) : null;
-    const httpLocal = connectivity.find(x => x.type === "http" && x.endpoint) || null;
+    const local = connector ? operationConnectivity(endpoint, connector) : null;
+    const httpEvidence = httpEvidenceForOperation(endpoint);
+    const globalHttp = connectivity.filter(x => x.type === "http" && x.endpoint);
+    const httpLocal = httpEvidence.length === 1 ? httpEvidence[0] : (globalHttp.length === 1 ? globalHttp[0] : null);
     return {
       name: endpoint.method.toLowerCase() + slug(endpoint.path).replace(/-/g, "_"),
       method: endpoint.method,
       path: endpoint.path,
       connector,
-      connectorAmbiguous: connector === null,
+      connectorAmbiguous: connector === null || (connector !== "http" && !local),
       downstreamEndpoint: httpLocal?.endpoint || null,
       schedule: local?.schedule || null,
       filePath: local?.path || null,
