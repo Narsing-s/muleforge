@@ -96,6 +96,9 @@ jobs:
         id: requirement
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_SHA: ${{ github.sha }}
           REQUIREMENT_FILE: ${{ inputs.requirement_file }}
           PROJECT_NAME: ${{ inputs.project_name }}
           API_TYPE: ${{ inputs.api_type }}
@@ -110,6 +113,36 @@ jobs:
           ADDITIONAL_REQUIREMENTS: ${{ inputs.additional_requirements }}
         run: |
           set -euo pipefail
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            mapfile -t CHANGED_FILES < <(
+              if [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+                git diff --name-only "$EVENT_BEFORE" "$GITHUB_SHA" -- requirements/
+              else
+                git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- requirements/
+              fi
+            )
+
+            FILE=""
+            for candidate in "${CHANGED_FILES[@]}"; do
+              [ -f "$candidate" ] || continue
+              case "$candidate" in
+                requirements/*.txt|requirements/*.md|requirements/*.markdown|requirements/*.pdf|requirements/*.docx|requirements/*.pptx|requirements/*.xlsx|requirements/*.csv|requirements/*.json|requirements/*.yaml|requirements/*.yml|requirements/*.html|requirements/*.htm)
+                  FILE="$candidate"
+                  break
+                  ;;
+              esac
+            done
+
+            if [ -z "$FILE" ]; then
+              echo "No supported requirement document changed under requirements/." >&2
+              exit 1
+            fi
+
+            echo "file=$FILE" >> "$GITHUB_OUTPUT"
+            echo "mode=document" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           if [ -n "$REQUIREMENT_FILE" ]; then
             case "$REQUIREMENT_FILE" in
@@ -170,7 +203,6 @@ EOF
 
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
           echo "mode=questions" >> "$GITHUB_OUTPUT"
-
       - name: Generate Mule project
         env:
           PROJECT_NAME: ${{ inputs.project_name }}
