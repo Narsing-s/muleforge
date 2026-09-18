@@ -15,7 +15,7 @@ const { generateMunit } = require("./munit-generator");
 const { startUi } = require("./ui-server");
 const { writeProductionArtifacts } = require("./production");
 const { writeDocumentation } = require("./requirement-model");
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
 const render = (template, data) => {
