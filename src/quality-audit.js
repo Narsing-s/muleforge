@@ -23,6 +23,18 @@ function auditProject(file = 'muleforge.yaml') {
   function walk(dir) { if (!fs.existsSync(dir)) return; for (const e of fs.readdirSync(dir,{withFileTypes:true})) { const f=path.join(dir,e.name); if(['target','.git','node_modules'].includes(e.name)) continue; if(e.isDirectory()) walk(f); else if(/\.(xml|yaml|yml|json|dwl|md|js|properties)$/.test(e.name) && secret.test(fs.readFileSync(f,'utf8'))) leaked.push(path.relative(root,f)); } }
   walk(root);
   add('Secret hygiene', leaked.length === 0, leaked.length ? 'Potential hard-coded secret in: ' + leaked.join(', ') : 'No obvious hard-coded secrets detected.');
+  const sourceFiles = [];
+  function scan(dir) { if (!fs.existsSync(dir)) return; for (const e of fs.readdirSync(dir,{withFileTypes:true})) { const f=path.join(dir,e.name); if(['target','.git','node_modules'].includes(e.name)) continue; if(e.isDirectory()) scan(f); else sourceFiles.push(f); } }
+  scan(root);
+  const xmlFiles = sourceFiles.filter(f => f.endsWith('.xml'));
+  const malformed = xmlFiles.filter(f => { const s=fs.readFileSync(f,'utf8'); return !s.trim().startsWith('<?xml') || (s.match(/<mule\\b/g)||[]).length !== (s.match(/<\\/mule>/g)||[]).length; });
+  add('Mule XML structural sanity', malformed.length === 0, malformed.length ? 'Potential malformed Mule XML: ' + malformed.map(f=>path.relative(root,f)).join(', ') : 'Mule XML files have a basic root/closing-tag sanity check.');
+  const ramlFiles = sourceFiles.filter(f => f.endsWith('.raml'));
+  const badRaml = ramlFiles.filter(f => !fs.readFileSync(f,'utf8').startsWith('#%RAML 1.0'));
+  add('RAML header', badRaml.length === 0, badRaml.length ? 'Invalid RAML header in: ' + badRaml.map(f=>path.relative(root,f)).join(', ') : 'RAML files declare RAML 1.0.');
+  const envFiles = sourceFiles.filter(f => /application-(dev|qa|uat|prod)\\.ya?ml$/i.test(f));
+  const leakedEnv = envFiles.filter(f => /(?:password|client[_-]?secret|access[_-]?token|api[_-]?key)\\s*[:=]\\s*(?!\\$\\{|\\*{3,}|<[^>]+>)[^\\s#]{8,}/i.test(fs.readFileSync(f,'utf8')));
+  add('Environment secret hygiene', leakedEnv.length === 0, leakedEnv.length ? 'Potential secret in environment config: ' + leakedEnv.map(f=>path.relative(root,f)).join(', ') : 'Environment configs use placeholders rather than obvious literal secrets.');
   if ((config.deployment || {}).target === 'none') warnings.push('Deployment target is not selected; deployment assets remain environment-neutral.');
   const score = checks.length ? Math.round(checks.filter(c=>c.pass).length / checks.length * 100) : 0;
   return { score, checks, warnings, ready: checks.every(c=>c.pass) };
