@@ -74,3 +74,12 @@ test("CloudHub 2 deployment validation enforces target and supported vCores", ()
   assert.match(source, /deployment requires target/);
   assert.match(source, /validVCores/);
 });
+
+
+test("release workflow is gated by tests, self-test and release readiness", () => {
+  const workflow = fs.readFileSync(path.resolve(__dirname, "../.github/workflows/release.yml"), "utf8");
+  assert.match(workflow, /npm test/);
+  assert.match(workflow, /self-test/);
+  assert.match(workflow, /release-check/);
+  assert.match(workflow, /npm pack/);
+});
