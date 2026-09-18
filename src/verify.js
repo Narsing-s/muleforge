@@ -46,6 +46,11 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   checks.push(result("Required connectivity configuration", !Array.isArray(config.missingConfigurations) || config.missingConfigurations.length === 0, "Required non-secret connectivity values must be explicitly resolved; credentials may remain environment placeholders."));
   checks.push(result("Operation connector mapping", operations.every(op => (op.connector || !(Array.isArray(config.connectors) && config.connectors.length)) && !op.connectorAmbiguous), "Every analyzed operation must have one unambiguous connector mapping; legacy/reference configs without explicit connector metadata use HTTP as the default source."));
   checks.push(result("Maven project", Boolean(pom && /<project[\s>]/.test(pom)), "pom.xml must contain a Maven project."));
+  for (const connector of (config.connectors || []).map(v => String(v).toLowerCase().replace(/_/g, "-"))) {
+    if (connector === "http") continue;
+    const dependencyPattern = connector === "ibm-mq" ? /mule-ibm-mq-connector/ : connector === "anypoint-mq" ? /mule-anypoint-mq-connector/ : connector === "sftp" ? /mule-sftp-connector/ : connector === "database" || connector === "snowflake" ? /mule-db-connector/ : null;
+    if (dependencyPattern) checks.push(result("Maven dependency " + connector, dependencyPattern.test(pom), "pom.xml must include the " + connector + " connector dependency."));
+  }
   checks.push(result("Mule artifact", exists(root, "mule-artifact.json"), "mule-artifact.json is required."));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
   checks.push(result("RAML exists", Boolean(raml), `Expected ${ramlPath}.`));
@@ -74,7 +79,6 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     checks.push(result("HTTP listener config", /<http:listener-config\b/.test(mule), "An HTTP listener configuration is expected for HTTP APIs."));
     for (const op of operations) {
       const expectedPath = `${api.basePath || ""}${op.path || ""}`;
-      const listener = new RegExp(`<http:listener\\b[^>]*path=["']${expectedPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} ["']`, "i");
       const pathPresent = op.schedule ? /<scheduler\b/.test(mule) : (mule.includes(`path="${expectedPath}"`) || mule.includes(`path='${expectedPath}'`));
       const methodPresent = op.schedule ? true : (mule.includes(`allowedMethods="${String(op.method).toUpperCase()}"`) || mule.includes(`allowedMethods='${String(op.method).toUpperCase()}'`));
       const sourcePresent = op.schedule ? /<scheduler\b/.test(mule) : Boolean(pathPresent && methodPresent);
