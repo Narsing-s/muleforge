@@ -117,3 +117,12 @@ test("extracts Snowflake connection fields", () => {
   assert.equal(sf.schema, "PUBLIC");
   assert.equal(sf.role, "APP_ROLE");
 });
+
+
+test("does not require optional Snowflake role", () => {
+  const model = analyzeRequirementDocument(
+    "POST /customers uses Snowflake. Account name ACME_ACCOUNT warehouse ANALYTICS_WH database CUSTOMER_DB schema PUBLIC.",
+    "snowflake-optional-role.md"
+  );
+  assert.equal(model.missingConfigurations.some(x => x.item === "snowflake role"), false);
+});
