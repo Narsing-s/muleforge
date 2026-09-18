@@ -278,6 +278,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const operationConflicts = operations.filter(op => op.connectorAmbiguous).map(op => ({
     type: "operation-connector",
     operation: op.method + " " + op.path,
+    candidates: [...new Set(connectivity.filter(c => c.type !== "http").map(c => c.type))],
     message: "Multiple non-HTTP connectors are present and the documents do not identify which connector belongs to this operation.",
     resolutionRequired: true
   }));
