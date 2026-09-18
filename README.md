@@ -330,3 +330,17 @@ When adding a feature, update the implementation, tests and user documentation t
 ## 📄 License
 
 Apache-2.0
+
+
+## Document-first requirement fidelity
+
+MuleForge treats the complete requirement package as the source of truth for solution generation.
+
+- Upload multiple requirement documents together: PDF, DOCX, PPTX, XLSX, TXT, Markdown, CSV, JSON, YAML or HTML.
+- Explicit API and integration connectivity is preserved: REST/HTTP endpoints, SFTP hosts/paths, IBM MQ queues, Anypoint MQ destinations, database/Snowflake references, schedules and authentication schemes.
+- Missing connection values are surfaced as required configuration/placeholders; MuleForge does not invent credentials or secret values.
+- Conflicting documents are detected and shown with their source documents. Desktop export is blocked until conflicts are resolved.
+- The UI exposes source documents, extracted requirements, explicit connectivity, missing configuration and requirement traceability.
+- Local Desktop export remains fail-closed: staging, verification, Maven tests and package must pass before the generated project is copied to Desktop.
+
+PDF extraction uses `pdftotext` when available; DOCX/PPTX/XLSX extraction uses the system `unzip` or `tar` utility. If the required extractor is unavailable, MuleForge reports that instead of pretending the document was analyzed.
