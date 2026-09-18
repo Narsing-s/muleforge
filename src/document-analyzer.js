@@ -156,7 +156,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const connectorIds = [...new Set(connectivity.map(c => c.type))];
   const operations = endpoints.map(endpoint => {
     const requestFields = inferFields(combined, endpoint);
-    return { name: endpoint.method.toLowerCase() + slug(endpoint.path).replace(/-/g, "_"), method: endpoint.method, path: endpoint.path, connector: connectorIds.find(x => x !== "http") || "http", requestFields, responseFields: [...new Set([...requestFields, ...(endpoint.method === "POST" ? ["id","status"] : [])])], validation: inferValidation(combined, requestFields), successStatus: endpoint.method === "POST" ? 201 : 200, errors };
+    return { name: endpoint.method.toLowerCase() + slug(endpoint.path).replace(/-/g, "_"), method: endpoint.method, path: endpoint.path, connector: connectorIds.find(x => x !== "http") || "http", downstreamEndpoint: httpConnectivity ? httpConnectivity.endpoint : null, requestFields, responseFields: [...new Set([...requestFields, ...(endpoint.method === "POST" ? ["id","status"] : [])])], validation: inferValidation(combined, requestFields), successStatus: endpoint.method === "POST" ? 201 : 200, errors };
   });
   if (!operations.length && connectorIds.length) operations.push({ name: "integration-process", method: "POST", path: "/process", connector: connectorIds[0], requestFields: [], responseFields: [], validation: [], successStatus: 200, errors });
   return {
