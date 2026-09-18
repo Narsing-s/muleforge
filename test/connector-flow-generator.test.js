@@ -25,3 +25,10 @@ test('generates documented HTTP downstream flow', () => {
   assert.match(xml, /https:\/\/example\.test\/customers/);
   assert.match(xml, /allowedMethods="GET"/);
 });
+
+
+test('generates IBM MQ publish flow', () => {
+  const xml = connectorFlow({ name: 'publish', path: '/messages', method: 'POST', connector: 'ibm-mq', destination: 'CUSTOMER.IN' }, { artifactId: 'mq-api', basePath: '/api/v1' });
+  assert.match(xml, /ibm-mq:publish/);
+  assert.match(xml, /destination="CUSTOMER.IN"/);
+});
