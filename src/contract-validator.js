@@ -76,7 +76,7 @@ function validateDeployment(deployment = {}) {
   const errors = [];
   const warnings = [];
   const target = String(deployment.target || "").toLowerCase();
-  const allowed = ["cloudhub", "cloudhub2", "rtf", "onprem"];
+  const allowed = ["none", "cloudhub", "cloudhub2", "rtf", "onprem"];
   if (deployment.target && !allowed.includes(target)) errors.push("deployment.target must be one of: " + allowed.join(", "));
   const replicas = deployment.replicas ?? deployment.replicaCount;
   if (replicas != null && (!Number.isInteger(Number(replicas)) || Number(replicas) < 1)) errors.push("deployment.replicas must be a positive integer.");
