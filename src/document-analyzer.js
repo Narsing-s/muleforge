@@ -122,7 +122,7 @@ function inferConnectivity(text, source) {
   const channelMatch = text.match(/(?:channel)\s*(?:(?:name|is|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const accountNameMatch = text.match(/(?:account(?:\s*name)?|accountName)\s*(?:(?:is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const warehouseMatch = text.match(/(?:warehouse)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
-  const databaseNameMatch = text.match(/(?:database(?:\s+name)?|db(?:\s+name)?)\s*(?:(?:is|=|:)\s*)?["']?([A-Za-z0-9_][A-Za-z0-9._-]*)/i);
+  const databaseNameMatch = text.match(/(?:database(?:\s+name)?|db(?:\s+name)?)\s*(?:(?:is|=|:)\s*)?(?!host\b|port\b|name\b|schema\b)["']?([A-Za-z0-9_][A-Za-z0-9._-]*)/i);
   const schemaMatch = text.match(/(?:schema)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const roleMatch = text.match(/(?:role)\s*(?:(?:name|is|=|:)\s*)?["']?([A-Za-z0-9._-]+)/i);
   const auth = /oauth2|oauth 2/i.test(text) ? "oauth2" : /basic auth|basic authentication/i.test(text) ? "basic" : /client credentials/i.test(text) ? "client-credentials" : /api[- ]?key/i.test(text) ? "apikey" : /username.*password|user.*password/i.test(text) ? "username-password" : null;
