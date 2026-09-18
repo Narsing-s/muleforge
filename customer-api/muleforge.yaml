@@ -1,3 +1,4 @@
+requirement: Generate a customer System API with GET and POST customer operations backed by Snowflake.
 project:
   name: customer-api
   version: 1.0.0
