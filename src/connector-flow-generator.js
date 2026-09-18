@@ -23,7 +23,7 @@ function params(fields = []) {
 
 function connectorFlow(op, data) {
   const connector = String(op.connector || '').toLowerCase().replace(/_/g, '-');
-  if (!connector || connector === 'http') return null;
+  if (!connector) return null;
   const name = `${data.artifactId}-${safe(op.name)}-flow`;
   const endpoint = `${data.basePath}${op.path}`;
   const method = String(op.method || 'GET').toUpperCase();
