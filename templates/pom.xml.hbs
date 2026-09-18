@@ -19,6 +19,20 @@
     <pluginRepository><id>mulesoft-releases</id><name>MuleSoft Releases Repository</name><url>https://repository.mulesoft.org/releases/</url><snapshots><enabled>false</enabled></snapshots></pluginRepository>
   </pluginRepositories>
   <dependencies>
+    <dependency>
+      <groupId>com.mulesoft.munit</groupId>
+      <artifactId>munit-runner</artifactId>
+      <version>${munit.version}</version>
+      <classifier>mule-plugin</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.mulesoft.munit</groupId>
+      <artifactId>munit-tools</artifactId>
+      <version>${munit.version}</version>
+      <classifier>mule-plugin</classifier>
+      <scope>test</scope>
+    </dependency>
     {{#each connectorDependencies}}
     <dependency>
       <groupId>{{groupId}}</groupId>
@@ -48,6 +62,7 @@
           </execution>
         </executions>
         <configuration>
+          <runtimeVersion>${app.runtime}</runtimeVersion>
           <coverage>
             <runCoverage>true</runCoverage>
             <failBuild>false</failBuild>
