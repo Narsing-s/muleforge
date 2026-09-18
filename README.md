@@ -160,7 +160,7 @@ UAT approval
 PROD approval
 ```
 
-See [CI/CD documentation](docs/cicd/README.md) and [GitHub Actions guidance](docs/cicd/github-actions.md).
+See [CI/CD documentation](docs/cicd/README.md), [GitHub Actions guidance](docs/cicd/github-actions.md), and [runtime validation](docs/cicd/runtime-validation.md).
 
 > CloudHub, CloudHub 2.0, Runtime Fabric and on-premises deployment helpers remain roadmap items. Do not put Anypoint credentials directly into generated workflow files.
 
@@ -314,6 +314,7 @@ When adding a feature, update the implementation, tests and user documentation t
 ## 🗺️ Roadmap
 
 - [x] GitHub Actions CI quality gate
+- [x] Manual generated-project Maven/MUnit runtime validation
 - [x] CLI verification
 - [x] Local Web UI
 - [ ] Production-grade requirement-to-flow generation
