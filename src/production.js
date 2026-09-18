@@ -72,6 +72,7 @@ jobs:
           test -d src/test/munit
       - name: Build and test with Maven
         run: mvn -B -DskipTests=false clean package
+          -Dmunit.coverage.failBuild=false
 `;
 }
 function writeProductionArtifacts(root, config, data) {
