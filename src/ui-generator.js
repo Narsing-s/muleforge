@@ -120,6 +120,13 @@ function generateMuleXml(config, d) {
   const dbNamespace = d.hasDatabase && !d.hasSnowflake ? ' xmlns:db="http://www.mulesoft.org/schema/mule/db"' : "";
   const snowflakeNamespace = d.hasSnowflake ? ' xmlns:snowflake="http://www.mulesoft.org/schema/mule/snowflake"' : "";
   const header = '<?xml version="1.0" encoding="UTF-8"?>\n<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"' + dbNamespace + snowflakeNamespace + ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' + namespaces(d) + ' xsi:schemaLocation="' + schemas(d) + '">\n  <http:listener-config name="HTTP_Listener_config"><http:listener-connection host="0.0.0.0" port="' + prop("http.port") + '" /></http:listener-config>\n' + connectivityConfigs + snowflakeConfig + databaseConfig;
+  const supportedConnectors = new Set(["http", "database", "snowflake", "sftp", "ibm-mq", "anypoint-mq", "object-store"]);
+  for (const op of config.operations || []) {
+    const connector = String(op.connector || "http").toLowerCase().replace(/_/g, "-");
+    if (!supportedConnectors.has(connector)) {
+      throw new Error("Unsupported connector for operation " + op.method + " " + op.path + ": " + op.connector + ". MuleForge will not substitute an invented generic implementation.");
+    }
+  }
   const flows = (config.operations || []).map(op => connectorFlow(op, d) || generateBusinessFlows({ ...config, operations: [op] }, d)).filter(Boolean);
   return header + flows.join("\n") + "</mule>\n";
 }
