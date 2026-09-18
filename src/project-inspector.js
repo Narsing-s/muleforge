@@ -32,6 +32,7 @@ function inspectProject(root = ".") {
     try { model = YAML.parse(fs.readFileSync(modelFile, "utf8")) || null; } catch {}
   }
   const issues = [];
+  const security = { envFiles: configs.length, suspiciousSecretFiles: rel.filter(f => /(^|\/)(\.env|.*secret.*|.*credential.*)$/i.test(f)) };
   if (!pom) issues.push("Missing pom.xml");
   if (!raml.length) issues.push("No RAML specification found");
   if (!xml.length) issues.push("No Mule XML flows found");
@@ -49,6 +50,7 @@ function inspectProject(root = ".") {
     hasMuleForgeModel: Boolean(model),
     operations: model && Array.isArray(model.operations) ? model.operations.length : null,
     issues,
+    security,
     readyForMigrationReview: issues.length === 0
   };
 }
