@@ -344,3 +344,10 @@ MuleForge treats the complete requirement package as the source of truth for sol
 - Local Desktop export remains fail-closed: staging, verification, Maven tests and package must pass before the generated project is copied to Desktop.
 
 PDF extraction uses `pdftotext` when available; DOCX/PPTX/XLSX extraction uses the system `unzip` or `tar` utility. If the required extractor is unavailable, MuleForge reports that instead of pretending the document was analyzed.
+
+
+## 🔍 Quality and traceability
+
+Generated projects now include a machine-readable `muleforge-traceability.json` manifest and `docs/11-traceability.md`. Run `muleforge trace` to regenerate them and `muleforge audit` to check requirement completeness, duplicate operations, generated assets and obvious hard-coded secrets.
+
+These additions are additive: the existing generation, verification, Maven and Desktop-save workflow remains unchanged.
