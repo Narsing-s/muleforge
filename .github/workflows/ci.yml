@@ -58,7 +58,7 @@ jobs:
           done
           exit 1
       - name: Verify reference project
-        run: node src/index.js verify customer-api
+        run: node src/index.js verify customer-api/muleforge.yaml
       - name: Upload generated project metadata
         uses: actions/upload-artifact@v4
         with:
