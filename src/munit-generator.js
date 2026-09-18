@@ -20,6 +20,7 @@ function processorMocks(op, data) {
     add("snowflake:select", "#[[]]");
     add("snowflake:insert", "#[{}]");
   }
+  if (op.idempotency) add("os:store", "#[{}]");
   const connectorProcessors = {
     "anypoint-mq": ["anypoint-mq:publish"],
     "ibm-mq": ["ibm-mq:publish"],
@@ -116,6 +117,38 @@ function generateMunit(config, data) {
     </munit:validation>
   </munit:test>`);
     }
+    if (op.idempotency) {
+      tests.push(`  <munit:test name="${testName(op, "idempotency-duplicate")}">
+    <munit:behavior>
+      <munit-tools:mock-when processor="os:store">
+        <munit-tools:then-return>
+          <munit-tools:error typeId="#['OS:KEY_ALREADY_EXISTS']"/>
+        </munit-tools:then-return>
+      </munit-tools:mock-when>
+    </munit:behavior>
+    <munit:execution>
+      <munit:set-event><munit:set-payload value="#[{}]"/></munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 409]" is="#[MunitTools::equalTo(409)]"/>
+    </munit:validation>
+  </munit:test>`);
+    }
+    if (op.pagination) {
+      tests.push(`  <munit:test name="${testName(op, "pagination")}">
+    <munit:execution>
+      <munit:set-event>
+        <munit:attributes value="#[{ queryParams: { page: '2', pageSize: '10' } }]"/>
+      </munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.page]" is="#[MunitTools::equalTo(2)]"/>
+      <munit-tools:assert-that expression="#[vars.pageSize]" is="#[MunitTools::equalTo(10)]"/>
+    </munit:validation>
+  </munit:test>`);
+    }
     if (op.validation && op.validation.length) {
       tests.push(`  <munit:test name="${testName(op, "validation")}">
     <munit:execution>
@@ -152,12 +185,14 @@ function generateMunit(config, data) {
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:db="http://www.mulesoft.org/schema/mule/db"
       xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
-      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"${(config.operations || []).some(o => o.idempotency) ? `
+      xmlns:os="http://www.mulesoft.org/schema/mule/os"` : ""}
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
       http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
       http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
-      http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+      http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd${(config.operations || []).some(o => o.idempotency) ? "
+      http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd" : ""}>
   <munit:config name="${xmlEscape(data.artifactId)}-test-suite"/>
 ${tests.join("\n")}
 </mule>
