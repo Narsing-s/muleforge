@@ -96,6 +96,9 @@ jobs:
         id: requirement
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_SHA: ${{ github.sha }}
           REQUIREMENT_FILE: ${{ inputs.requirement_file }}
           PROJECT_NAME: ${{ inputs.project_name }}
           API_TYPE: ${{ inputs.api_type }}
@@ -111,7 +114,50 @@ jobs:
         run: |
           set -euo pipefail
 
+          SUPPORTED='*.txt *.md *.markdown *.pdf *.docx *.pptx *.xlsx *.csv *.json *.yaml *.yml *.html *.htm'
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            echo "Requirement push detected. Finding the changed requirement document..."
+
+            mapfile -t CHANGED_FILES < <(
+              if [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+                git diff --name-only "$EVENT_BEFORE" "$GITHUB_SHA" -- requirements/
+              else
+                git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- requirements/
+              fi
+            )
+
+            FILE=""
+            for candidate in "${CHANGED_FILES[@]}"; do
+              [ -f "$candidate" ] || continue
+              case "$candidate" in
+                requirements/*.txt|requirements/*.md|requirements/*.markdown|requirements/*.pdf|requirements/*.docx|requirements/*.pptx|requirements/*.xlsx|requirements/*.csv|requirements/*.json|requirements/*.yaml|requirements/*.yml|requirements/*.html|requirements/*.htm)
+                  FILE="$candidate"
+                  break
+                  ;;
+              esac
+            done
+
+            if [ -z "$FILE" ]; then
+              echo "No supported requirement document changed under requirements/." >&2
+              echo "Supported: TXT, MD, PDF, DOCX, PPTX, XLSX, CSV, JSON, YAML, HTML." >&2
+              exit 1
+            fi
+
+            echo "file=$FILE" >> "$GITHUB_OUTPUT"
+            echo "mode=document" >> "$GITHUB_OUTPUT"
+            echo "Using requirement document: $FILE"
+            exit 0
+          fi
+
           if [ -n "$REQUIREMENT_FILE" ]; then
+            case "$REQUIREMENT_FILE" in
+              requirements/*) ;;
+              *)
+                echo "requirement_file must point to a file under requirements/." >&2
+                exit 1
+                ;;
+            esac
             test -f "$REQUIREMENT_FILE"
             echo "file=$REQUIREMENT_FILE" >> "$GITHUB_OUTPUT"
             echo "mode=document" >> "$GITHUB_OUTPUT"
@@ -175,7 +221,7 @@ EOF
           set -euo pipefail
           FILE="${{ steps.requirement.outputs.file }}"
 
-          if [ -n "$PROJECT_NAME" ]; then
+          if [ -n "$PROJECT_NAME" ] && [ "${{ steps.requirement.outputs.mode }}" = "questions" ]; then
             node src/index.js analyze "$FILE" "$PROJECT_NAME"
           else
             node src/index.js analyze "$FILE"
@@ -192,7 +238,7 @@ EOF
             FOUND=1
             echo "=== Verifying $CONFIG ==="
             node src/index.js verify "$CONFIG"
-          done < <(find . -mindepth 2 -maxdepth 3 -name muleforge.yaml -not -path "./.git/*" -not -path "./node_modules/*" | sort)
+          done < <(find . -mindepth 2 -maxdepth 4 -name muleforge.yaml -not -path "./.git/*" -not -path "./node_modules/*" | sort)
 
           if [ "$FOUND" -eq 0 ]; then
             echo "No generated Mule project was found."
