@@ -162,7 +162,7 @@ PROD approval
 
 See [CI/CD documentation](docs/cicd/README.md), [GitHub Actions guidance](docs/cicd/github-actions.md), and [runtime validation](docs/cicd/runtime-validation.md).
 
-> Deployment helpers are now generated for CloudHub 1.0, CloudHub 2.0 and Runtime Fabric. They are target-aware templates and require organization-specific Anypoint permissions plus secure Maven settings. Do not put Anypoint credentials directly into generated workflow files.
+> Deployment helpers are generated for CloudHub 1.0, CloudHub 2.0, Runtime Fabric and on-premises Runtime Manager. They are target-aware templates and require organization-specific Anypoint permissions plus secure Maven settings. Do not put Anypoint credentials directly into generated workflow files.
 
 ## 💾 Local Desktop export workflow
 
@@ -185,7 +185,7 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge clean` | Clean Maven output |
 | `muleforge doctor` | Check local development tools |
 | `muleforge runtime-check` | Check Java, Maven and Mule project prerequisites |
-| `muleforge release-check` | Check release-readiness and required quality artifacts |\n| `muleforge deployment-check` | Validate deployment target and release settings |
+| `muleforge release-check` | Check release-readiness and required quality artifacts |\n| `muleforge deployment-check` | Validate deployment target and release settings |\n| `muleforge connector-check` | Verify connector dependencies, namespaces, configs and generated operations |\n| `muleforge sync-docs` | Synchronize application documentation and traceability from the project model |
 
 Run:
 
@@ -322,8 +322,8 @@ When adding a feature, update the implementation, tests and user documentation t
 - [ ] Production-grade requirement-to-flow generation
 - [ ] Connector-specific implementation generation
 - [ ] Requirement-derived MUnit scenarios
-- [ ] Complete requirement-to-code traceability
-- [ ] Automatic documentation synchronization
+- [x] Complete requirement-to-code traceability
+- [x] Automatic documentation synchronization
 - [ ] `muleforge cicd init`
 - [x] CloudHub and CloudHub 2.0 deployment helpers
 - [x] Runtime Fabric deployment helpers
