@@ -170,3 +170,26 @@ Connector: database
   assert.equal(model.operations.find(op => op.path === "/products/{productId}").table, "PRODUCT");
   assert.equal(model.operations.find(op => op.path === "/orders/{orderId}").table, "ORDERS");
 });
+
+
+test("generates all database operation types with dedicated flows", () => {
+  const { connectorFlow } = require("../src/connector-flow-generator");
+  const data = {
+    artifactId: "ecommerce-order-api",
+    basePath: "/api/v1",
+    databaseTable: "CUSTOMER"
+  };
+  const ops = [
+    { name: "getproducts_productid", method: "GET", path: "/products/{productId}", connector: "database", table: "PRODUCT" },
+    { name: "patchorders_orderid_status", method: "PATCH", path: "/orders/{orderId}/status", connector: "database", table: "ORDERS", requestFields: ["status"] },
+    { name: "deleteorders_orderid", method: "DELETE", path: "/orders/{orderId}", connector: "database", table: "ORDERS" }
+  ];
+  const flows = ops.map(op => connectorFlow(op, data));
+  assert.match(flows[0], /<db:select/);
+  assert.match(flows[0], /SELECT \* FROM PRODUCT WHERE PRODUCTID = :productId/);
+  assert.match(flows[1], /<db:update/);
+  assert.match(flows[1], /UPDATE ORDERS SET STATUS = :status WHERE ORDERID = :orderId/);
+  assert.match(flows[2], /<db:delete/);
+  assert.match(flows[2], /DELETE FROM ORDERS WHERE ORDERID = :orderId/);
+  for (const flow of flows) assert.match(flow, /<error-handler>/);
+});
