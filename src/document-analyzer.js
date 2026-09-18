@@ -140,10 +140,20 @@ function mergeDocuments(documents) {
   const byType = new Map();
   for (const c of connectivity) { if (!byType.has(c.type)) byType.set(c.type, []); byType.get(c.type).push(c); }
   for (const [type, values] of byType) {
-    const endpoints = [...new Set(values.map(v => v.endpoint).filter(Boolean))];
-    const schedules = [...new Set(values.map(v => v.schedule).filter(Boolean))];
-    const paths = [...new Set(values.map(v => v.path).filter(Boolean))];
-    if (endpoints.length > 1 || schedules.length > 1 || paths.length > 1) conflicts.push({ type: "connectivity", connector: type, message: "Conflicting explicit connectivity details across requirement documents.", values, resolutionRequired: true });
+    const fields = ["endpoint", "host", "port", "path", "queue", "topic", "queueManager", "channel", "schedule"];
+    const differences = fields
+      .map(field => ({ field, values: [...new Set(values.map(v => v[field]).filter(v => v !== null && v !== undefined && v !== ""))] }))
+      .filter(x => x.values.length > 1);
+    if (differences.length) {
+      conflicts.push({
+        type: "connectivity",
+        connector: type,
+        message: "Conflicting explicit connectivity details across requirement documents.",
+        differences,
+        values,
+        resolutionRequired: true
+      });
+    }
   }
   return { requirements, connectivity, conflicts };
 }
