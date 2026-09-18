@@ -12,7 +12,7 @@ test("generated POM keeps Mule and MUnit plugins inside build/plugins", () => {
   assert.equal((pom.match(/<plugins>/g) || []).length, 1);
   assert.match(pom, /<artifactId>munit-runner<\/artifactId>/);
   assert.match(pom, /<artifactId>munit-tools<\/artifactId>/);
-  assert.match(pom, /<runtimeVersion>\$\{app\.runtime\}<\/runtimeVersion>/);
+  assert.match(pom, /<munit\.runtimeversion>\$\{app\.runtime\}<\/munit\.runtimeversion>/);
 });
 
 test("snapshot diff reports added and removed project files", () => {
