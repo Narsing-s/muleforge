@@ -3,43 +3,13 @@
   "version": "0.6.0",
   "description": "Open-source CLI for requirement-driven Mule 4 project generation",
   "main": "src/index.js",
-  "bin": {
-    "muleforge": "src/index.js"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "scripts": {
-    "start": "node src/index.js ui",
-    "test": "node --test"
-  },
-  "keywords": [
-    "mulesoft",
-    "mule",
-    "mule4",
-    "muleforge",
-    "api",
-    "generator",
-    "raml",
-    "dataweave",
-    "integration",
-    "anypoint",
-    "requirements",
-    "munit",
-    "postman"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Narsing-s/muleforge.git"
-  },
+  "bin": {"muleforge": "src/index.js"},
+  "engines": {"node": ">=18"},
+  "scripts": {"start": "node src/index.js ui", "test": "node --test"},
+  "keywords": ["mulesoft","mule","mule4","muleforge","api","generator","raml","dataweave","integration","anypoint","requirements","munit","postman"],
+  "repository": {"type": "git", "url": "https://github.com/Narsing-s/muleforge.git"},
   "homepage": "https://github.com/Narsing-s/muleforge",
-  "bugs": {
-    "url": "https://github.com/Narsing-s/muleforge/issues"
-  },
+  "bugs": {"url": "https://github.com/Narsing-s/muleforge/issues"},
   "license": "Apache-2.0",
-  "dependencies": {
-    "chalk": "^5.0.0",
-    "commander": "^14.0.0",
-    "yaml": "^2.0.0"
-  }
+  "dependencies": {"chalk": "^5.0.0", "commander": "^14.0.0", "handlebars": "^4.7.0", "yaml": "^2.0.0"}
 }
