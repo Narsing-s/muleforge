@@ -41,3 +41,19 @@ test('adds a standard error handler to every supported connector flow', () => {
     assert.match(xml, /type="ANY"/);
   }
 });
+
+
+test('generates documented SFTP-to-HTTP end-to-end flow', () => {
+  const xml = connectorFlow({
+    name: 'process-file',
+    path: '/files',
+    method: 'POST',
+    connector: 'sftp',
+    filePath: '/inbound/customer',
+    downstreamEndpoint: 'https://customer.example.com/v1/customers'
+  }, { artifactId: 'file-api', basePath: '/api/v1' });
+  assert.match(xml, /sftp:read/);
+  assert.match(xml, /http:request/);
+  assert.match(xml, /https:\/\/customer\.example\.com\/v1\/customers/);
+  assert.match(xml, /<error-handler>/);
+});
