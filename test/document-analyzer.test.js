@@ -90,3 +90,16 @@ test("keeps connector and downstream evidence scoped to each operation", () => {
   assert.equal(model.operations[1].destination, "CUSTOMER.OUT");
   assert.equal(model.operations[1].downstreamEndpoint, "https://messages.example.com/v1/publish");
 });
+
+test("scopes operation windows when multiple endpoints are close together", () => {
+  const text = [
+    "POST /files uses SFTP host sftp.example.com path /inbound.",
+    "POST /messages uses IBM MQ host mq.example.com queue CUSTOMER.OUT."
+  ].join("\n");
+  const model = analyzeRequirementDocument(text, "multi.md");
+  assert.equal(model.operations.length, 2);
+  assert.equal(model.operations[0].connector, "sftp");
+  assert.equal(model.operations[0].destination, null);
+  assert.equal(model.operations[1].connector, "ibm-mq");
+  assert.equal(model.operations[1].destination, "CUSTOMER.OUT");
+});
