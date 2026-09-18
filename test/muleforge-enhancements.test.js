@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { resolveConnectors } = require("../src/connectors");
 const { buildTraceability } = require("../src/traceability");
 const { inspectProject } = require("../src/project-inspector");
