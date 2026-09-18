@@ -89,12 +89,11 @@ test('generates an explicit HTTP error response for propagated connector failure
   assert.match(xml, /<http:body><!\[CDATA\[#\[payload\]\]\]><\/http:body>/);
 });
 
-test('does not silently generate a generic flow for an unsupported connector', () => {
-  assert.equal(
-    connectorFlow(
-      { name: 'process', path: '/process', method: 'POST', connector: 'kafka' },
-      { artifactId: 'api', basePath: '/api/v1' }
-    ),
-    null
+test('generates the configured Kafka flow', () => {
+  const xml = connectorFlow(
+    { name: 'process', path: '/process', method: 'POST', connector: 'kafka' },
+    { artifactId: 'api', basePath: '/api/v1' }
   );
+  assert.match(xml, /<kafka:publish/);
+  assert.match(xml, /config-ref="Kafka_Config"/);
 });
