@@ -42,6 +42,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   checks.push(result("Project metadata", Boolean(project.name), "project.name is required."));
   checks.push(result("API metadata", Boolean(api.name && api.basePath), "api.name and api.basePath are required."));
   checks.push(result("Operations defined", operations.length > 0, "At least one confirmed API operation is required."));
+  checks.push(result("No unresolved document conflicts", !Array.isArray(config.conflicts) || config.conflicts.length === 0, "Conflicting source documents must be resolved before generation is considered ready."));
   checks.push(result("Maven project", Boolean(pom && /<project[\s>]/.test(pom)), "pom.xml must contain a Maven project."));
   checks.push(result("Mule artifact", exists(root, "mule-artifact.json"), "mule-artifact.json is required."));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
@@ -60,6 +61,10 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   }
 
   if (mule) {
+    const connectorIds = new Set((config.connectors || []).map(v => String(v).toLowerCase().replace(/_/g, "-")));
+    if (connectorIds.has("sftp")) checks.push(result("SFTP configuration", /<sftp:config\b/.test(mule), "SFTP selection requires a generated configuration."));
+    if (connectorIds.has("ibm-mq")) checks.push(result("IBM MQ configuration", /<ibm-mq:config\b/.test(mule) && /<ibm-mq:publish\b/.test(mule), "IBM MQ selection requires a generated configuration and publish operation."));
+    if (connectorIds.has("anypoint-mq")) checks.push(result("Anypoint MQ configuration", /<anypoint-mq:config\b/.test(mule) && /<anypoint-mq:publish\b/.test(mule), "Anypoint MQ selection requires a generated configuration and publish operation."));
     checks.push(result("Mule XML declaration", mule.startsWith("<?xml"), "Mule XML should contain an XML declaration."));
     checks.push(result("Mule root", /<mule\b/.test(mule) && /<\/mule>\s*$/.test(mule), "Mule XML must have a mule root element."));
     checks.push(result("HTTP listener config", /<http:listener-config\b/.test(mule), "An HTTP listener configuration is expected for HTTP APIs."));
