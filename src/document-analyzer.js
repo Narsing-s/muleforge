@@ -158,7 +158,7 @@ function mergeDocuments(documents) {
   const byType = new Map();
   for (const c of connectivity) { if (!byType.has(c.type)) byType.set(c.type, []); byType.get(c.type).push(c); }
   for (const [type, values] of byType) {
-    const fields = ["endpoint", "host", "port", "path", "queue", "topic", "queueManager", "channel", "schedule"];
+    const fields = ["endpoint", "host", "port", "path", "queue", "topic", "queueManager", "channel", "schedule", "accountName", "warehouse", "database", "schema"];
     const differences = fields
       .map(field => ({ field, values: [...new Set(values.map(v => v[field]).filter(v => v !== null && v !== undefined && v !== ""))] }))
       .filter(x => x.values.length > 1);
