@@ -3,8 +3,8 @@ const CONNECTORS = {
   database: { name: "Database", description: "Database connector", maven: "org.mule.connectors:mule-db-connector", namespace: "db", defaultVersion: "1.14.13" },
   snowflake: { name: "Snowflake", description: "Snowflake database connector", maven: "com.mulesoft.connectors:mule-snowflake-connector", namespace: "snowflake", defaultVersion: "1.0.0" },
   sftp: { name: "SFTP", description: "Secure file transfer", maven: "org.mule.connectors:mule-sftp-connector", namespace: "sftp", defaultVersion: "2.5.0" },
-  "ibm-mq": { name: "IBM MQ", description: "IBM MQ messaging", maven: "com.mulesoft.connectors:mule-ibm-mq-connector", namespace: "ibm-mq", defaultVersion: "1.7.0" },
-  "anypoint-mq": { name: "Anypoint MQ", description: "Anypoint MQ messaging", maven: "com.mulesoft.connectors:mule-anypoint-mq-connector", namespace: "anypoint-mq", defaultVersion: "4.0.0" },
+  "ibm-mq": { name: "IBM MQ", description: "IBM MQ messaging", maven: "com.mulesoft.connectors:mule-ibm-mq-connector", namespace: "ibm-mq", defaultVersion: "1.9.0" },
+  "anypoint-mq": { name: "Anypoint MQ", description: "Anypoint MQ messaging", maven: "com.mulesoft.connectors:mule-anypoint-mq-connector", namespace: "anypoint-mq", defaultVersion: "4.0.23" },
   "object-store": { name: "Object Store", description: "Mule Object Store", maven: null, namespace: "os" }
 };
 
