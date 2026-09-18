@@ -1,4 +1,4 @@
-function esc(value) {
+function generatedErrorHandler() { return '<error-handler>\n      <on-error-continue type="CONNECTIVITY" logException="true"><set-variable variableName="httpStatus" value="503"/></on-error-continue>\n      <on-error-continue type="TIMEOUT" logException="true"><set-variable variableName="httpStatus" value="504"/></on-error-continue>\n      <on-error-continue type="ANY" logException="true"><set-variable variableName="httpStatus" value="500"/></on-error-continue>\n    </error-handler>'; }\n\nfunction esc(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
@@ -40,6 +40,7 @@ function connectorFlow(op, data) {
       <http:headers><![CDATA[#[{}]]]></http:headers>
     </http:request>
     <set-variable variableName="httpStatus" value="${status}" />
+    ${generatedErrorHandler()}
   </flow>
 `;
   }
