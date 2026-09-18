@@ -31,7 +31,7 @@ function auditProject(file = 'muleforge.yaml') {
   function scan(dir) { if (!fs.existsSync(dir)) return; for (const e of fs.readdirSync(dir,{withFileTypes:true})) { const f=path.join(dir,e.name); if(['target','.git','node_modules'].includes(e.name)) continue; if(e.isDirectory()) scan(f); else sourceFiles.push(f); } }
   scan(root);
   const xmlFiles = sourceFiles.filter(f => f.endsWith('.xml'));
-  const malformed = xmlFiles.filter(f => { const s=fs.readFileSync(f,'utf8'); return !s.trim().startsWith('<?xml') || (s.match(/<mule\\b/g)||[]).length !== (s.match(/<\\/mule>/g)||[]).length; });
+  const malformed = xmlFiles.filter(f => { const s=fs.readFileSync(f,'utf8'); return !s.trim().startsWith('<?xml') || (s.match(/<mule\b/g)||[]).length !== (s.match(/<\/mule>/g)||[]).length; });
   add('Mule XML structural sanity', malformed.length === 0, malformed.length ? 'Potential malformed Mule XML: ' + malformed.map(f=>path.relative(root,f)).join(', ') : 'Mule XML files have a basic root/closing-tag sanity check.');
   const ramlFiles = sourceFiles.filter(f => f.endsWith('.raml'));
   const badRaml = ramlFiles.filter(f => !fs.readFileSync(f,'utf8').startsWith('#%RAML 1.0'));
