@@ -60,3 +60,11 @@ test("maps a single explicit connector without inventing a second connector", ()
   assert.equal(model.operations[0].connector, "ibm-mq");
   assert.equal(model.operations[0].destination, "CUSTOMER.IN");
 });
+
+test("does not silently assign multiple connectors to an operation", () => {
+  const model = analyzeRequirementDocument(
+    "POST /process. Integrate with SFTP and IBM MQ. SFTP host sftp.example.com path /inbound. IBM MQ host mq.example.com queue CUSTOMER.IN.",
+    "mixed.md"
+  );
+  assert.ok(model.conflicts.some(x => x.type === "operation-routing" && x.resolutionRequired === true));
+});
