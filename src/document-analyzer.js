@@ -180,7 +180,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     const hit = marker.exec(combined);
     if (!hit) return "";
     const start = hit.index;
-    const all = /\\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\s+\\/[^\\s,.;:)]+/gi;
+    const all = /\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/[^\s,.;:)]+/gi;
     all.lastIndex = start + hit[0].length;
     const next = all.exec(combined);
     return combined.slice(start, next ? next.index : Math.min(combined.length, start + 2500));
