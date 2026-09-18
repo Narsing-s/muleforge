@@ -13,7 +13,11 @@ function auditProject(file = 'muleforge.yaml') {
   add('Connector mappings', operations.every(op => op.connector || !(config.connectors || []).length), 'Each operation should have an explicit connector when multiple connectors are selected.');
   add('No unresolved conflicts', !(config.conflicts || []).length, 'Requirement/document conflicts must be resolved.');
   add('No missing non-secret configuration', !(config.missingConfigurations || []).length, 'Required connectivity values should be resolved; secrets may remain placeholders.');
-  for (const f of ['pom.xml','mule-artifact.json','src/main/resources/application.yaml','muleforge-traceability.json']) add('Generated ' + f, fs.existsSync(path.join(root,f)), f + ' should exist after generation.');
+  for (const f of ['pom.xml','mule-artifact.json','src/main/resources/application.yaml','muleforge-traceability.json','docs/11-traceability.md']) add('Generated ' + f, fs.existsSync(path.join(root,f)), f + ' should exist after generation.');
+  add('Postman artifact', fs.existsSync(path.join(root,'postman')), 'Generated projects should contain Postman assets.');
+  add('Environment artifacts', ['dev','qa','uat','prod'].every(e => fs.existsSync(path.join(root,'src/main/resources/properties',`application-${e}.yaml`))), 'All four environment property files should exist.');
+  const tracePath=path.join(root,'muleforge-traceability.json');
+  if(fs.existsSync(tracePath)){ try { const trace=JSON.parse(fs.readFileSync(tracePath,'utf8')); const assetChecks=(trace.operations||[]).flatMap(o=>Object.values(o.generated||{})); add('Traceability evidence', assetChecks.length===0 || assetChecks.every(Boolean), 'Every recorded generated asset should exist on disk.'); } catch { add('Traceability evidence', false, 'muleforge-traceability.json must be valid JSON.'); } }
   const names = operations.map(o => String(o.name || '')).filter(Boolean);
   add('Unique operation names', new Set(names).size === names.length, 'Operation names must be unique.');
   const routes = operations.map(o => String(o.method || 'GET').toUpperCase() + ' ' + String(o.path || '/'));
