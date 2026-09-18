@@ -120,6 +120,10 @@ function inferConnectivity(text, source) {
   const portMatch = text.match(/(?:port)\s*(?:is|=|:)\s*(\d{2,5})/i);
   const queueManagerMatch = text.match(/(?:queue\s*manager|queuemanager|QM)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
   const channelMatch = text.match(/(?:channel)\s*(?:name|is|:)\s*["']?([A-Za-z0-9._-]+)/i);
+  const accountNameMatch = text.match(/(?:account(?:\s*name)?|accountName)\s*(?:is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
+  const warehouseMatch = text.match(/(?:warehouse)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
+  const databaseNameMatch = text.match(/(?:database|db)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
+  const schemaMatch = text.match(/(?:schema)\s*(?:name|is|=|:)\s*["']?([A-Za-z0-9._-]+)/i);
   const auth = /oauth2|oauth 2/i.test(text) ? "oauth2" : /basic auth|basic authentication/i.test(text) ? "basic" : /client credentials/i.test(text) ? "client-credentials" : /api[- ]?key/i.test(text) ? "apikey" : /username.*password|user.*password/i.test(text) ? "username-password" : null;
   const add = (type, values) => out.push({ type, explicit: true, ...values, auth, source: source || "requirement" });
   for (const [type, re] of CONNECTORS) {
@@ -129,7 +133,14 @@ function inferConnectivity(text, source) {
     else if (type === "ibm-mq") add(type, { host: hostMatch?.[1] || null, port: portMatch ? Number(portMatch[1]) : null, queueManager: queueManagerMatch?.[1] || null, channel: channelMatch?.[1] || null, queue: queueMatch?.[1] || null });
     else if (type === "anypoint-mq") add(type, { endpoint, queue: queueMatch?.[1] || null, topic: topicMatch?.[1] || null });
     else if (type === "database") add(type, { endpoint, host: hostMatch?.[1] || null });
-    else if (type === "snowflake") add(type, { endpoint, host: hostMatch?.[1] || null });
+    else if (type === "snowflake") add(type, {
+      endpoint,
+      host: hostMatch?.[1] || null,
+      accountName: accountNameMatch?.[1] || null,
+      warehouse: warehouseMatch?.[1] || null,
+      database: databaseNameMatch?.[1] || null,
+      schema: schemaMatch?.[1] || null
+    });
     else add(type, {});
   }
   return out;
@@ -271,7 +282,11 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
 
   const missingConfigurations = connectivity.flatMap(c => {
     const missing = [];
-    if (["sftp", "ibm-mq", "anypoint-mq", "database", "snowflake"].includes(c.type) && !c.host && !c.endpoint) missing.push(c.type + " host/endpoint");
+    if (["sftp", "ibm-mq", "anypoint-mq", "database"].includes(c.type) && !c.host && !c.endpoint) missing.push(c.type + " host/endpoint");
+    if (c.type === "snowflake" && !c.accountName) missing.push("snowflake accountName");
+    if (c.type === "snowflake" && !c.warehouse) missing.push("snowflake warehouse");
+    if (c.type === "snowflake" && !c.database) missing.push("snowflake database");
+    if (c.type === "snowflake" && !c.schema) missing.push("snowflake schema");
     if (c.type === "sftp" && !c.path) missing.push("sftp path");
     if (["ibm-mq", "anypoint-mq"].includes(c.type) && !c.queue && !c.topic) missing.push(c.type + " queue/destination");
     if (c.type === "ibm-mq" && !c.port) missing.push("ibm-mq port");
