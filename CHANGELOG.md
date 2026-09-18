@@ -1,3 +1,11 @@
+# 0.9.1
+
+- Updated generated MUnit configuration to use the current `munit.runtimeversion` property.
+- Made generated MUnit scenarios connector-aware by mocking external connector processors.
+- Limited the generated customer not-found test to the Snowflake customer flow that actually implements 404 behavior.
+- Unified `muleforge validate` so it runs verification, contract validation and the quality audit together.
+- Documented `muleforge runtime-check` and the expanded validation gate.
+
 # 0.9.0
 
 - Added a local `muleforge self-test` smoke gate covering generation, contract validation, verification and audit.
