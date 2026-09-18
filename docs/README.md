@@ -48,16 +48,26 @@ MuleForge is a requirement-driven CLI for generating Mule 4 project foundations.
 - Runtime Fabric
 - On-premises Mule runtimes
 
-### 8. Development
+### 8. Hosting and Local Export
+
+- [Hosting Overview](hosting/README.md)
+- [Free Hosting](deployment/free-hosting.md)
+- [Local Desktop Export](architecture/local-desktop-export.md)
+
+### 9. Development
 
 - [Development Setup](development/development-setup.md)
 - [Contributing](development/contributing.md)
 - [Testing](development/testing.md)
 - [Release Process](development/release-process.md)
 
-### 9. Troubleshooting
+### 10. Troubleshooting
 
 - [FAQ and Common Errors](troubleshooting/faq.md)
+
+## CI Quality Gates
+
+- [CI Quality Gates](ci/README.md)
 
 ## Generated project documentation
 
