@@ -74,6 +74,46 @@
   </build>
   <profiles>
     <profile>
+      <id>cloudhub</id>
+      <activation><property><name>muleforge.cloudhub</name><value>true</value></property></activation>
+      <build><plugins><plugin>
+        <groupId>org.mule.tools.maven</groupId>
+        <artifactId>mule-maven-plugin</artifactId>
+        <version>${mule.maven.plugin.version}</version>
+        <extensions>true</extensions>
+        <configuration><cloudHubDeployment>
+          <uri>${anypoint.uri}</uri>
+          <muleVersion>${app.runtime}</muleVersion>
+          <server>muleforge-anypoint</server>
+          <applicationName>${anypoint.applicationName}</applicationName>
+          <environment>${anypoint.environment}</environment>
+          <region>${anypoint.region}</region>
+          <workers>${anypoint.workers}</workers>
+          <workerType>${anypoint.workerType}</workerType>
+        </cloudHubDeployment></configuration>
+      </plugin></plugins></build>
+    </profile>
+    <profile>
+      <id>rtf</id>
+      <activation><property><name>muleforge.rtf</name><value>true</value></property></activation>
+      <build><plugins><plugin>
+        <groupId>org.mule.tools.maven</groupId>
+        <artifactId>mule-maven-plugin</artifactId>
+        <version>${mule.maven.plugin.version}</version>
+        <extensions>true</extensions>
+        <configuration><runtimeFabricDeployment>
+          <uri>${anypoint.uri}</uri>
+          <muleVersion>${app.runtime}</muleVersion>
+          <server>muleforge-anypoint</server>
+          <applicationName>${anypoint.applicationName}</applicationName>
+          <target>${anypoint.target}</target>
+          <environment>${anypoint.environment}</environment>
+          <provider>MC</provider>
+          <replicas>${anypoint.replicas}</replicas>
+        </runtimeFabricDeployment></configuration>
+      </plugin></plugins></build>
+    </profile>
+    <profile>
       <id>cloudhub2</id>
       <activation>
         <property>
