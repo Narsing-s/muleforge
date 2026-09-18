@@ -43,7 +43,21 @@ function runMavenPackage(root) {
 
 function copyDirectory(source, destination) {
   fs.mkdirSync(destination, { recursive: true });
-  fs.cpSync(source, destination, { recursive: true, force: true });
+  fs.cpSync(source, destination, { recursive: true, force: false, errorOnExist: false });
+}
+
+function listFiles(root) {
+  const files = [];
+  const walk = current => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      const relative = path.relative(root, full).split(path.sep).join("/");
+      if (entry.isDirectory()) walk(full);
+      else files.push(relative);
+    }
+  };
+  walk(root);
+  return files.sort();
 }
 
 function prepareAndSave(model) {
@@ -88,8 +102,46 @@ function prepareAndSave(model) {
       throw new Error(`Desktop already contains "${projectName}". Nothing was overwritten.`);
     }
 
-    // Atomic-ish final handoff: only this copy is performed after every gate passes.
-    copyDirectory(stagedRoot, destination);
+    // Create an audit report before export so the Desktop copy contains the workflow result.
+    const generatedFiles = listFiles(stagedRoot);
+    const report = {
+      product: "MuleForge",
+      generatedAt: new Date().toISOString(),
+      projectName,
+      requirement: model.requirement || "",
+      workflow: {
+        generation: "passed",
+        staticVerification: verification.ready,
+        mavenTests: verification.build.pass,
+        mavenPackage: packageResult.pass,
+        desktopExport: "pending"
+      },
+      verification: {
+        score: verification.score,
+        passed: verification.passed,
+        total: verification.total
+      },
+      generatedFiles
+    };
+    fs.writeFileSync(path.join(stagedRoot, "muleforge-generation-report.json"), JSON.stringify(report, null, 2) + "\n", "utf8");
+
+    // Final handoff is atomic at the project-directory level: copy to a hidden Desktop staging folder, then rename.
+    const desktopStage = path.join(desktop, ".muleforge-" + projectName + "-" + process.pid + "-" + Date.now());
+    try {
+      copyDirectory(stagedRoot, desktopStage);
+      const sourceFiles = listFiles(stagedRoot);
+      const copiedFiles = listFiles(desktopStage);
+      if (sourceFiles.length !== copiedFiles.length || sourceFiles.some(file => !copiedFiles.includes(file))) {
+        throw new Error("Desktop copy verification failed. The final project was not published.");
+      }
+      report.workflow.desktopExport = "passed";
+      fs.writeFileSync(path.join(desktopStage, "muleforge-generation-report.json"), JSON.stringify(report, null, 2) + "\n", "utf8");
+      fs.renameSync(desktopStage, destination);
+    } catch (error) {
+      fs.rmSync(desktopStage, { recursive: true, force: true });
+      throw error;
+    }
+
     return {
       saved: true,
       projectName,
