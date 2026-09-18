@@ -34,6 +34,30 @@ function processorMocks(op, data) {
   for (const processor of connectorProcessors[connector] || []) add(processor);
   return mocks.length ? `\n${mocks.join("\n")}` : "";
 }
+function failureMocks(op, data) {
+  const connector = String(op.connector || "").toLowerCase().replace(/_/g, "-");
+  const processors = [];
+  if (data.hasDatabase) processors.push("db:select", "db:insert");
+  if (connector === "snowflake") processors.push("snowflake:select", "snowflake:insert");
+  const map = {
+    "anypoint-mq": ["anypoint-mq:publish"],
+    "ibm-mq": ["ibm-mq:publish"],
+    sftp: ["sftp:read", "sftp:write", "sftp:list"],
+    "object-store": ["os:store"],
+    file: ["file:read", "file:write"],
+    email: ["email:send"],
+    jms: ["jms:publish"],
+    kafka: ["kafka:publish"],
+    salesforce: ["sfdc:query", "sfdc:create"]
+  };
+  processors.push(...(map[connector] || []));
+  if (!processors.length) processors.push("http:request");
+  return "\n" + processors.map(processor => `      <munit-tools:mock-when processor="${processor}">
+        <munit-tools:then-return>
+          <munit-tools:error typeId="#['CONNECTIVITY']"/>
+        </munit-tools:then-return>
+      </munit-tools:mock-when>`).join("\n");
+}
 function isCustomerNotFoundScenario(op, data) {
   return Boolean(
     data.hasDatabase &&
@@ -65,6 +89,7 @@ function generateMunit(config, data) {
     const method = String(op.method || "GET").toUpperCase();
     const success = Number(op.successStatus || (method === "POST" ? 201 : 200));
     const mocks = processorMocks(op, data);
+    const failureMocks = failureMocks(op, data);
     tests.push(`  <munit:test name="${testName(op, "happy-path")}">
     <munit:behavior>${mocks}
     </munit:behavior>
@@ -81,7 +106,7 @@ function generateMunit(config, data) {
     const scenarioPlan = deriveScenarioPlan({ ...op, method });
     if (scenarioPlan.some(s => s.type === "connector-error")) {
       tests.push(`  <munit:test name="${testName(op, "connector-error")}">
-    <munit:behavior>${mocks}</munit:behavior>
+    <munit:behavior>${failureMocks}</munit:behavior>
     <munit:execution>
       <munit:set-event><munit:set-payload value="#[{}]"/></munit:set-event>
       <flow-ref name="${xmlEscape(flow)}"/>
