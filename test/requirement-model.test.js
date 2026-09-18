@@ -30,3 +30,25 @@ test("does not assign request body fields to GET and DELETE operations", () => {
   assert.deepEqual(model.operations[3].requestFields, ["patientId", "fullName", "dateOfBirth", "mobileNumber"]);
   assert.deepEqual(model.operations[4].requestFields, []);
 });
+
+test("preserves wizard answers when operations were initially created without fields", () => {
+  const model = buildRequirementModel("Create a customer API with POST /customers and GET /customers/{customerId}", {
+    projectName: "customer-api",
+    operations: [
+      { method: "POST", path: "/customers" },
+      { method: "GET", path: "/customers/{customerId}" }
+    ],
+    requestFields: ["name", "email", "mobileNumber"],
+    responseFields: ["customerId", "customer details"],
+    validation: ["name is required", "email must be valid", "mobileNumber is required"],
+    errors: ["customer not found returns 404", "invalid request returns 400", "duplicate email returns 409", "unexpected errors return 500"],
+    connectors: ["http", "database"]
+  });
+
+  assert.deepEqual(model.operations[0].requestFields, ["name", "email", "mobileNumber"]);
+  assert.deepEqual(model.operations[0].responseFields, ["customerId", "customer details"]);
+  assert.deepEqual(model.operations[0].validation, ["name is required", "email must be valid", "mobileNumber is required"]);
+  assert.deepEqual(model.operations[0].errors, ["customer not found returns 404", "invalid request returns 400", "duplicate email returns 409", "unexpected errors return 500"]);
+  assert.equal(model.operations[0].connector, "database");
+  assert.equal(model.operations[1].connector, "database");
+});
