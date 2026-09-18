@@ -25,7 +25,7 @@ const { validateDeployment } = require("./deployment-validator");
 const { auditConnectors } = require("./connector-audit");
 const { repairProject } = require("./repair");
 const { snapshot, diffSnapshots } = require("./diff");
-const VERSION = "0.9.4";
+const VERSION = "0.9.5";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
 const render = (template, data) => {
