@@ -62,6 +62,8 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   }
   checks.push(result("Mule artifact", exists(root, "mule-artifact.json"), "mule-artifact.json is required."));
   checks.push(result("Requirement traceability", exists(root, "muleforge-traceability.json") && exists(root, "docs/11-traceability.md"), "Generated projects must include machine-readable and human-readable requirement traceability."));
+  checks.push(result("Generated environment properties", ["dev","qa","uat","prod"].every(e => exists(root, "src/main/resources/properties/application-" + e + ".yaml")), "DEV/QA/UAT/PROD property files should be present."));
+  checks.push(result("Postman collection", exists(root, "postman"), "Generated projects should include a Postman artifact directory."));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
   checks.push(result("RAML exists", Boolean(raml), `Expected ${ramlPath}.`));
   checks.push(result("Mule implementation exists", Boolean(mule), `Expected ${mulePath}.`));
