@@ -35,5 +35,5 @@ test("generated Mule XML contains only one database config", () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-db-")); const cfg = path.join(temp, "muleforge.yaml");
   fs.writeFileSync(cfg, "project:\n  name: db-api\n  artifactId: db-api\napi:\n  name: db-api\n  basePath: /api/v1\ndatabase:\n  type: generic\nconnectors: [http]\noperations:\n  - name: get_customer\n    method: GET\n    path: /customers\n", "utf8");
   execFileSync(process.execPath, [path.resolve(__dirname, "../src/index.js"), "generate", cfg], { encoding: "utf8" });
-  const xml = fs.readFileSync(path.join(temp, "src/main/mule/db-api.xml"), "utf8"); assert.equal((xml.match(/<db:config\\b/g) || []).length, 1);
+  const xml = fs.readFileSync(path.join(temp, "src/main/mule/db-api.xml"), "utf8"); assert.equal((xml.split("<db:config ").length - 1), 1);
 });
