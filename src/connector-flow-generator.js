@@ -169,6 +169,28 @@ ${source(op, data, endpoint, method, status)}    <os:store key="#[attributes.que
     <set-variable variableName="httpStatus" value="${status}" />`);
   }
 
+  if (connector === 'file') {
+    const filePath = esc(op.filePath || op.path || '${file.path}');
+    const fileAction = action || (method === 'GET' ? 'read' : 'write');
+    const operation = fileAction === 'write' ? '<file:write path="' + filePath + '" config-ref="File_Config" doc:name="Write file"/>' : '<file:read path="' + filePath + '" config-ref="File_Config" doc:name="Read file"/>';
+    return withErrorHandler('  <flow name="' + name + '">\n' + source(op, data, endpoint, method, status) + '    ' + operation + '\n    <set-variable variableName="httpStatus" value="' + status + '"/>');
+  }
+  if (connector === 'email') {
+    return withErrorHandler('  <flow name="' + name + '">\n' + source(op, data, endpoint, method, status) + '    <email:send config-ref="Email_Config" from="${email.from}" to="${email.to}" subject="' + esc(op.subject || 'MuleForge notification') + '" doc:name="Send email"><email:body contentType="text/plain">#[payload as String]</email:body></email:send>\n    <set-variable variableName="httpStatus" value="' + status + '"/>');
+  }
+  if (connector === 'jms') {
+    const destination = esc(op.destination || '${jms.destination}');
+    return withErrorHandler('  <flow name="' + name + '">\n' + source(op, data, endpoint, method, status) + '    <jms:publish config-ref="JMS_Config" destination="' + destination + '" doc:name="Publish JMS message"/>\n    <set-variable variableName="httpStatus" value="' + status + '"/>');
+  }
+  if (connector === 'kafka') {
+    const topic = esc(op.topic || '${kafka.topic}');
+    return withErrorHandler('  <flow name="' + name + '">\n' + source(op, data, endpoint, method, status) + '    <kafka:publish config-ref="Kafka_Config" topic="' + topic + '" doc:name="Publish Kafka message"/>\n    <set-variable variableName="httpStatus" value="' + status + '"/>');
+  }
+  if (connector === 'salesforce') {
+    const actionName = action || (method === 'GET' ? 'query' : 'create');
+    if (actionName === 'query') return withErrorHandler('  <flow name="' + name + '">\n' + source(op, data, endpoint, method, status) + '    <sfdc:query config-ref="Salesforce_Config" doc:name="Query Salesforce"><sfdc:salesforce-query><![CDATA[' + esc(op.query || 'SELECT Id FROM Account LIMIT 10') + ']]></sfdc:salesforce-query></sfdc:query>\n    <set-variable variableName="httpStatus" value="' + status + '"/>');
+    return withErrorHandler('  <flow name="' + name + '">\n' + source(op, data, endpoint, method, status) + '    <sfdc:create config-ref="Salesforce_Config" type="' + esc(op.objectType || 'Account') + '" doc:name="Create Salesforce record"/>\n    <set-variable variableName="httpStatus" value="' + status + '"/>');
+  }
   return null;
 }
 
