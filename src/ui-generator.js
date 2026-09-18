@@ -88,9 +88,18 @@ function generateConnectivityConfigs(d) {
     out.push('  <sftp:config name="SFTP_Config" doc:name="SFTP Config"><sftp:connection host="' + host + '" port="' + port + '" username="' + prop("sftp.user") + '" password="' + prop("sftp.password") + '" workingDir="' + working + '"/></sftp:config>\n');
   }
   const mq = byType.get("ibm-mq");
-  if (mq) out.push('  <!-- IBM MQ queue: ' + xmlEscape(mq.queue || mq.topic || prop("ibmmq.queue")) + '; credentials remain secure-property placeholders. -->\n');
+  if (mq) {
+    const host = xmlEscape(mq.host || prop("ibmmq.host"));
+    const port = mq.port || prop("ibmmq.port");
+    const qm = xmlEscape(mq.queueManager || prop("ibmmq.queueManager"));
+    const channel = xmlEscape(mq.channel || prop("ibmmq.channel"));
+    out.push(`  <ibm-mq:config name="IBM_MQ_Config" doc:name="IBM MQ Config"><ibm-mq:ibm-mq-connection username="${prop("ibmmq.username")}" password="${prop("ibmmq.password")}"><ibm-mq:connection-mode><ibm-mq:client host="${host}" port="${port}" queueManager="${qm}" channel="${channel}" /></ibm-mq:connection-mode></ibm-mq:ibm-mq-connection></ibm-mq:config>\\n`);
+  }
   const amq = byType.get("anypoint-mq");
-  if (amq) out.push('  <!-- Anypoint MQ destination: ' + xmlEscape(amq.queue || amq.topic || prop("anypointmq.destination")) + '; credentials remain secure-property placeholders. -->\n');
+  if (amq) {
+    const url = xmlEscape(amq.endpoint || prop("anypointmq.url"));
+    out.push(`  <anypoint-mq:config name="Anypoint_MQ_Config" doc:name="Anypoint MQ Config"><anypoint-mq:connection url="${url}" clientId="${prop("anypointmq.clientId")}" clientSecret="${prop("anypointmq.clientSecret")}" /></anypoint-mq:config>\\n`);
+  }
   return out.join("");
 }
 function generateMuleXml(config, d) {
