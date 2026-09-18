@@ -1,21 +1,21 @@
 function generatedErrorHandler() {
   return `    <error-handler>
-      <on-error-continue type="CONNECTIVITY" logException="true">
+      <on-error-propagate type="CONNECTIVITY" logException="true">
         <set-variable variableName="httpStatus" value="503"/>
         <set-payload value="#[{ status: 'FAILED', code: 'DEPENDENCY_ERROR', message: error.description default 'Dependency unavailable' }]" mimeType="application/json"/>
-      </on-error-continue>
-      <on-error-continue type="TIMEOUT" logException="true">
+      </on-error-propagate>
+      <on-error-propagate type="TIMEOUT" logException="true">
         <set-variable variableName="httpStatus" value="504"/>
         <set-payload value="#[{ status: 'FAILED', code: 'TIMEOUT', message: error.description default 'Dependency timed out' }]" mimeType="application/json"/>
-      </on-error-continue>
-      <on-error-continue type="RETRY_EXHAUSTED" logException="true">
+      </on-error-propagate>
+      <on-error-propagate type="RETRY_EXHAUSTED" logException="true">
         <set-variable variableName="httpStatus" value="503"/>
         <set-payload value="#[{ status: 'FAILED', code: 'RETRY_EXHAUSTED', message: error.description default 'Operation could not be completed' }]" mimeType="application/json"/>
-      </on-error-continue>
-      <on-error-continue type="ANY" logException="true">
+      </on-error-propagate>
+      <on-error-propagate type="ANY" logException="true">
         <set-variable variableName="httpStatus" value="500"/>
         <set-payload value="#[{ status: 'FAILED', code: 'INTERNAL_ERROR', message: error.description default 'Internal server error' }]" mimeType="application/json"/>
-      </on-error-continue>
+      </on-error-propagate>
     </error-handler>`;
 }
 
