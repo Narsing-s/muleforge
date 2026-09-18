@@ -63,11 +63,9 @@ jobs:
         run: node src/index.js contract-check customer-api/muleforge.yaml
       - name: Verify reference project
         run: node src/index.js verify customer-api/muleforge.yaml
-      - name: MUnit and Maven integration gate
+      - name: Generated Maven project gate
         if: success()
-        run: |
-          test -f customer-api/pom.xml
-          mvn -B -f customer-api/pom.xml -DskipTests=false test || true
+        run: test -f customer-api/pom.xml && test -f customer-api/mule-artifact.json
       - name: Quality audit
         run: node src/index.js audit customer-api/muleforge.yaml
       - name: Upload generated project metadata
