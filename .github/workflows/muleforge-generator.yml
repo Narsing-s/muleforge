@@ -3,6 +3,9 @@ name: MuleForge Generator
 run-name: "MuleForge Generator - ${{ inputs.project_name || inputs.requirement_file || 'requirement' }}"
 
 on:
+  push:
+    paths:
+      - "requirements/**"
   workflow_dispatch:
     inputs:
       requirement_file:
