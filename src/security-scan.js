@@ -14,7 +14,9 @@ function suspiciousValue(value){
 }
 function lineHasSecret(line){
   if(/\b(?:const|let|var)\s+SECRET\s*=\s*\//i.test(line)) return false;
-  const match=line.match(/\b(password|passwd|secret|token|api[_-]?key|client[_-]?secret)\b\s*[:=]\s*(?:"([^"]*)"|'([^']*)'|([^\s,;]+))/i);
+  if(/(?:^|\s)SECRET\s*=\s*\//i.test(line)) return false;
+  const match=line.match(/^\s*["']?(password|passwd|secret|token|api[_-]?key|client[_-]?secret)["']?\s*[:=]\s*(?:"([^"]*)"|'([^']*)'|(.+?))\s*$/i)
+    || line.match(/^\s*<[^>]*\b(password|passwd|secret|token|api[_-]?key|client[_-]?secret)\b[^>]*\b(?:value|[a-z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
   if(!match) return false;
   return suspiciousValue(match[2]??match[3]??match[4]);
 }
