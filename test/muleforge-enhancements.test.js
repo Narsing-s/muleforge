@@ -166,3 +166,31 @@ test("connector failure MUnit expects the generated 503 dependency response", ()
   assert.match(xml, /KAFKA:CONNECTIVITY/);
   assert.match(xml, /equalTo\(503\)/);
 });
+
+
+test("contract validator rejects invalid field schemas and error statuses", () => {
+  const { validateContract } = require("../src/contract-validator");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-contract-"));
+  const file = path.join(dir, "muleforge.yaml");
+  fs.mkdirSync(path.join(dir, "src/main/resources/api"), { recursive: true });
+  fs.writeFileSync(file, [
+    "operations:",
+    "  - name: bad",
+    "    method: GET",
+    "    path: /bad",
+    "    requestFields:",
+    "      - name: id",
+    "        type: uuid",
+    "        required: yes",
+    "    errors:",
+    "      - status: 418"
+  ].join("\n"));
+  const report = validateContract(file);
+  assert.equal(report.valid, false);
+  assert.ok(report.errors.some(x => x.includes("unsupported requestFields type")));
+  assert.ok(report.errors.some(x => x.includes("required must be boolean")));
+  assert.ok(report.errors.some(x => x.includes("unsupported declared error status")));
+});
