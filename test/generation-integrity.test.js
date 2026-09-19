@@ -231,3 +231,8 @@ test("deeper importer preserves source review metadata",()=>{const {importProjec
 
 
 test("event runtime generator emits connector flow, retry and correlation metadata",()=>{const {generateEventRuntime}=require("../src/event-runtime-generator");const x=generateEventRuntime({events:[{name:"orders",type:"kafka",topic:"orders",retry:{maxAttempts:4},deadLetterQueue:"orders-dlq"}]});assert.match(x,/kafka:message-listener/);assert.match(x,/until-successful/);assert.match(x,/correlationId/);assert.match(x,/orders-dlq/);});
+
+
+test("nested schema fields preserve arrays enums and nested properties",()=>{const {normalizeField}=require("../src/schema-generator");const f=normalizeField({name:"customer",type:"object",fields:[{name:"id",type:"integer",required:true}],enum:["x"]});assert.equal(f.type,"object");assert.equal(f.fields[0].required,true);});
+test("database schema diff detects additive and type drift",()=>{const {schemaDiff}=require("../src/db-schema");const r=schemaDiff({columns:[{name:"ID",type:"INT"}]},{columns:[{name:"ID",type:"BIGINT"},{name:"NAME",type:"VARCHAR"}]});assert.equal(r.drift,true);assert.equal(r.changes.length,2);});
+test("existing project import discovers non-http connector operations",()=>{const {importProject}=require("../src/import-project");const r=importProject(".");assert.ok(Array.isArray(r.operations));assert.ok(Array.isArray(r.ramlSources));});
