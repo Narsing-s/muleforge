@@ -4,7 +4,7 @@ const path = require("path");
 function safe(value) { return String(value || "").replace(/[^A-Za-z0-9_.-]/g, "-"); }
 function fieldObject(field) { return typeof field === "string" ? { name: field, type: "string" } : (field || {}); }
 function fieldName(field) { const f = fieldObject(field); return f.name || f.field; }
-function pathParameters(pathname) { return [...String(pathname || "").matchAll(/\\{([^}]+)\\}/g)].map(m => m[1]); }
+function pathParameters(pathname) { return [...String(pathname || "").matchAll(/\{([^}]+)\}/g)].map(m => m[1]); }
 function responseAssertions(op) {
   const lines = [
     `pm.test("Expected ${op.successStatus}", function () { pm.response.to.have.status(${op.successStatus}); });`
