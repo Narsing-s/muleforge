@@ -2,6 +2,19 @@ const fs = require("fs");
 const path = require("path");
 
 function safe(value) { return String(value || "").replace(/[^A-Za-z0-9_.-]/g, "-"); }
+function fieldObject(field) { return typeof field === "string" ? { name: field, type: "string" } : (field || {}); }
+function fieldName(field) { const f = fieldObject(field); return f.name || f.field; }
+function pathParameters(pathname) { return [...String(pathname || "").matchAll(/\\{([^}]+)\\}/g)].map(m => m[1]); }
+function responseAssertions(op) {
+  const lines = [
+    `pm.test("Expected ${op.successStatus}", function () { pm.response.to.have.status(${op.successStatus}); });`
+  ];
+  const fields = Array.isArray(op.responseFields) ? op.responseFields.map(fieldName).filter(Boolean) : [];
+  if (fields.length) {
+    lines.push('pm.test("Response body contains documented fields", function () { const body = pm.response.json(); const fields = ' + JSON.stringify(fields) + '; fields.forEach(function (field) { pm.expect(Object.prototype.hasOwnProperty.call(body, field), "Missing response field: " + field).to.eql(true); }); });');
+  }
+  return lines;
+}
 function operations(config = {}) {
   return (config.operations || []).map(op => ({
     name: op.name || `${String(op.method || "GET").toUpperCase()} ${op.path}`,
@@ -25,12 +38,15 @@ function generatePostman(config, data) {
       const request = {
         method: op.method,
         header: [{ key: "Content-Type", value: "application/json" }],
-        url: { raw: `{{baseUrl}}${data.basePath}${op.path}`, host: ["{{baseUrl}}"], path: `${data.basePath}${op.path}`.split("/").filter(Boolean) }
+        url: { raw: `{{baseUrl}}${data.basePath}${op.path}`, host: ["{{baseUrl}}"], path: `${data.basePath}${op.path}`.split("/").filter(Boolean), variable: pathParameters(op.path).map(name => ({ key: name, value: "{{" + name + "}}" })) }
       };
+      if (op.security === "client-id" || op.security === "clientId") request.header.push({ key: "client_id", value: "{{clientId}}" });
+      if (op.security === "oauth2") request.auth = { type: "bearer", bearer: [{ key: "token", value: "{{accessToken}}", type: "string" }] };
+      if (op.security === "basic") request.auth = { type: "basic", basic: [{ key: "username", value: "{{username}}", type: "string" }, { key: "password", value: "{{password}}", type: "string" }] };
       if (["POST", "PUT", "PATCH"].includes(op.method) && op.requestFields.length) {
-        request.body = { mode: "raw", raw: JSON.stringify(Object.fromEntries(op.requestFields.map(field => [field, exampleValue(field)])), null, 2), options: { raw: { language: "json" } } };
+        request.body = { mode: "raw", raw: JSON.stringify(Object.fromEntries(op.requestFields.map(field => [fieldName(field), exampleValue(fieldName(field))]).filter(([name]) => name)), null, 2), options: { raw: { language: "json" } } };
       }
-      return { name: op.name, request, event: [{ listen: "test", script: { exec: [`pm.test(\"Expected ${op.successStatus}\", function () { pm.response.to.have.status(${op.successStatus}); });`] } }] };
+      return { name: op.name, request, event: [{ listen: "test", script: { type: "text/javascript", exec: responseAssertions(op) } }] };
     })
   };
   return JSON.stringify(collection, null, 2) + "\n";
