@@ -206,7 +206,7 @@ function releaseCheck(directory = ".") {
   add("runtime validation workflow", fs.existsSync(path.join(root, ".github", "workflows", "runtime-validation.yml")), "Manual Maven/MUnit runtime validation workflow is required.");
   add("runtime validation docs", fs.existsSync(path.join(root, "docs", "cicd", "runtime-validation.md")), "Runtime validation documentation is required.");
   const workflowDir = path.join(root, ".github", "workflows");
-  const workflowFiles = fs.existsSync(workflowDir) ? fs.readdirSync(workflowDir).filter(name => /\\.ya?ml$/.test(name)) : [];
+  const workflowFiles = fs.existsSync(workflowDir) ? fs.readdirSync(workflowDir).filter(name => /\.ya?ml$/.test(name)) : [];
   add("workflow syntax", workflowFiles.length > 0 && workflowFiles.every(name => {
     try { YAML.parse(fs.readFileSync(path.join(workflowDir, name), "utf8")); return true; } catch { return false; }
   }), "GitHub Actions workflow files must be parseable YAML.");
