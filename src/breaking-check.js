@@ -27,7 +27,9 @@ function compareFields(changes, key, kind, oldFields, newFields) {
       if (oldField.enum.length && next.enum.length && oldField.enum.some(v => !next.enum.includes(v))) changes.push({ type: `${kind}-enum-value-removed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} removed enum values` });
     }
   }
-  for (const [name, next] of newMap) if (!oldMap.has(name) && next.required) changes.push({ type: "required-field-added", key, field: name, severity: "breaking", detail: `Required ${kind} field ${name} was added` });
+  for (const [name, next] of newMap) {
+    if (!oldMap.has(name) && next.required) changes.push({ type: "required-field-added", key, field: name, severity: "breaking", detail: `Required ${kind} field ${name} was added` });
+  }
 }
 function parameterNames(pathValue) {
   return new Set([...String(pathValue || "").matchAll(/\{([^}]+)\}/g)].map(match => match[1]));
@@ -35,7 +37,10 @@ function parameterNames(pathValue) {
 function breakingChanges(oldModel, newModel) {
   const changes = [], oldOps = mapOps(oldModel), newOps = mapOps(newModel);
   for (const [key, oldOp] of oldOps) {
-    if (!newOps.has(key)) { changes.push({ type: "operation-removed", key, severity: "breaking", detail: `${key} was removed` }); continue; }
+    if (!newOps.has(key)) {
+      changes.push({ type: "operation-removed", key, severity: "breaking", detail: `${key} was removed` });
+      continue;
+    }
     const next = newOps.get(key);
     if (String(oldOp.successStatus || "") !== String(next.successStatus || "")) changes.push({ type: "success-status-changed", key, severity: "breaking", detail: `${oldOp.successStatus || "default"} -> ${next.successStatus || "default"}` });
     const oldSecurity = String(oldOp.security || "none").toLowerCase(), newSecurity = String(next.security || "none").toLowerCase();
@@ -44,9 +49,14 @@ function breakingChanges(oldModel, newModel) {
     for (const param of oldParams) if (!newParams.has(param)) changes.push({ type: "path-parameter-removed", key, field: param, severity: "breaking", detail: `Path parameter ${param} was removed` });
     for (const param of newParams) if (!oldParams.has(param)) changes.push({ type: "path-parameter-added", key, field: param, severity: "breaking", detail: `Path parameter ${param} was added` });
     compareFields(changes, key, "request", oldOp.requestFields || oldOp.fields || [], next.requestFields || next.fields || []);
-    compareFields(changes, key, "response", oldOp.responseFields || [], next.responseFields || []);\n    const oldPagination = Boolean(oldOp.pagination);\n    const newPagination = Boolean(next.pagination);\n    if (oldPagination && !newPagination) changes.push({ type: "pagination-removed", key, severity: "breaking", detail: "Pagination policy was removed" });\n    const oldIdempotency = Boolean(oldOp.idempotency);\n    const newIdempotency = Boolean(next.idempotency);\n    if (oldIdempotency && !newIdempotency) changes.push({ type: "idempotency-removed", key, severity: "breaking", detail: "Idempotency policy was removed" });
+    compareFields(changes, key, "response", oldOp.responseFields || [], next.responseFields || []);
+    if (Boolean(oldOp.pagination) && !Boolean(next.pagination)) changes.push({ type: "pagination-removed", key, severity: "breaking", detail: "Pagination policy was removed" });
+    if (Boolean(oldOp.idempotency) && !Boolean(next.idempotency)) changes.push({ type: "idempotency-removed", key, severity: "breaking", detail: "Idempotency policy was removed" });
   }
   return changes;
 }
-function runBreakingCheck(oldFile, newFile) { const changes = breakingChanges(load(oldFile), load(newFile)); return { breaking: changes.length > 0, changes }; }
+function runBreakingCheck(oldFile, newFile) {
+  const changes = breakingChanges(load(oldFile), load(newFile));
+  return { breaking: changes.length > 0, changes };
+}
 module.exports = { breakingChanges, runBreakingCheck };
