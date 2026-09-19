@@ -9,7 +9,7 @@ function runGolden(){
   return cases.map(([name,model])=>{
     const dw=generateDataWeaveFiles(model);
     const artifacts=Array.isArray(dw) ? dw : [];
-    return {name,pass:Array.isArray(dw)&&artifacts.length===model.operations.length,artifacts:artifacts.map(x=>x.name)};
+    return {name,pass:Array.isArray(dw)&&artifacts.length===(model.operations||[]).length,artifacts:artifacts.map(x=>x.name)};
   });
 }
 function writeGoldenReport(root="."){
