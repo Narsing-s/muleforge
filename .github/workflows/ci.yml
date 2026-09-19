@@ -96,6 +96,12 @@ jobs:
           printf '%s' "$MAVEN_SETTINGS_XML" > "$HOME/.m2/settings.xml"
           mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false test -Dmunit.coverage.failBuild=false
 
+      - name: Semantic IR gate
+        run: node src/index.js ir-check customer-api/muleforge.yaml
+      - name: Security scan
+        run: node src/index.js security-scan .
+      - name: Generate SBOM
+        run: node src/index.js sbom .
       - name: Quality audit
         run: node src/index.js audit customer-api/muleforge.yaml
       - name: Upload generated project metadata
