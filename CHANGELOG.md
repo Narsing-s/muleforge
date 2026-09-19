@@ -1,3 +1,9 @@
+## 0.9.15
+
+- Made policy generation audits operation-specific to reduce false positives across unrelated flows.
+- Hardened generated application CI with explicit Maven settings validation and MUnit/Surefire/coverage artifacts.
+- Strengthened release readiness with workflow YAML parsing and package/CLI/changelog version synchronization.
+
 ## 0.9.12
 
 - Hardened contract validation for request/response field schemas and declared error statuses.
