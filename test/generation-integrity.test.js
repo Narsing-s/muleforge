@@ -199,7 +199,9 @@ test("semantic breaking checker detects enum, required and policy removals", () 
 test("APIKit generator emits router and config", () => {
   const { generateApiKitFlow, generateApiKitConfig } = require("../src/apikit-generator");
   assert.match(generateApiKitConfig({ artifactId: "demo" }), /apikit:config/);
-  assert.match(generateApiKitFlow({ artifactId: "demo", basePath: "/api/v1" }), /apikit:router/);
+  const flow = generateApiKitFlow({ artifactId: "demo", basePath: "/api/v1", operations: [{ method: "POST", path: "/customers/{id}", responseFields: ["status"], successStatus: 201 }] });
+  assert.match(flow, /apikit:router/);
+  assert.match(flow, /post:\\customers\\\{id\}:application\\json:api-config/);
 });
 
 
