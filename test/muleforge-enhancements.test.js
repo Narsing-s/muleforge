@@ -17,6 +17,30 @@ test("traceability maps operations", () => {
   assert.deepEqual(report.operations[0].targets, ["raml","mule","dataweave","munit","postman","documentation"]);
 });
 
+test("traceability includes source line references when generated assets exist", () => {
+  const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-trace-"));
+  fs.mkdirSync(path.join(root, "src/main/resources/api"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src/main/mule"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src/main/resources/dwl"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src/test/munit"), { recursive: true });
+  fs.mkdirSync(path.join(root, "postman"), { recursive: true });
+  fs.writeFileSync(path.join(root, "src/main/resources/api/demo.raml"), "#%RAML 1.0\n/customers:\n  get:\n");
+  fs.writeFileSync(path.join(root, "src/main/mule/demo.xml"), "<flow name=\"getCustomer\"></flow>\n");
+  fs.writeFileSync(path.join(root, "src/main/resources/dwl/getcustomer-request.dwl"), "// getCustomer\n");
+  fs.writeFileSync(path.join(root, "src/main/resources/dwl/getcustomer-response.dwl"), "// getCustomer\n");
+  fs.writeFileSync(path.join(root, "src/test/munit/demo-test.xml"), "<test name=\"getCustomer\"></test>\n");
+  fs.writeFileSync(path.join(root, "postman/demo.collection.json"), "{\"name\":\"getCustomer\"}\n");
+  const report = buildTraceability({ project: { artifactId: "demo" }, operations: [{ name: "getCustomer", method: "GET", path: "/customers" }], requirements: [] }, root);
+  assert.equal(report.version, "1.1");
+  assert.equal(report.operations[0].references.raml.line, 2);
+  assert.equal(report.operations[0].references.mule.line, 1);
+  assert.equal(report.operations[0].references.dataweave.length, 2);
+  assert.equal(report.operations[0].references.munit.line, 1);
+  assert.equal(report.operations[0].references.postman.line, 1);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 test("inspector returns a safe report for an arbitrary directory", () => {
   const report = inspectProject(".");
   assert.equal(typeof report.files, "number");
