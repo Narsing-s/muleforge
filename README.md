@@ -238,7 +238,6 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge ide-manifest [directory]` | Generate IDE integration metadata |
 | `muleforge soap-scaffold [config]` | Generate a reviewable SOAP/WSDL scaffold when configured |
 | `muleforge graphql [config]` | Generate a GraphQL schema scaffold |
-| `muleforge artifact-manifest [directory]` | Generate a deterministic SHA-256 artifact manifest |
 
 
 Run:
