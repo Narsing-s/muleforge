@@ -19,7 +19,7 @@ function fieldMap(fields) { return new Map(normalizedFields(fields).map(field =>
 function compareFields(changes, key, kind, oldFields, newFields) {
   const oldMap = fieldMap(oldFields), newMap = fieldMap(newFields);
   for (const [name, oldField] of oldMap) {
-    if (!newMap.has(name)) changes.push({ type: `${kind}-field-removed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} was removed` });
+    if (!newMap.has(name)) changes.push({ type: `${kind}-field-removed`, legacyType: "field-removed", key, field: name, severity: "breaking", detail: `${kind} field ${name} was removed` });
     else {
       const next = newMap.get(name);
       if (oldField.type !== next.type) changes.push({ type: `${kind}-field-type-changed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} type changed from ${oldField.type} to ${next.type}` });
@@ -44,7 +44,7 @@ function breakingChanges(oldModel, newModel) {
     for (const param of oldParams) if (!newParams.has(param)) changes.push({ type: "path-parameter-removed", key, field: param, severity: "breaking", detail: `Path parameter ${param} was removed` });
     for (const param of newParams) if (!oldParams.has(param)) changes.push({ type: "path-parameter-added", key, field: param, severity: "breaking", detail: `Path parameter ${param} was added` });
     compareFields(changes, key, "request", oldOp.requestFields || oldOp.fields || [], next.requestFields || next.fields || []);
-    compareFields(changes, key, "response", oldOp.responseFields || [], next.responseFields || []);
+    compareFields(changes, key, "response", oldOp.responseFields || [], next.responseFields || []);\n    const oldPagination = Boolean(oldOp.pagination);\n    const newPagination = Boolean(next.pagination);\n    if (oldPagination && !newPagination) changes.push({ type: "pagination-removed", key, severity: "breaking", detail: "Pagination policy was removed" });\n    const oldIdempotency = Boolean(oldOp.idempotency);\n    const newIdempotency = Boolean(next.idempotency);\n    if (oldIdempotency && !newIdempotency) changes.push({ type: "idempotency-removed", key, severity: "breaking", detail: "Idempotency policy was removed" });
   }
   return changes;
 }
