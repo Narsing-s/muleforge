@@ -57,6 +57,22 @@ test("traceability markdown exposes operation source references", () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+test("traceability markdown exposes operation source references", () => {
+  const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path");
+  const { writeTraceability } = require("../src/traceability");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-trace-md-"));
+  fs.mkdirSync(path.join(root, "src/main/resources/api"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src/main/mule"), { recursive: true });
+  fs.writeFileSync(path.join(root, "src/main/resources/api/demo.raml"), "#%RAML 1.0\n/customers:\n");
+  fs.writeFileSync(path.join(root, "src/main/mule/demo.xml"), '<flow name="getCustomer"></flow>\n');
+  const report = writeTraceability(root, { project: { artifactId: "demo" }, operations: [{ name: "getCustomer", method: "GET", path: "/customers" }], requirements: [] });
+  const markdown = fs.readFileSync(path.join(root, "docs/11-traceability.md"), "utf8");
+  assert.equal(report.version, "1.1");
+  assert.match(markdown, /src\/main\/resources\/api\/demo\.raml:2/);
+  assert.match(markdown, /src\/main\/mule\/demo\.xml:1/);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 test("inspector returns a safe report for an arbitrary directory", () => {
   const report = inspectProject(".");
   assert.equal(typeof report.files, "number");
