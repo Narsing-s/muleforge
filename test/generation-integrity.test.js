@@ -250,3 +250,17 @@ test("Ed25519 artifact signing verifies and rejects tampering",()=>{const fs=req
 
 
 test("existing-project importer reconstructs flow refs, handlers and global config metadata",()=>{const {extractSemantics}=require("../src/import-project");const xml='<mule><db:config name="DB_Config"/><flow name="main"><flow-ref name="shared"/><ee:transform/><error-handler><on-error-propagate type="DB:CONNECTIVITY"/></error-handler></flow><sub-flow name="shared"/></mule>';const s=extractSemantics(xml);assert.equal(s.flows.length,2);assert.deepEqual(s.flowRefs,["shared"]);assert.equal(s.transformCount,1);assert.equal(s.errorHandlers.length,1);assert.equal(s.errorHandlers[0].errorType,"DB:CONNECTIVITY");assert.equal(s.globalConfigs[0].name,"DB_Config");});
+
+test("OpenAPI generates path parameters and 3.1 schema metadata",()=>{
+  const {generateOpenApi}=require("../src/openapi-generator");
+  const doc=generateOpenApi({openapiVersion:"3.1.0",operations:[{name:"getCustomer",method:"GET",path:"/customers/{customerId}",requestFields:[{name:"customerId",type:"integer"}]}]});
+  assert.equal(doc.openapi,"3.1.0");
+  assert.equal(doc.jsonSchemaDialect,"https://json-schema.org/draft/2020-12/schema");
+  assert.deepEqual(doc.paths["/customers/{customerId}"].get.parameters,[{name:"customerId",in:"path",required:true,schema:{type:"integer"}}]);
+});
+test("OpenAPI clientId security creates the declared scheme",()=>{
+  const {generateOpenApi}=require("../src/openapi-generator");
+  const doc=generateOpenApi({operations:[{name:"get",method:"GET",path:"/x",security:"clientId"}]});
+  assert.ok(doc.components.securitySchemes.clientId);
+  assert.deepEqual(doc.paths["/x"].get.security,[{clientId:[]}]);
+});
