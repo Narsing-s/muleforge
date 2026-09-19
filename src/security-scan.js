@@ -1,7 +1,9 @@
 const fs=require("node:fs"),path=require("node:path");
-const SECRET_KEY=/\b(password|passwd|secret|token|api[_-]?key|client[_-]?secret)\b/i;
 const PLACEHOLDER=/^(?:\$\{\{.*\}\}|\$\{[^}]+\}|#\[.*\]|\{\{.*\}\}|\*+|<[^>]+>|YOUR_[A-Z0-9_]+|CHANGE_ME|REPLACE_ME|ENV_[A-Z0-9_]+)$/i;
 const SAFE_WORDS=new Set(["environment","environments","variable","variables","placeholder","placeholders","required","optional","true","false","null","undefined","example","examples","secret","secrets","token","tokens","password","passwords","value","values"]);
+const SECRET_ATTRIBUTE=/\b(password|passwd|secret|token|api[_-]?key|client[_-]?secret)\b\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
+const SECRET_ASSIGNMENT=/^\s*["']?(password|passwd|secret|token|api[_-]?key|client[_-]?secret)["']?\s*[:=]\s*(?:"([^"]*)"|'([^']*)'|(.+?))\s*$/i;
+
 function suspiciousValue(value){
   const v=String(value||"").trim().replace(/[;,]$/,"").replace(/^\\(?=\$\{|#\[|\{\{)/,"");
   if(!v || PLACEHOLDER.test(v)) return false;
@@ -14,11 +16,11 @@ function suspiciousValue(value){
 }
 function lineHasSecret(line){
   if(/\b(?:const|let|var)\s+SECRET\s*=\s*\//i.test(line)) return false;
-  if(/(?:^|\s)SECRET\s*=\s*\//i.test(line)) return false;
-  const match=line.match(/^\s*["']?(password|passwd|secret|token|api[_-]?key|client[_-]?secret)["']?\s*[:=]\s*(?:"([^"]*)"|'([^']*)'|(.+?))\s*$/i)
-    || line.match(/^\s*<[^>]*\b(password|passwd|secret|token|api[_-]?key|client[_-]?secret)\b[^>]*\b(?:value|[a-z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
-  if(!match) return false;
-  return suspiciousValue(match[2]??match[3]??match[4]);
+  const xmlMatch=line.match(SECRET_ATTRIBUTE);
+  if(xmlMatch) return suspiciousValue(xmlMatch[2]??xmlMatch[3]);
+  const assignment=line.match(SECRET_ASSIGNMENT);
+  if(assignment) return suspiciousValue(assignment[2]??assignment[3]??assignment[4]);
+  return false;
 }
 function walk(root,skip=new Set([".git","node_modules","target","dist"])){
   const out=[];
