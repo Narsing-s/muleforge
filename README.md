@@ -177,7 +177,8 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge create` | Start requirement-driven project creation |
 | `muleforge init <name>` | Initialize a project/configuration |
 | `muleforge generate` | Generate files from `muleforge.yaml` |
-| `muleforge validate` | Run verification, contract, deployment, policy, connector and quality gates |
+| `muleforge validate` | Ru
+- `muleforge breaking-check <old.yaml> [new.yaml]` — detect potentially breaking contract changesn verification, contract, deployment, policy, connector and quality gates |
 | `muleforge verify` | Check requirement-to-project coverage |
 | `muleforge verify --build` | Verify and run Maven tests when static checks pass |
 | `muleforge test` | Run Maven tests |
