@@ -157,7 +157,7 @@ test("MUnit generator includes idempotency and pagination scenarios", () => {
   assert.match(source, /OS:KEY_ALREADY_EXISTS/);
   assert.ok(source.includes('testName(op, "pagination")'));
 });
-test("MUnit assertions cover nested schema fields and enums",()=>{const {generateMunit}=require("../src/munit-generator");const x=generateMunit({operations:[{name:"create",method:"POST",path:"/customers",responseFields:[{name:"profile",type:"object",required:true,fields:[{name:"email",required:true}]},{name:"status",type:"string",enum:["ACTIVE","INACTIVE"]},{name:"items",type:"array",items:{type:"object",fields:[{name:"id",required:true}]}}]}]},{artifactId:"demo",hasDatabase:false});assert.match(x,/payload\.profile\.email/);assert.match(x,/ACTIVE.*INACTIVE|\[\\"ACTIVE\\",\\"INACTIVE\\"\]/);assert.match(x,/payload\.items\[0\]\.id/);});
+test("MUnit assertions cover nested schema fields and enums",()=>{const {generateMunit}=require("../src/munit-generator");const x=generateMunit({operations:[{name:"create",method:"POST",path:"/customers",responseFields:[{name:"profile",type:"object",required:true,fields:[{name:"email",required:true}]},{name:"status",type:"string",enum:["ACTIVE","INACTIVE"]},{name:"items",type:"array",items:{type:"object",fields:[{name:"id",required:true}]}}]}]},{artifactId:"demo",hasDatabase:false});assert.match(x,/payload\.profile\.email/);assert.match(x,/ACTIVE.*INACTIVE|\[\\"ACTIVE\\",\\"INACTIVE\\"\]/);assert.match(x,/sizeOf\(payload\.items default \[\]\) &gt; 0/);assert.match(x,/payload\.items\[0\]\.id/);});
 
 
 test("breaking-change checker detects removed operations and newly required fields", () => {
