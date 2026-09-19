@@ -128,3 +128,41 @@ test("MUnit failure mocks use connector-specific error types", () => {
   assert.match(xml, /KAFKA:CONNECTIVITY/);
   assert.doesNotMatch(xml, /#\['CONNECTIVITY'\]/);
 });
+
+test("breaking checker separates request and response fields and detects type changes", () => {
+  const { breakingChanges } = require("../src/breaking-check");
+  const oldModel = {
+    operations: [{
+      name: "getCustomer", method: "GET", path: "/customers/{id}",
+      requestFields: [{ name: "id", type: "string", required: true }],
+      responseFields: [{ name: "status", type: "string", required: true }]
+    }]
+  };
+  const newModel = {
+    operations: [{
+      name: "getCustomer", method: "GET", path: "/customers/{id}",
+      requestFields: [{ name: "id", type: "string", required: true }],
+      responseFields: [{ name: "status", type: "integer", required: true }]
+    }]
+  };
+  const changes = breakingChanges(oldModel, newModel);
+  assert.ok(changes.some(x => x.type === "response-field-type-changed"));
+  assert.doesNotMatch(JSON.stringify(changes), /request field status was removed/);
+});
+
+test("generated pagination flow contains only one pagination response transform", () => {
+  const { connectorFlow } = require("../src/connector-flow-generator");
+  const xml = connectorFlow({
+    name: "listCustomers", method: "GET", path: "/customers",
+    connector: "database", table: "CUSTOMER",
+    pagination: { defaultPageSize: 20, maxPageSize: 100 }
+  }, { artifactId: "sample", basePath: "/api/v1", hasDatabase: true, databaseTable: "CUSTOMER" });
+  assert.equal((xml.match(/doc:name="Build pagination response"/g) || []).length, 1);
+});
+
+test("connector failure MUnit expects the generated 503 dependency response", () => {
+  const { generateMunit } = require("../src/munit-generator");
+  const xml = generateMunit({ operations: [{ name: "publish", method: "POST", path: "/messages", connector: "kafka" }] }, { artifactId: "sample", hasDatabase: false });
+  assert.match(xml, /KAFKA:CONNECTIVITY/);
+  assert.match(xml, /equalTo\(503\)/);
+});
