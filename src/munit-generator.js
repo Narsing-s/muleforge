@@ -93,6 +93,7 @@ function deriveScenarioPlan(operation = {}) {
   return scenarios;
 }
 
+function assertionForFields(fields = [], source = "payload") { const checks=[]; for (const field of Array.isArray(fields)?fields:[]) { const name=typeof field==="string"?field:field?.name; if(!name) continue; const required=typeof field==="object" && field.required; checks.push(`      <munit-tools:assert-that expression="#[${source}.${name}]" is="#[MunitTools::notNullValue()]"/>`); if(required) checks.push(`      <munit-tools:assert-that expression="#[!isEmpty(${source}.${name} default null)]" is="#[MunitTools::equalTo(true)]"/>`); } return checks.join("\n"); }
 function generateMunit(config, data) {
   const ops = operations(config);
   const tests = [];
@@ -113,6 +114,7 @@ function generateMunit(config, data) {
     </munit:execution>
     <munit:validation>
       <munit-tools:assert-that expression="#[vars.httpStatus default ${success}]" is="#[MunitTools::equalTo(${success})]"/>
+${assertionForFields(op.responseFields)}
     </munit:validation>
   </munit:test>`);
     const scenarioPlan = deriveScenarioPlan({ ...op, method });
