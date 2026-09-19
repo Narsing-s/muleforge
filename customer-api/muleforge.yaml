@@ -25,29 +25,41 @@ operations:
     connector: http
     requestFields: []
     responseFields:
-      - customerId
-      - name
-      - email
+      - name: customerId
+        type: string
+      - name: name
+        type: string
+      - name: email
+        type: string
     successStatus: 200
     errors:
-      - Customer not found returns 404
-      - Unexpected errors return 500
+      - status: 404
+        description: Customer not found
+      - status: 500
+        description: Unexpected error
 
   - name: createCustomer
     method: POST
     path: /customers
     connector: http
     requestFields:
-      - name
-      - email
+      - name: name
+        type: string
+      - name: email
+        type: string
     responseFields:
-      - customerId
-      - name
-      - email
+      - name: customerId
+        type: string
+      - name: name
+        type: string
+      - name: email
+        type: string
     successStatus: 201
     errors:
-      - Invalid request returns 400
-      - Unexpected errors return 500
+      - status: 400
+        description: Invalid request
+      - status: 500
+        description: Unexpected error
 
 testing:
   munit: true
