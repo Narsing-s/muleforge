@@ -18,6 +18,46 @@ function auditProject(file = 'muleforge.yaml') {
   add('Environment artifacts', ['dev','qa','uat','prod'].every(e => fs.existsSync(path.join(root,'src/main/resources/properties',`application-${e}.yaml`))), 'All four environment property files should exist.');
   const tracePath=path.join(root,'muleforge-traceability.json');
   if(fs.existsSync(tracePath)){ try { const trace=JSON.parse(fs.readFileSync(tracePath,'utf8')); const assetChecks=(trace.operations||[]).flatMap(o=>Object.values(o.generated||{})); add('Traceability evidence', assetChecks.length===0 || assetChecks.every(Boolean), 'Every recorded generated asset should exist on disk.'); } catch { add('Traceability evidence', false, 'muleforge-traceability.json must be valid JSON.'); } }
+  const generatedRamlPath = path.join(root, 'src', 'main', 'resources', 'api', ((config.project || {}).artifactId || (config.project || {}).name || 'mule-api') + '.raml');
+  const generatedMuleDir = path.join(root, 'src', 'main', 'mule');
+  const generatedMunitDir = path.join(root, 'src', 'test', 'munit');
+  if (operations.length && fs.existsSync(generatedRamlPath)) {
+    const raml = fs.readFileSync(generatedRamlPath, 'utf8');
+    const missingRaml = operations.filter(op => {
+      const method = String(op.method || 'GET').toLowerCase();
+      const pathText = String(op.path || '/');
+      const escapedPath = pathText.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\  const names = operations.map(o => String(o.name || '')).filter(Boolean);');
+      return !new RegExp('^\\s*' + escapedPath + ':\\s*\\n\\s*' + method + ':', 'm').test(raml);
+    });
+    add('RAML operation coverage', missingRaml.length === 0, missingRaml.length ? 'Missing generated RAML operations: ' + missingRaml.map(o => o.name || o.path).join(', ') : 'Every configured operation is represented in the generated RAML.');
+  }
+  const muleFiles = fs.existsSync(generatedMuleDir) ? fs.readdirSync(generatedMuleDir).filter(f => f.endsWith('.xml')).map(f => fs.readFileSync(path.join(generatedMuleDir, f), 'utf8')).join('\n') : '';
+  const munitFiles = fs.existsSync(generatedMunitDir) ? fs.readdirSync(generatedMunitDir).filter(f => f.endsWith('.xml')).map(f => fs.readFileSync(path.join(generatedMunitDir, f), 'utf8')).join('\n') : '';
+  if (operations.length) {
+    const missingFlows = operations.filter(op => {
+      const safe = String(op.name || (String(op.method || 'GET') + '-' + String(op.path || '/'))).replace(/[^A-Za-z0-9_-]/g, '-');
+      const artifact = String((config.project || {}).artifactId || (config.project || {}).name || 'mule-api');
+      const escapedArtifact = artifact.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\  const names = operations.map(o => String(o.name || '')).filter(Boolean);');
+      const escapedSafe = safe.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\  const names = operations.map(o => String(o.name || '')).filter(Boolean);');
+      return !new RegExp('<flow\\s+name="' + escapedArtifact + '-' + escapedSafe + '-flow"').test(muleFiles);
+    });
+    add('Mule flow coverage', missingFlows.length === 0, missingFlows.length ? 'Missing generated Mule flows: ' + missingFlows.map(o => o.name || o.path).join(', ') : 'Every configured operation has a generated Mule flow.');
+    const missingMunit = operations.filter(op => {
+      const safe = String(op.name || (String(op.method || 'GET') + '-' + String(op.path || '/'))).replace(/[^A-Za-z0-9_-]/g, '-');
+      const escapedSafe = safe.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\  const names = operations.map(o => String(o.name || '')).filter(Boolean);');
+      return !new RegExp('name="' + escapedSafe + '-happy-path-test"').test(munitFiles);
+    });
+    add('MUnit operation coverage', missingMunit.length === 0, missingMunit.length ? 'Missing generated MUnit happy-path tests: ' + missingMunit.map(o => o.name || o.path).join(', ') : 'Every configured operation has a generated MUnit happy-path test.');
+  }
+  const policyChecks = [];
+  for (const op of operations) {
+    const label = op.name || op.path || 'operation';
+    if (op.retry && !/<until-successful\b/.test(muleFiles)) policyChecks.push(label + ': retry');
+    if (op.pagination && !/queryParams\.page/.test(muleFiles)) policyChecks.push(label + ': pagination');
+    if (op.idempotency && !/Idempotency-Key/.test(muleFiles)) policyChecks.push(label + ': idempotency');
+    if (op.transaction && !/<try\b/.test(muleFiles)) policyChecks.push(label + ': transaction');
+  }
+  add('Policy generation evidence', policyChecks.length === 0, policyChecks.length ? 'Configured policies without obvious generated evidence: ' + policyChecks.join(', ') : 'Configured retry, pagination, idempotency and transaction policies have generated evidence where enabled.');
   const names = operations.map(o => String(o.name || '')).filter(Boolean);
   add('Unique operation names', new Set(names).size === names.length, 'Operation names must be unique.');
   const routes = operations.map(o => String(o.method || 'GET').toUpperCase() + ' ' + String(o.path || '/'));
