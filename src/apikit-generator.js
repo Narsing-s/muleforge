@@ -14,12 +14,6 @@ function responsePayload(op) {
   else body.status = "SUCCESS";
   return JSON.stringify(body);
 }
-function requestPayload(op) {
-  const fields = Array.isArray(op.requestFields) ? op.requestFields.map(fieldName).filter(Boolean) : [];
-  const body = {};
-  for (const name of fields) body[name] = null;
-  return JSON.stringify(body);
-}
 function errorHandlers(op) {
   return (Array.isArray(op.errors) ? op.errors : []).map((err, index) => {
     const type = typeof err === "object" ? (err.type || err.code || "ANY") : "ANY";
