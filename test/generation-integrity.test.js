@@ -172,3 +172,9 @@ test("CLI exposes breaking-check", () => {
   const source = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
   assert.match(source, /breaking-check <from>/);
 });
+
+test("release-check requires breaking-change checker", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
+  assert.match(source, /breaking-check/);
+  assert.match(source, /breaking-change checker/);
+});
