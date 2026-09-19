@@ -70,9 +70,30 @@ jobs:
           test -d src/main/mule
           test -d src/main/resources/api
           test -d src/test/munit
+      - name: Validate Maven settings
+        env:
+          MAVEN_SETTINGS_XML: ${{ secrets.MAVEN_SETTINGS_XML }}
+        run: |
+          if [ -z "$MAVEN_SETTINGS_XML" ]; then
+            echo "::error::MAVEN_SETTINGS_XML is required to build generated Mule applications."
+            exit 1
+          fi
+          mkdir -p "$HOME/.m2"
+          printf '%s' "$MAVEN_SETTINGS_XML" > "$HOME/.m2/settings.xml"
+          test -s "$HOME/.m2/settings.xml"
       - name: Build and test with Maven
-        run: mvn -B -DskipTests=false clean package
+        run: mvn -B -ntp -s "$HOME/.m2/settings.xml" -DskipTests=false clean package
           -Dmunit.coverage.failBuild=false
+      - name: Upload Maven/MUnit reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: muleforge-maven-reports
+          if-no-files-found: warn
+          path: |
+            "**/target/surefire-reports/**"
+            "**/target/site/munit/coverage/**"
+            "**/target/*.jar"
 `;
 }
 function writeProductionArtifacts(root, config, data) {
