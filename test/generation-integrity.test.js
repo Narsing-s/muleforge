@@ -213,3 +213,6 @@ test("promotion plan includes approval and rollback controls",()=>{const {promot
 
 test("event model validates supported messaging triggers",()=>{const {buildEventModel,validateEventModel}=require("../src/event-model");const r=validateEventModel(buildEventModel({events:[{type:"kafka",topic:"orders",idempotency:true}]}));assert.equal(r.valid,true);});
 test("artifact provenance hashes repository files",()=>{const {artifactManifest}=require("../src/provenance");const r=artifactManifest(".");assert.equal(r.algorithm,"sha256");assert.ok(r.files.length>0);});
+
+
+test("dependency audit exposes an executable security gate",()=>{const {dependencyAudit}=require("../src/dependency-audit");const r=dependencyAudit(".");assert.equal(typeof r.available,"boolean");assert.ok(Array.isArray(r.results));});
