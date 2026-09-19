@@ -119,3 +119,12 @@ test("connector-generated flows include shared correlation and policy hooks", ()
   assert.match(source, /Idempotency-Key/);
   assert.match(source, /queryParams\.page/);
 });
+
+
+test("MUnit failure mocks use connector-specific error types", () => {
+  const { generateMunit } = require("../src/munit-generator");
+  const xml = generateMunit({ operations: [{ name: "publish", method: "POST", path: "/messages", connector: "kafka" }] }, { artifactId: "sample", hasDatabase: false });
+  assert.match(xml, /kafka:publish/);
+  assert.match(xml, /KAFKA:CONNECTIVITY/);
+  assert.doesNotMatch(xml, /#\['CONNECTIVITY'\]/);
+});
