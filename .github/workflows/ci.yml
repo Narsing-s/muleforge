@@ -102,6 +102,10 @@ jobs:
         run: node src/index.js security-scan .
       - name: Generate SBOM
         run: node src/index.js sbom .
+      - name: DataWeave static gate
+        run: node src/index.js dataweave-check customer-api
+      - name: Golden regression gate
+        run: node src/index.js golden-test .
       - name: Quality audit
         run: node src/index.js audit customer-api/muleforge.yaml
       - name: Upload generated project metadata
