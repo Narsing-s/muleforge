@@ -19,7 +19,7 @@ function fieldMap(fields) { return new Map(normalizedFields(fields).map(field =>
 function compareFields(changes, key, kind, oldFields, newFields) {
   const oldMap = fieldMap(oldFields), newMap = fieldMap(newFields);
   for (const [name, oldField] of oldMap) {
-    if (!newMap.has(name)) changes.push({ type: `${kind}-field-removed`, legacyType: "field-removed", key, field: name, severity: "breaking", detail: `${kind} field ${name} was removed` });
+    if (!newMap.has(name)) changes.push({ type: "field-removed", detailType: `${kind}-field-removed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} was removed` });
     else {
       const next = newMap.get(name);
       if (oldField.type !== next.type) changes.push({ type: `${kind}-field-type-changed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} type changed from ${oldField.type} to ${next.type}` });
