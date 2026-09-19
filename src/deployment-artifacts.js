@@ -124,5 +124,35 @@ function deploymentArtifacts(root, config = {}, data = {}) {
   const docDir = path.join(root, 'docs', '09-deployment');
   fs.mkdirSync(docDir, { recursive: true });
   fs.writeFileSync(path.join(docDir, 'deployment-matrix.md'), '# Deployment Matrix\n\n| Target | Workflow | Maven strategy |\n|---|---|---|\n| CloudHub 1.0 | `.github/workflows/deploy-cloudhub.yml` | `cloudHubDeployment` |\n| CloudHub 2.0 | `.github/workflows/deploy-cloudhub2.yml` | `cloudhub2Deployment` |\n| Runtime Fabric | `.github/workflows/deploy-rtf.yml` | `runtimeFabricDeployment` |\n| On-premises | .github/workflows/deploy-onprem.yml | armDeployment / Runtime Manager |\n\nOnly the workflow matching `deployment.target` is enabled. Other generated workflows are safe no-op templates.\n\nCredentials are supplied through Maven `settings.xml` stored as an approved GitHub secret; usernames, passwords, tokens and client secrets are never generated into workflow files.\n', 'utf8');
+  const rateLimitOperations = (config.operations || []).filter(op => op && op.rateLimit);
+  const policyManifest = rateLimitOperations.map(op => ({
+    operation: op.name || (String(op.method || 'GET') + ' ' + String(op.path || '/')),
+    policyType: 'rate-limiting',
+    policyVersion: '1.2.0',
+    configuration: {
+      rateLimits: [{
+        maximumRequests: Number(op.rateLimit.requests),
+        timePeriodInMilliseconds: Number(op.rateLimit.periodSeconds) * 1000
+      }],
+      clusterizable: true,
+      exposeHeaders: true
+    },
+    pointcut: [{
+      methodRegex: String(op.method || 'GET').toUpperCase(),
+      uriTemplateRegex: String(op.path || '/')
+    }]
+  }));
+  if (policyManifest.length) {
+    fs.writeFileSync(
+      path.join(docDir, 'api-manager-policies.json'),
+      JSON.stringify({
+        generatedBy: 'MuleForge',
+        policyModel: 'Mule Gateway API Manager',
+        note: 'Apply these policy configurations through API Manager or Anypoint CLI. Rate limiting is intentionally not implemented as an in-application counter.',
+        policies: policyManifest
+      }, null, 2) + '\n',
+      'utf8'
+    );
+  }
 }
 module.exports = { deploymentArtifacts };
