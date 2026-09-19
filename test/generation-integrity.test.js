@@ -228,3 +228,6 @@ test("DataWeave runtime adapter never fakes execution when CLI is unavailable",(
 test("golden regression suite covers multiple integration classes",()=>{const {runGolden}=require("../src/golden-regression");const r=runGolden();assert.ok(r.length>=4);assert.equal(r.every(x=>x.pass),true);});
 test("native CI renderer supports all configured targets",()=>{const {render}=require("../src/ci-native");for(const t of ["gitlab","azure-devops","jenkins","bitbucket"])assert.ok(render(t).length>20);});
 test("deeper importer preserves source review metadata",()=>{const {importProject}=require("../src/import-project");const r=importProject(".");assert.equal(r.migration.preserveSource,true);assert.ok(r.inventory.files>0);});
+
+
+test("event runtime generator emits connector flow, retry and correlation metadata",()=>{const {generateEventRuntime}=require("../src/event-runtime-generator");const x=generateEventRuntime({events:[{name:"orders",type:"kafka",topic:"orders",retry:{maxAttempts:4},deadLetterQueue:"orders-dlq"}]});assert.match(x,/kafka:message-listener/);assert.match(x,/until-successful/);assert.match(x,/correlationId/);assert.match(x,/orders-dlq/);});
