@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Added API governance validation with duplicate-operation, path, method, schema, status, security and error-contract checks.
+- Added Java/Mule runtime compatibility validation and generated Maven alignment checks.
+- Added secret-safe environment model diffing with sensitive-value redaction.
+- Added regression tests for all three new quality gates.
+
 - Added OpenAPI 3.x contract generation from the MuleForge project model.
 - Added APIKit router and operation implementation scaffolding.
 - Added `muleforge runtime-test` for Maven verification and optional live Mule readiness probing.
