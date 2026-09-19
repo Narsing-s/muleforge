@@ -213,6 +213,33 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge openapi [config]` | Generate an OpenAPI 3.x contract from the project model |
 | `muleforge runtime-test [directory] --start` | Run Maven tests and optionally start Mule and probe a readiness endpoint |
 
+| `muleforge trace [config]` | Generate requirement-to-asset traceability with source references |
+| `muleforge postman [config]` | Generate a Postman collection with documented response assertions |
+| `muleforge cicd [config]` | Generate CI/CD environment and workflow assets |
+| `muleforge promotion-plan [config]` | Generate environment promotion and rollback metadata |
+| `muleforge config-check [config]` | Validate required, typed and allowed configuration values |
+| `muleforge contract-check [config]` | Validate API operation contracts before generation |
+| `muleforge event-check [config]` | Validate event and messaging trigger definitions |
+| `muleforge ir-check [config]` | Validate the semantic integration model |
+| `muleforge security-scan [directory]` | Scan source for secrets and dependency inventory |
+| `muleforge sbom [directory]` | Generate a CycloneDX dependency SBOM |
+| `muleforge dependency-audit [directory]` | Run available dependency vulnerability audits |
+| `muleforge dataweave-check [directory]` | Validate generated DataWeave scripts |
+| `muleforge dataweave-validate <file>` | Validate one DataWeave script |
+| `muleforge dataweave-run <file>` | Execute DataWeave only when the official runtime CLI is installed |
+| `muleforge golden-test [directory]` | Run golden generation regression fixtures |
+| `muleforge import [directory]` | Reverse-engineer an existing Mule project into a reviewable model |
+| `muleforge artifact-manifest [directory]` | Generate a SHA-256 artifact provenance manifest |
+| `muleforge artifact-keygen [directory]` | Generate an Ed25519 signing key pair |
+| `muleforge artifact-sign [directory]` | Sign an artifact manifest |
+| `muleforge artifact-verify [directory]` | Verify an artifact manifest signature |
+| `muleforge db-migration <from> <to> [directory]` | Generate reviewable SQL for JSON schema drift |
+| `muleforge ci-native <target> [directory]` | Generate a native GitLab, Azure DevOps, Jenkins or Bitbucket CI template |
+| `muleforge ide-manifest [directory]` | Generate IDE integration metadata |
+| `muleforge soap-scaffold [config]` | Generate a reviewable SOAP/WSDL scaffold when configured |
+| `muleforge graphql [config]` | Generate a GraphQL schema scaffold |
+| `muleforge artifact-manifest [directory]` | Generate a deterministic SHA-256 artifact manifest |
+
 
 Run:
 
