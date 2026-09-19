@@ -16,7 +16,9 @@ function lineRef(root, file, needles = []) {
 function buildTraceability(config = {}, root = null) {
   const operations = Array.isArray(config.operations) ? config.operations : [];
   const assets = (op) => { const id = String(op.name || `${op.method}-${op.path}`).replace(/[^A-Za-z0-9_-]/g, '-').toLowerCase(); const artifactId = String((config.project || {}).artifactId || (config.project || {}).name || 'mule-api'); return { raml: `src/main/resources/api/${artifactId}.raml`, mule: `src/main/mule/${artifactId}.xml`, dataweave: [`src/main/resources/dwl/${id}-request.dwl`, `src/main/resources/dwl/${id}-response.dwl`], munit: `src/test/munit/${artifactId}-test.xml`, postman: `postman/${artifactId}.collection.json`, documentation: 'docs/' }; };
-  const requirements = Array.isArray(config.requirements) ? config.requirements : [];
+  const requirements = Array.isArray(config.requirements) && config.requirements.length
+    ? config.requirements
+    : (String(config.requirement || '').trim() ? [{ id: 'REQ-001', source: 'muleforge.yaml', text: String(config.requirement).trim() }] : []);
   return {
     version: '1.1', generatedBy: 'MuleForge', requirementCount: requirements.length, operationCount: operations.length,
     requirements: requirements.map(req => ({ requirementId: req.id, source: req.source, text: req.text, status: 'review', targets: ['architecture','implementation','munit','postman','documentation'] })),
