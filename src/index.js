@@ -26,7 +26,7 @@ const { auditConnectors } = require("./connector-audit");
 const { repairProject } = require("./repair");
 const { snapshot, diffSnapshots } = require("./diff");
 const { renderProperties } = require("./schema-generator");
-const VERSION = "0.9.11";
+const VERSION = "0.9.12";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
 const render = (template, data) => {
