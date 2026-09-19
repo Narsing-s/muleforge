@@ -1,0 +1,4 @@
+const fs=require("node:fs"),path=require("node:path");
+function promotionPlan(config={}){const envs=(config.deployment?.promotionEnvironments||["dev","qa","uat","prod"]).map(String);return {version:"1.0",artifact:config.project?.artifactId||config.project?.name||"mule-api",environments:envs.map((environment,index)=>({environment,order:index+1,approvalRequired:["uat","prod"].includes(environment),immutableArtifact:true})),rollback:{enabled:true,requiresArtifactChecksum:true}};}
+function writePromotionPlan(root,config){const file=path.join(path.resolve(root),"deployment-promotion.json");fs.writeFileSync(file,JSON.stringify(promotionPlan(config),null,2)+"\n","utf8");return file;}
+module.exports={promotionPlan,writePromotionPlan};
