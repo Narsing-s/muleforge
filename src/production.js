@@ -18,7 +18,7 @@ function responseAssertions(op) {
 function operations(config = {}) {
   return (config.operations || []).map(op => ({
     name: op.name || `${String(op.method || "GET").toUpperCase()} ${op.path}`,
-    method: String(op.method || "GET").toUpperCase(), path: op.path || "/", requestFields: op.requestFields || [], successStatus: op.successStatus || (String(op.method || "GET").toUpperCase() === "POST" ? 201 : 200)
+    method: String(op.method || "GET").toUpperCase(), path: op.path || "/", requestFields: op.requestFields || [], responseFields: op.responseFields || [], errors: op.errors || [], security: op.security || null, successStatus: op.successStatus || (String(op.method || "GET").toUpperCase() === "POST" ? 201 : 200)
   }));
 }
 function exampleValue(field) {
