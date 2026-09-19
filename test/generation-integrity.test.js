@@ -268,3 +268,4 @@ test("OpenAPI clientId security creates the declared scheme",()=>{
   assert.ok(doc.components.securitySchemes.clientId);
   assert.deepEqual(doc.paths["/x"].get.security,[{clientId:[]}]);
 });
+test("runtime verification requires the expected readiness status",()=>{const source=fs.readFileSync(path.resolve(__dirname,"../src/runtime-test.js"),"utf8");assert.match(source,/expectedStatus\|\|200/);assert.match(source,/result\.request\.status===expected/);});
