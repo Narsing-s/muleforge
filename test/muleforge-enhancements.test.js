@@ -39,6 +39,13 @@ test("reference Mule XML contains only one database config", () => {
   assert.equal(xml.split("<db:config ").length - 1, 1);
 });
 
+test("MUnit generation adds policy-aware scenarios", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/munit-generator.js"), "utf8");
+  assert.match(source, /retry-exhaustion/);
+  assert.match(source, /transaction-rollback/);
+  assert.match(source, /declaredStatuses/);
+});
+
 test("generated Maven MUnit configuration reserves a dynamic HTTP port", () => {
   const template = fs.readFileSync(path.resolve(__dirname, "../templates/pom.xml.hbs"), "utf8");
   assert.match(template, /<dynamicPorts>\\s*<dynamicPort>http\\.port<\\/dynamicPort>\\s*<\\/dynamicPorts>/);
