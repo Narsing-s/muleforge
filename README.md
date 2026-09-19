@@ -100,6 +100,16 @@ If the customer already exists, return 409.
 
 MuleForge should identify what is known, ask for missing decisions, show the proposed solution and wait for approval before generation.
 
+## ⚙️ Configuration validation
+
+MuleForge also validates declared configuration schemas before generation or deployment. Use:
+
+```bash
+muleforge config-check
+```
+
+When a project defines `properties` or `configuration` entries, the gate checks required values and validates declared defaults against `allowedValues`. The same configuration gate is included in `muleforge validate`.
+
 ## 🔎 Verify the result
 
 After generation, run:
