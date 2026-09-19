@@ -19,13 +19,21 @@ function fieldsSchema(fields = []) {
   if (required.length) schema.required = required;
   return schema;
 }
+function pathParameters(pathname) { return [...String(pathname || "").matchAll(/\\{([^}]+)\\}/g)].map(m => m[1]); }
 function generateOpenApi(config = {}, options = {}) {
   const api = config.api || {}, project = config.project || {};
-  const doc = { openapi: options.version || "3.0.3", info: { title: api.name || project.name || "Mule API", version: api.version || project.version || "v1" }, servers: [{ url: api.baseUri || api.basePath || "/api/v1" }], paths: {} };
+  const version = String(options.version || config.openapiVersion || "3.0.3");
+  const doc = { openapi: version, info: { title: api.name || project.name || "Mule API", version: api.version || project.version || "v1" }, servers: [{ url: api.baseUri || api.basePath || "/api/v1" }], paths: {} };
+  if (version.startsWith("3.1")) doc.jsonSchemaDialect = "https://json-schema.org/draft/2020-12/schema";
   for (const op of config.operations || []) {
     if (!op.path || !op.method) continue;
     const method = String(op.method).toLowerCase(), item = doc.paths[op.path] ||= {};
     const operation = { operationId: op.name || method + op.path.replace(/[^A-Za-z0-9]+/g, "_"), responses: {} };
+    const parameters = pathParameters(op.path).map(name => {
+      const field = (op.requestFields || []).map(normalizeField).find(f => f && f.name === name) || { name, type: "string", required: true };
+      return { name, in: "path", required: true, schema: typeSchema(field) };
+    });
+    if (parameters.length) operation.parameters = parameters;
     if (op.description) operation.description = String(op.description);
     if ((op.requestFields || []).length && !["get","delete","head"].includes(method)) operation.requestBody = { required: true, content: { "application/json": { schema: fieldsSchema(op.requestFields) } } };
     const success = String(op.successStatus || (method === "post" ? 201 : 200));
@@ -37,7 +45,7 @@ function generateOpenApi(config = {}, options = {}) {
   const modes = new Set((config.operations || []).map(o => String(o.security || "").toLowerCase())), schemes = {};
   if (modes.has("oauth2")) schemes.oauth2 = { type: "oauth2", flows: { clientCredentials: { tokenUrl: "\${oauth2.tokenUrl}", scopes: {} } } };
   if (modes.has("basic")) schemes.basicAuth = { type: "http", scheme: "basic" };
-  if (modes.has("client-id")) schemes.clientId = { type: "apiKey", in: "header", name: "client_id" };
+  if (modes.has("client-id") || modes.has("clientid")) schemes.clientId = { type: "apiKey", in: "header", name: "client_id" };
   if (Object.keys(schemes).length) doc.components = { securitySchemes: schemes };
   return doc;
 }
