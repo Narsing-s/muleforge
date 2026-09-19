@@ -16,6 +16,8 @@ function suspiciousValue(value){
 }
 function lineHasSecret(line){
   if(/\b(?:const|let|var)\s+SECRET\s*=\s*\//i.test(line)) return false;
+  // Generator source may contain secret attribute names whose values are assembled from runtime properties.
+  if(/\+\s*["'\`]\s*|["'\`]\s*\+/.test(line)) return false;
   const xmlMatch=line.match(SECRET_ATTRIBUTE);
   if(xmlMatch) return suspiciousValue(xmlMatch[2]??xmlMatch[3]);
   const assignment=line.match(SECRET_ASSIGNMENT);
