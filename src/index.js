@@ -44,6 +44,10 @@ const { writeSoapScaffold } = require("./soap-generator");
 const { writeGraphql } = require("./graphql-generator");
 const { signManifest } = require("./artifact-signing");
 const { writeIdeManifest } = require("./ide-manifest");
+const { executeDataWeave, compareExpected } = require("./dataweave-runtime");
+const { writeGoldenReport } = require("./golden-regression");
+const { writeNative } = require("./ci-native");
+
 const VERSION = "0.9.17";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
@@ -311,6 +315,9 @@ program.command("ide-manifest [directory]").description("Generate IDE integratio
 program.command("dependency-audit [directory]").description("Run available dependency vulnerability audits").action((directory=".")=>{const r=dependencyAudit(directory);console.log(JSON.stringify(r,null,2));if(r.available&&!r.passed)process.exitCode=1;});
 program.command("artifact-manifest [directory]").description("Generate SHA-256 artifact provenance manifest").action((directory=".")=>console.log("✔ Artifact manifest written to "+writeManifest(directory)));
 program.command("dataweave-check [directory]").description("Validate generated DataWeave scripts before runtime execution").action((directory=".")=>{const r=validateDirectory(directory);console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
+program.command("dataweave-run <file>").description("Execute DataWeave only when the official CLI is installed").option("--input <file>","JSON input file").option("--expected <file>","Expected JSON output").action((file,options)=>{const script=fs.readFileSync(path.resolve(file),"utf8"),input=options.input?JSON.parse(fs.readFileSync(path.resolve(options.input),"utf8")):null,r=executeDataWeave(script,input);if(options.expected&&r.executed){r.expected=JSON.parse(fs.readFileSync(path.resolve(options.expected),"utf8"));r.matches=compareExpected(r.stdout,r.expected);if(!r.matches)process.exitCode=1;}console.log(JSON.stringify(r,null,2));});
+program.command("golden-test [directory]").description("Run MuleForge golden generation regression fixtures").action((directory=".")=>{const r=writeGoldenReport(directory);console.log(JSON.stringify(r,null,2));if(!r.passed)process.exitCode=1;});
+program.command("ci-native <target> [directory]").description("Generate a native CI template for gitlab, azure-devops, jenkins or bitbucket").action((target,directory=".")=>console.log("✔ Native CI template written to "+writeNative(directory,target)));
 program.command("dataweave-validate <file>").description("Validate one DataWeave script").action(file=>{const r=validateScript(fs.readFileSync(path.resolve(file),"utf8"));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
 program.command("import [directory]").description("Reverse-engineer an existing Mule project into a reviewable MuleForge model").action((directory=".")=>{const r=writeImportedModel(directory);console.log("✔ Imported model written to "+r.target);console.log(JSON.stringify(r.model,null,2));});
 program.command("promotion-plan [config]").description("Generate an environment promotion and rollback plan").action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config));console.log("✔ Promotion plan written to "+writePromotionPlan(root,model));});
