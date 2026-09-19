@@ -1,5 +1,4 @@
 const fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
-const { artifactManifest } = require("./provenance");
 
 function manifestChecksum(root){
   const file=path.join(path.resolve(root),"artifact-manifest.json");
