@@ -40,6 +40,10 @@ const { generateHealthFlows } = require("./health-generator");
 const { pipelineModel, renderPipeline } = require("./ci-pipeline");
 const { writeManifest } = require("./provenance");
 const { dependencyAudit } = require("./dependency-audit");
+const { writeSoapScaffold } = require("./soap-generator");
+const { writeGraphql } = require("./graphql-generator");
+const { signManifest } = require("./artifact-signing");
+const { writeIdeManifest } = require("./ide-manifest");
 const VERSION = "0.9.17";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
@@ -300,6 +304,10 @@ program.name("muleforge").description("Open-source CLI for requirement-driven Mu
 
 program.command("event-check [config]").description("Validate event and messaging trigger definitions").action((config="muleforge.yaml")=>{const r=validateEventModel(buildEventModel(loadConfig(config)));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
 program.command("pipeline-plan [config]").description("Generate a portable CI/CD pipeline model").action((config="muleforge.yaml")=>{const m=pipelineModel(loadConfig(config));console.log(JSON.stringify(m,null,2));for(const t of m.targets)console.log("\n"+renderPipeline(m,t));});
+program.command("soap-scaffold [config]").description("Generate a reviewable SOAP/WSDL scaffold when a WSDL source is declared").action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config)),r=writeSoapScaffold(root,model);console.log(r?"✔ SOAP/WSDL scaffold created":"No WSDL declared; nothing generated.");});
+program.command("graphql [config]").description("Generate a GraphQL schema scaffold from the project model").action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config));console.log("✔ GraphQL schema written to "+writeGraphql(root,model));});
+program.command("artifact-sign [directory]").description("Sign an existing artifact manifest with an environment-provided HMAC secret").action((directory=".")=>console.log("✔ Artifact manifest signed: "+signManifest(directory,process.env.MULEFORGE_SIGNING_SECRET)));
+program.command("ide-manifest [directory]").description("Generate IDE integration metadata without modifying source semantics").action((directory=".")=>console.log("✔ IDE manifest written to "+writeIdeManifest(directory)));
 program.command("dependency-audit [directory]").description("Run available dependency vulnerability audits").action((directory=".")=>{const r=dependencyAudit(directory);console.log(JSON.stringify(r,null,2));if(r.available&&!r.passed)process.exitCode=1;});
 program.command("artifact-manifest [directory]").description("Generate SHA-256 artifact provenance manifest").action((directory=".")=>console.log("✔ Artifact manifest written to "+writeManifest(directory)));
 program.command("dataweave-check [directory]").description("Validate generated DataWeave scripts before runtime execution").action((directory=".")=>{const r=validateDirectory(directory);console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
