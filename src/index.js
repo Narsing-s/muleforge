@@ -26,7 +26,7 @@ const { auditConnectors } = require("./connector-audit");
 const { repairProject } = require("./repair");
 const { snapshot, diffSnapshots } = require("./diff");
 const { renderProperties } = require("./schema-generator");
-const VERSION = "0.9.14";
+const VERSION = "0.9.15";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
 const render = (template, data) => {
@@ -181,6 +181,17 @@ function releaseCheck(directory = ".") {
   add("release workflow", fs.existsSync(path.join(root, ".github", "workflows", "release.yml")), "Gated release packaging workflow is required.");
   add("runtime validation workflow", fs.existsSync(path.join(root, ".github", "workflows", "runtime-validation.yml")), "Manual Maven/MUnit runtime validation workflow is required.");
   add("runtime validation docs", fs.existsSync(path.join(root, "docs", "cicd", "runtime-validation.md")), "Runtime validation documentation is required.");
+  const workflowDir = path.join(root, ".github", "workflows");
+  const workflowFiles = fs.existsSync(workflowDir) ? fs.readdirSync(workflowDir).filter(name => /\\.ya?ml$/.test(name)) : [];
+  add("workflow syntax", workflowFiles.length > 0 && workflowFiles.every(name => {
+    try { YAML.parse(fs.readFileSync(path.join(workflowDir, name), "utf8")); return true; } catch { return false; }
+  }), "GitHub Actions workflow files must be parseable YAML.");
+  const sourceVersion = (() => {
+    try { return String(fs.readFileSync(path.join(root, "src", "index.js"), "utf8").match(/const VERSION = "([^"]+)"/)?.[1] || ""); } catch { return ""; }
+  })();
+  add("CLI version sync", Boolean(pkg && sourceVersion === pkg.version), "src/index.js CLI version must match package.json.");
+  const changelog = fs.existsSync(path.join(root, "CHANGELOG.md")) ? fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8") : "";
+  add("changelog version", Boolean(pkg && changelog.includes(pkg.version)), "CHANGELOG.md must contain the current package version.");
   add("tests", fs.existsSync(path.join(root, "test")), "Automated tests are required.");
   add("generator template", fs.existsSync(path.join(root, "templates", "pom.xml.hbs")), "Generated Maven template is required.");
   add("connector audit", fs.existsSync(path.join(root, "src", "connector-audit.js")), "Connector integrity audit is required.");
