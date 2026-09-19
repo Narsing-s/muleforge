@@ -35,6 +35,10 @@ const { scanSecrets, scanDependencies, sbom } = require("./security-scan");
 const { validateDirectory, validateScript } = require("./dataweave-validator");
 const { writeImportedModel } = require("./import-project");
 const { writePromotionPlan } = require("./promotion");
+const { buildEventModel, validateEventModel } = require("./event-model");
+const { generateHealthFlows } = require("./health-generator");
+const { pipelineModel, renderPipeline } = require("./ci-pipeline");
+const { writeManifest } = require("./provenance");
 const VERSION = "0.9.17";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
@@ -293,6 +297,9 @@ program.name("muleforge").description("Open-source CLI for requirement-driven Mu
 });
 
 
+program.command("event-check [config]").description("Validate event and messaging trigger definitions").action((config="muleforge.yaml")=>{const r=validateEventModel(buildEventModel(loadConfig(config)));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
+program.command("pipeline-plan [config]").description("Generate a portable CI/CD pipeline model").action((config="muleforge.yaml")=>{const m=pipelineModel(loadConfig(config));console.log(JSON.stringify(m,null,2));for(const t of m.targets)console.log("\n"+renderPipeline(m,t));});
+program.command("artifact-manifest [directory]").description("Generate SHA-256 artifact provenance manifest").action((directory=".")=>console.log("✔ Artifact manifest written to "+writeManifest(directory)));
 program.command("dataweave-check [directory]").description("Validate generated DataWeave scripts before runtime execution").action((directory=".")=>{const r=validateDirectory(directory);console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
 program.command("dataweave-validate <file>").description("Validate one DataWeave script").action(file=>{const r=validateScript(fs.readFileSync(path.resolve(file),"utf8"));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
 program.command("import [directory]").description("Reverse-engineer an existing Mule project into a reviewable MuleForge model").action((directory=".")=>{const r=writeImportedModel(directory);console.log("✔ Imported model written to "+r.target);console.log(JSON.stringify(r.model,null,2));});
