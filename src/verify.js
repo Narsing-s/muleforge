@@ -130,8 +130,9 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
 
   for (const op of operations) {
     for (const field of op.requestFields || []) {
-      const mentioned = raml.includes(String(field)) || mule.includes(String(field));
-      checks.push(result(`Request field ${field}`, mentioned, "Request field should be represented in the generated API or implementation."));
+      const fieldName = typeof field === "string" ? field : field && field.name;
+      const mentioned = Boolean(fieldName) && (raml.includes(String(fieldName)) || mule.includes(String(fieldName)));
+      checks.push(result(`Request field ${fieldName || "(unnamed)"}`, mentioned, "Request field should be represented in the generated API or implementation."));
     }
     if (op.successStatus) {
       checks.push(result(`Success status ${op.name}`, raml.includes(String(op.successStatus)), "Confirmed success status should appear in the RAML contract."));
