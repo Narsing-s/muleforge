@@ -38,24 +38,24 @@ function processorMocks(op, data) {
 function buildFailureMocks(op, data) {
   const connector = String(op.connector || "").toLowerCase().replace(/_/g, "-");
   const processors = [];
-  if (data.hasDatabase) processors.push("db:select", "db:insert");
-  if (connector === "snowflake") processors.push("snowflake:select", "snowflake:insert");
+  if (data.hasDatabase) processors.push(["db:select", "DB:CONNECTIVITY"], ["db:insert", "DB:CONNECTIVITY"]);
+  if (connector === "snowflake") processors.push(["snowflake:select", "SNOWFLAKE:CONNECTIVITY"], ["snowflake:insert", "SNOWFLAKE:CONNECTIVITY"]);
   const map = {
-    "anypoint-mq": ["anypoint-mq:publish"],
-    "ibm-mq": ["ibm-mq:publish"],
-    sftp: ["sftp:read", "sftp:write", "sftp:list"],
-    "object-store": ["os:store"],
-    file: ["file:read", "file:write"],
-    email: ["email:send"],
-    jms: ["jms:publish"],
-    kafka: ["kafka:publish"],
-    salesforce: ["sfdc:query", "sfdc:create"]
+    "anypoint-mq": [["anypoint-mq:publish", "ANYPOINT-MQ:CONNECTIVITY"]],
+    "ibm-mq": [["ibm-mq:publish", "IBM-MQ:CONNECTIVITY"]],
+    sftp: [["sftp:read", "SFTP:CONNECTIVITY"], ["sftp:write", "SFTP:CONNECTIVITY"], ["sftp:list", "SFTP:CONNECTIVITY"]],
+    "object-store": [["os:store", "OS:STORE_NOT_AVAILABLE"]],
+    file: [["file:read", "FILE:CONNECTIVITY"], ["file:write", "FILE:CONNECTIVITY"]],
+    email: [["email:send", "EMAIL:CONNECTIVITY"]],
+    jms: [["jms:publish", "JMS:CONNECTIVITY"]],
+    kafka: [["kafka:publish", "KAFKA:CONNECTIVITY"]],
+    salesforce: [["sfdc:query", "SALESFORCE:CONNECTIVITY"], ["sfdc:create", "SALESFORCE:CONNECTIVITY"]]
   };
   processors.push(...(map[connector] || []));
-  if (!processors.length) processors.push("http:request");
-  return "\n" + processors.map(processor => `      <munit-tools:mock-when processor="${processor}">
+  if (!processors.length) processors.push(["http:request", "HTTP:CONNECTIVITY"]);
+  return "\n" + processors.map(([processor, errorType]) => `      <munit-tools:mock-when processor="${processor}">
         <munit-tools:then-return>
-          <munit-tools:error typeId="#['CONNECTIVITY']"/>
+          <munit-tools:error typeId="#['${errorType}']"/>
         </munit-tools:then-return>
       </munit-tools:mock-when>`).join("\n");
 }
