@@ -1,3 +1,8 @@
+## Unreleased
+
+- Added `muleforge breaking-check` for API compatibility analysis before releases.
+- Detects removed operations, success-status changes, security changes, removed fields, and newly required request fields.
+
 ## 0.9.8
 
 - Added persistent Object Store idempotency reservations for idempotent generated operations.
