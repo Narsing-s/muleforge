@@ -1,0 +1,3 @@
+const fs=require("node:fs"),path=require("node:path");
+function writeIdeManifest(root="."){const out=path.join(path.resolve(root),".muleforge","ide.json");fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify({version:"1.0",commands:["generate","validate","verify","contract-check","dataweave-check","event-check","dependency-audit"],fileAssociations:["muleforge.yaml","*.dwl","*.raml","*.xml"]},null,2)+"\n");return out;}
+module.exports={writeIdeManifest};
