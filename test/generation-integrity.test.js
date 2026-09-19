@@ -178,3 +178,25 @@ test("release-check requires breaking-change checker", () => {
   assert.match(source, /breaking-check/);
   assert.match(source, /breaking-change checker/);
 });
+
+test("OpenAPI generator preserves project operations and security schemes", () => {
+  const { generateOpenApi } = require("../src/openapi-generator");
+  const doc = generateOpenApi({ project: { name: "demo" }, api: { name: "Demo", version: "v1", basePath: "/api/v1" }, operations: [{ name: "create", method: "POST", path: "/customers", requestFields: [{ name: "email", required: true }], responseFields: ["id"], security: "oauth2" }] });
+  assert.equal(doc.openapi, "3.0.3");
+  assert.ok(doc.paths["/customers"].post.requestBody);
+  assert.ok(doc.components.securitySchemes.oauth2);
+});
+test("semantic breaking checker detects enum, required and policy removals", () => {
+  const { breakingChanges } = require("../src/breaking-check");
+  const oldModel = { operations: [{ method: "POST", path: "/x", requestFields: [{ name: "state", enum: ["A","B"] }], pagination: true, idempotency: true }] };
+  const newModel = { operations: [{ method: "POST", path: "/x", requestFields: [{ name: "state", enum: ["A"] }] }] };
+  const result = breakingChanges(oldModel, newModel);
+  assert.ok(result.some(x => x.type === "request-enum-value-removed"));
+  assert.ok(result.some(x => x.type === "pagination-removed"));
+  assert.ok(result.some(x => x.type === "idempotency-removed"));
+});
+test("APIKit generator emits router and config", () => {
+  const { generateApiKitFlow, generateApiKitConfig } = require("../src/apikit-generator");
+  assert.match(generateApiKitConfig({ artifactId: "demo" }), /apikit:config/);
+  assert.match(generateApiKitFlow({ artifactId: "demo", basePath: "/api/v1" }), /apikit:router/);
+});
