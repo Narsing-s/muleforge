@@ -52,7 +52,7 @@ function auditProject(file = 'muleforge.yaml') {
     const label = op.name || op.path || 'operation';
     const safe = String(op.name || (String(op.method || 'GET') + '-' + String(op.path || '/'))).replace(/[^A-Za-z0-9_-]/g, '-');
     const flowPattern = new RegExp('<flow\\s+name="' + escapeRegex(artifact) + '-' + escapeRegex(safe) + '-flow"([\\s\\S]*?)(?=<flow\\s+name="|</mule>)');
-    const flow = generatedMule.match(flowPattern)?.[1] || '';
+    const flow = muleFiles.match(flowPattern)?.[1] || '';
     if (op.retry && !/<until-successful\b/.test(flow)) policyChecks.push(label + ': retry');
     if (op.pagination && !/queryParams\.page/.test(flow)) policyChecks.push(label + ': pagination');
     if (op.idempotency && !/Idempotency-Key/.test(flow)) policyChecks.push(label + ': idempotency');
