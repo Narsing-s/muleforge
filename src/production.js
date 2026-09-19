@@ -82,7 +82,7 @@ jobs:
           printf '%s' "$MAVEN_SETTINGS_XML" > "$HOME/.m2/settings.xml"
           test -s "$HOME/.m2/settings.xml"
       - name: Build and test with Maven
-        run: mvn -B -ntp -s "$HOME/.m2/settings.xml" -DskipTests=false clean package
+        run: mvn -B -DskipTests=false clean package -ntp -s "$HOME/.m2/settings.xml"
           -Dmunit.coverage.failBuild=false
       - name: Upload Maven/MUnit reports
         if: \${{ always() }}
