@@ -57,6 +57,7 @@ function auditProject(file = 'muleforge.yaml') {
     if (op.pagination && !/queryParams\.page/.test(flow)) policyChecks.push(label + ': pagination');
     if (op.idempotency && !/Idempotency-Key/.test(flow)) policyChecks.push(label + ': idempotency');
     if (op.transaction && !/<try\b/.test(flow)) policyChecks.push(label + ': transaction');
+    if (op.timeout && String(op.connector || '').toLowerCase() === 'http' && op.downstreamEndpoint && !/responseTimeout=/.test(flow)) policyChecks.push(label + ': timeout');
   }
   add('Policy generation evidence', policyChecks.length === 0, policyChecks.length ? 'Configured policies without obvious generated evidence: ' + policyChecks.join(', ') : 'Configured retry, pagination, idempotency and transaction policies have generated evidence where enabled.');
   const names = operations.map(o => String(o.name || '')).filter(Boolean);
