@@ -259,6 +259,10 @@ The generated `docs/` folder describes the specific application. The MuleForge r
 - Local development environment diagnostics
 - GitHub Actions CI quality gate
 - Secret-hygiene checks in CI
+- OpenAPI 3.x contract generation from the project model
+- APIKit router and operation implementation scaffolding
+- Maven + optional live Mule readiness runtime verification
+- Semantic API contract diff and deeper breaking-change detection
 
 ## ⚠️ Current limitations
 
