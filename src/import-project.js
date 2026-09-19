@@ -2,7 +2,7 @@ const fs=require("node:fs"),path=require("node:path"),YAML=require("yaml");
 function walk(d,out=[]){if(!fs.existsSync(d))return out;for(const e of fs.readdirSync(d,{withFileTypes:true})){if([".git","target","node_modules"].includes(e.name))continue;const p=path.join(d,e.name);e.isDirectory()?walk(p,out):out.push(p);}return out;}
 function attrs(tag){const a={};for(const m of String(tag).matchAll(/([A-Za-z_:][\w:.-]*)\s*=\s*"([^"]*)"/g))a[m[1]]=m[2];return a;}
 function relative(base,file){return path.relative(base,file).replace(/\\/g,"/");}
-function extract(xml,file){const out=[];const re=/<flow\b[^>]*name="([^"]+)"[\s\S]*?<\/flow>/gi;let m;while((m=re.exec(xml))){const body=m[0],lm=body.match(/<http:listener\b([^>]*)\/?>(?:<\/http:listener>)?/i);if(lm){const a=attrs(lm[1]);out.push({name:m[1],method:(a.method||"GET").toUpperCase(),path:a.path||"/",connector:"http",source:file});}}
+function extract(xml,file){const out=[];const re=/<flow(?=[\s>])[^>]*name="([^"]+)"[\s\S]*?<\/flow>/gi;let m;while((m=re.exec(xml))){const body=m[0],lm=body.match(/<http:listener\b([^>]*)\/?>(?:<\/http:listener>)?/i);if(lm){const a=attrs(lm[1]);out.push({name:m[1],method:(a.method||"GET").toUpperCase(),path:a.path||"/",connector:"http",source:file});}}
 for(const m2 of xml.matchAll(/<([\w-]+):([\w-]+)\b([^>]*)\/?>(?:<\/\1:\2>)?/g)){const ns=m2[1].toLowerCase(),op=m2[2].toLowerCase();if(["db","snowflake","sftp","kafka","jms","ibm-mq","anypoint-mq","sfdc"].includes(ns))out.push({name:ns+"-"+op,method:"EVENT",path:"/",connector:ns,action:op,source:file});}return out;}
 function unique(values){return [...new Set(values.filter(Boolean).map(String))];}
 function extractSemantics(xml){
