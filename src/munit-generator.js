@@ -113,7 +113,7 @@ function generateMunit(config, data) {
       <flow-ref name="${xmlEscape(flow)}"/>
     </munit:execution>
     <munit:validation>
-      <munit-tools:assert-that expression="#[vars.httpStatus default 500]" is="#[MunitTools::equalTo(500)]"/>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 503]" is="#[MunitTools::equalTo(503)]"/>
     </munit:validation>
   </munit:test>`);
     }
