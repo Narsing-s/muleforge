@@ -1,12 +1,12 @@
-## Unreleased
+## 0.9.11
 
+- Hardened breaking-change detection by separating request and response compatibility checks.
+- Added detection for field type changes and path-parameter changes.
+- Removed duplicate generated pagination response transforms.
+- Corrected connector-failure MUnit expectations to match generated HTTP 503 dependency handling.
 - Strengthened contract validation for request/response schemas, declared error statuses, rate limits and timeouts.
 - Corrected generated MUnit connector failure mocks to use module-specific Mule error types.
 
-## Unreleased
-
-- Added `muleforge breaking-check` for API compatibility analysis before releases.
-- Detects removed operations, success-status changes, security changes, removed fields, and newly required request fields.
 
 ## 0.9.8
 
