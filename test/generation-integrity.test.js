@@ -203,6 +203,8 @@ test("APIKit generator emits router and config", () => {
 
 
 test("semantic IR normalizes operations and validates supported connectors",()=>{const {buildIntegrationIR,validateIntegrationIR}=require("../src/semantic-ir");const ir=buildIntegrationIR({operations:[{name:"get",method:"GET",path:"/x",connector:"http",requestFields:[{name:"id",required:true}]}]});assert.equal(ir.operations[0].requestFields[0].required,true);assert.equal(validateIntegrationIR(ir).valid,true);});
+test("OpenAPI preserves nested arrays enums and required fields",()=>{const {generateOpenApi}=require("../src/openapi-generator");const doc=generateOpenApi({operations:[{name:"create",method:"POST",path:"/customers",requestFields:[{name:"tags",type:"array",items:{type:"string"}},{name:"profile",type:"object",required:true,fields:[{name:"email",type:"string",required:true}]}],responseFields:[{name:"status",type:"string",enum:["ACTIVE","INACTIVE"]}]}]});const schema=doc.paths["/customers"].post.requestBody.content["application/json"].schema;assert.equal(schema.properties.tags.items.type,"string");assert.equal(schema.properties.profile.properties.email.type,"string");assert.deepEqual(schema.required,["profile"]);assert.deepEqual(doc.paths["/customers"].post.responses["200"].content["application/json"].schema.properties.status.enum,["ACTIVE","INACTIVE"]);});
+
 test("security scanner and SBOM inventory are exposed",()=>{const {scanDependencies,sbom}=require("../src/security-scan");assert.ok(Array.isArray(scanDependencies(".").npm));assert.equal(sbom(".").bomFormat,"CycloneDX");});
 
 
