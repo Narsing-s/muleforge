@@ -225,6 +225,8 @@ test("dependency audit exposes an executable security gate",()=>{const {dependen
 test("GraphQL generator creates a schema",()=>{const {generateGraphqlSchema}=require("../src/graphql-generator");assert.match(generateGraphqlSchema({project:{artifactId:"demo"}}),/type Query/);});
 test("SOAP scaffold requires an explicit WSDL",()=>{const {generateSoapScaffold}=require("../src/soap-generator");assert.equal(generateSoapScaffold({project:{name:"demo"}}),null);});
 test("artifact signing uses an environment-provided secret",()=>{const {signManifest}=require("../src/artifact-signing");assert.equal(typeof signManifest,"function");});
+test("health generator supports explicit dependency readiness checks",()=>{const {generateHealthFlows}=require("../src/health-generator");const x=generateHealthFlows({dependencies:["database"],dependencyChecks:[{name:"database",check:"vars.dbHealthy"}]});assert.match(x,/variableName="health_database"/);assert.match(x,/value="#[vars\.dbHealthy]"/);assert.match(x,/<on-error-continue type="ANY">/);assert.match(x,/status: if \(\(vars\.health_database == true\)\) "READY" else "NOT_READY"/);assert.match(x,/"database": vars\.health_database/);});
+
 test("IDE manifest is generated from CLI capabilities",()=>{const {writeIdeManifest}=require("../src/ide-manifest");assert.equal(typeof writeIdeManifest,"function");});
 
 
