@@ -1,0 +1,4 @@
+const fs=require("node:fs"),path=require("node:path");
+function generateSoapScaffold(config={}){const wsdl=config.api?.wsdl||config.wsdl;if(!wsdl)return null;const name=config.project?.artifactId||config.project?.name||"mule-api";return {name,wsdl,files:[{path:`src/main/resources/api/${name}.wsdl`,content:String(wsdl).startsWith("<")?String(wsdl):"<!-- Provide the source WSDL here. MuleForge preserves it and generates a reviewable SOAP integration scaffold. -->\n"}],reviewRequired:true};}
+function writeSoapScaffold(root,config){const r=generateSoapScaffold(config);if(!r)return null;for(const f of r.files){const p=path.join(path.resolve(root),f.path);fs.mkdirSync(path.dirname(p),{recursive:true});if(!fs.existsSync(p))fs.writeFileSync(p,f.content,"utf8");}return r;}
+module.exports={generateSoapScaffold,writeSoapScaffold};
