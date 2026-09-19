@@ -157,3 +157,18 @@ test("MUnit generator includes idempotency and pagination scenarios", () => {
   assert.match(source, /OS:KEY_ALREADY_EXISTS/);
   assert.ok(source.includes('testName(op, "pagination")'));
 });
+
+
+test("breaking-change checker detects removed operations and newly required fields", () => {
+  const { breakingChanges } = require("../src/breaking-check");
+  const oldModel = { operations: [{ name: "get", method: "GET", path: "/customers/{id}", requestFields: [{ name: "id", required: false }, { name: "name" }] }] };
+  const newModel = { operations: [{ name: "get", method: "GET", path: "/customers/{id}", requestFields: [{ name: "id", required: true }] }] };
+  const result = breakingChanges(oldModel, newModel);
+  assert.ok(result.some(c => c.type === "required-field-added"));
+  assert.ok(result.some(c => c.type === "field-removed"));
+});
+
+test("CLI exposes breaking-check", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
+  assert.match(source, /breaking-check <from>/);
+});
