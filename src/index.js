@@ -337,10 +337,10 @@ program.command("self-test").description("Run local generation, contract, connec
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-self-test-"));
   try {
     const root = path.join(temp, "self-test"); fs.mkdirSync(root, { recursive: true });
-    const model = { requirement: "Self-test requirement", project: { name: "self-test", artifactId: "self-test", groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" }, api: { name: "Self Test", version: "v1", basePath: "/api/v1" }, connectors: ["http"], operations: [{ name: "health", method: "GET", path: "/health", connector: "http", requestFields: ["name", "email"], responseFields: ["status"], successStatus: 200 }], testing: { munit: true }, deployment: { target: "none" } };
+    const model = { requirement: "Self-test requirement", project: { name: "self-test", artifactId: "self-test", groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" }, api: { name: "Self Test", version: "v1", basePath: "/api/v1" }, connectors: ["http"], operations: [{ name: "health", method: "GET", path: "/health", connector: "http", requestFields: [{ name: "name", type: "string" }, { name: "email", type: "string" }], responseFields: [{ name: "status", type: "string" }], successStatus: 200 }], testing: { munit: true }, deployment: { target: "none" } };
     const cfg = path.join(root, "muleforge.yaml"); write(cfg, YAML.stringify(model)); generateProject(cfg, { copyDesktop: false });
     const contract = validateContract(cfg), deployment = validateDeployment(model.deployment || {}), policies = validateOperationPolicies(model.operations || []), connectors = auditConnectors(cfg), verification = verifyProject(cfg), audit = auditProject(cfg);
-    if (!contract.valid || !deployment.valid || !policies.valid || !connectors.ready || !verification.ready || !audit.ready) { console.error(JSON.stringify({ contract, deployment, policies, connectors, verificationReady: verification.ready, auditReady: audit.ready }, null, 2)); printReport(verification); printAudit(audit); throw new Error("Self-test quality gates failed."); }
+    if (!contract.valid || !deployment.valid || !policies.valid || !connectors.ready || !verification.ready || !audit.ready) { printReport(verification); printAudit(audit); throw new Error("Self-test quality gates failed."); }
     console.log("✔ Self-test passed: generation, contract, verification and audit gates are green.");
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
