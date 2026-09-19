@@ -206,3 +206,11 @@ test("contract validator rejects invalid field schemas and error statuses", () =
   assert.ok(report.errors.some(x => x.includes("required must be boolean")));
   assert.ok(report.errors.some(x => x.includes("unsupported declared error status")));
 });
+
+
+test("release readiness checks include version synchronization gates", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/index.js"), "utf8");
+  assert.match(source, /CLI version sync/);
+  assert.match(source, /changelog version/);
+  assert.match(source, /workflow syntax/);
+});
