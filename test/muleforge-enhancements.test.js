@@ -216,6 +216,29 @@ test("release readiness checks include version synchronization gates", () => {
 });
 
 
+test("deployment config generates API Manager rate-limit policy manifest", () => {
+  const { deploymentArtifacts } = require("../src/deployment-artifacts");
+  const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-rate-limit-"));
+  deploymentArtifacts(root, {
+    deployment: { target: "cloudhub2" },
+    operations: [{
+      name: "list-customers", method: "GET", path: "/customers",
+      rateLimit: { requests: 100, periodSeconds: 60 }
+    }]
+  }, { artifactId: "sample", java: "17" });
+  const file = path.join(root, "docs/09-deployment/api-manager-policies.json");
+  assert.equal(fs.existsSync(file), true);
+  const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+  assert.equal(manifest.policies.length, 1);
+  assert.equal(manifest.policies[0].policyType, "rate-limiting");
+  assert.equal(manifest.policies[0].policyVersion, "1.2.0");
+  assert.equal(manifest.policies[0].configuration.rateLimits[0].maximumRequests, 100);
+  assert.equal(manifest.policies[0].configuration.rateLimits[0].timePeriodInMilliseconds, 60000);
+  assert.equal(manifest.policies[0].pointcut[0].methodRegex, "GET");
+  assert.equal(manifest.policies[0].pointcut[0].uriTemplateRegex, "/customers");
+});
+
 test("connector flow generates retry policy and HTTP timeout", () => {
   const { connectorFlow } = require("../src/connector-flow-generator");
   const retry = connectorFlow({
