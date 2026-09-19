@@ -30,6 +30,8 @@ const { openApiYaml } = require("./openapi-generator");
 const { generateApiKitFlow, generateApiKitConfig } = require("./apikit-generator");
 const { runtimeTest } = require("./runtime-test");
 const { runBreakingCheck } = require("./breaking-check");
+const { buildIntegrationIR, validateIntegrationIR } = require("./semantic-ir");
+const { scanSecrets, scanDependencies, sbom } = require("./security-scan");
 const VERSION = "0.9.17";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
@@ -288,6 +290,9 @@ program.name("muleforge").description("Open-source CLI for requirement-driven Mu
 });
 
 
+program.command("ir-check [config]").description("Validate the semantic integration model").action((config="muleforge.yaml")=>{const r=validateIntegrationIR(buildIntegrationIR(loadConfig(config)));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
+program.command("security-scan [directory]").description("Scan source for hard-coded secrets and report dependency inventory").action((directory=".")=>{const root=path.resolve(directory),r={secrets:scanSecrets(root),dependencies:scanDependencies(root)};console.log(JSON.stringify(r,null,2));if(r.secrets.length)process.exitCode=1;});
+program.command("sbom [directory]").description("Generate a CycloneDX SBOM for Node dependencies").action((directory=".")=>{write(path.join(path.resolve(directory),"bom.json"),JSON.stringify(sbom(path.resolve(directory)),null,2)+"\n");console.log("✔ SBOM written to bom.json");});
 program.command("openapi [config]").description("Generate an OpenAPI 3.0 contract from the project model").option("--version <version>","OpenAPI version","3.0.3").action((config="muleforge.yaml",options)=>{const model=loadConfig(config),root=path.resolve(path.dirname(config)),name=model.project?.artifactId||model.project?.name||"mule-api";write(path.join(root,"src/main/resources/api",name+".openapi.yaml"),openApiYaml(model,{version:options.version}));console.log("✔ OpenAPI contract generated");});
 program.command("runtime-test [directory]").description("Run Maven tests and optionally start Mule and probe an HTTP endpoint").option("--start","Start the Mule application after tests").option("--url <url>","HTTP URL to probe").option("--timeout <ms>","Readiness timeout","60000").action(async(directory=".",options)=>{const r=await runtimeTest(directory,options);console.log(JSON.stringify(r,null,2));if(!r.build||(options.start&&!r.ready))process.exitCode=1;});
 program.command("contract-diff <from> [to]").description("Show semantic API contract changes between two MuleForge models").action((from,to="muleforge.yaml")=>{const r=runBreakingCheck(from,to);console.log(JSON.stringify(r,null,2));});
