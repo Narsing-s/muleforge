@@ -76,7 +76,7 @@ test("generated MUnit keeps the customer not-found scenario only for the impleme
 });
 
 
-test("CloudHub 2 deployment workflow uses Maven deployment and secret settings", () => {
+test("secret scanner ignores placeholders and flags literal credentials", () => {\n  const { scanSecrets } = require("../src/security-scan");\n  const os = require("node:os");\n  const fs = require("node:fs");\n  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-secret-test-"));\n  try {\n    fs.writeFileSync(path.join(dir, "safe.yaml"), "password: ${DB_PASSWORD}\\nclientSecret: ${{ secrets.CLIENT_SECRET }}\\n");\n    fs.writeFileSync(path.join(dir, "unsafe.yaml"), "password: \"hardcoded-password-123\"\\n");\n    assert.deepEqual(scanSecrets(dir), ["unsafe.yaml"]);\n  } finally { fs.rmSync(dir, { recursive: true, force: true }); }\n});\n\ntest("CloudHub 2 deployment workflow uses Maven deployment and secret settings", () => {
   const { generateGithubActions } = require("../src/production");
   const { deploymentArtifacts } = require("../src/deployment-artifacts");
   const fs = require("node:fs");
