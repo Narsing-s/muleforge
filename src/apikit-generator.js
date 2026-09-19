@@ -41,13 +41,8 @@ function generateApiKitFlow(data = {}) {
     const route = String(op.path || "/");
     const apiKitPath = route.replace(/^\//, "").split("/").filter(Boolean).join("\\") || "";
     const suffix = ["post", "put", "patch"].includes(method) ? ":application\\json" : "";
-    const request = ["post", "put", "patch"].includes(method) && (op.requestFields || []).length
-      ? `    <ee:transform doc:name="APIKit request example"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-${requestPayload(op)}]]></ee:set-payload></ee:message></ee:transform>
-`
-      : "";
+    // APIKit receives the real client payload from the router. Do not overwrite it with a generated example.
+    const request = "";
     const errors = errorHandlers(op);
     const handler = errors ? `    <error-handler>
 ${errors}
