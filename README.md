@@ -179,6 +179,7 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge generate` | Generate files from `muleforge.yaml` |
 | `muleforge validate` | Run verification, contract, deployment, policy, connector and quality gates |
 | `muleforge breaking-check <old.yaml> [new.yaml]` | Detect potentially breaking API contract changes |
+| `muleforge contract-diff <old.yaml> [new.yaml]` | Show semantic API contract changes without failing the command |
 | `muleforge verify` | Check requirement-to-project coverage |
 | `muleforge verify --build` | Verify and run Maven tests when static checks pass |
 | `muleforge test` | Run Maven tests |
