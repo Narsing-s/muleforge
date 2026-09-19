@@ -204,3 +204,8 @@ test("APIKit generator emits router and config", () => {
 
 test("semantic IR normalizes operations and validates supported connectors",()=>{const {buildIntegrationIR,validateIntegrationIR}=require("../src/semantic-ir");const ir=buildIntegrationIR({operations:[{name:"get",method:"GET",path:"/x",connector:"http",requestFields:[{name:"id",required:true}]}]});assert.equal(ir.operations[0].requestFields[0].required,true);assert.equal(validateIntegrationIR(ir).valid,true);});
 test("security scanner and SBOM inventory are exposed",()=>{const {scanDependencies,sbom}=require("../src/security-scan");assert.ok(Array.isArray(scanDependencies(".").npm));assert.equal(sbom(".").bomFormat,"CycloneDX");});
+
+
+test("DataWeave validator catches missing header",()=>{const {validateScript}=require("../src/dataweave-validator");assert.equal(validateScript("output application/json --- payload").valid,false);});
+test("existing-project importer creates reviewable model",()=>{const {importProject}=require("../src/import-project");const model=importProject(".");assert.ok(model.project);assert.ok(Array.isArray(model.operations));assert.equal(model.import.reviewRequired,true);});
+test("promotion plan includes approval and rollback controls",()=>{const {promotionPlan}=require("../src/promotion");const p=promotionPlan({project:{artifactId:"demo"}});assert.ok(p.environments.find(e=>e.environment==="prod").approvalRequired);assert.equal(p.rollback.enabled,true);});
