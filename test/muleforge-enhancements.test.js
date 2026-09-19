@@ -39,6 +39,11 @@ test("reference Mule XML contains only one database config", () => {
   assert.equal(xml.split("<db:config ").length - 1, 1);
 });
 
+test("generated Maven MUnit configuration reserves a dynamic HTTP port", () => {
+  const template = fs.readFileSync(path.resolve(__dirname, "../templates/pom.xml.hbs"), "utf8");
+  assert.match(template, /<dynamicPorts>\\s*<dynamicPort>http\\.port<\\/dynamicPort>\\s*<\\/dynamicPorts>/);
+});
+
 test("generated MUnit mocks external connector processors", () => {
   const { generateMunit } = require("../src/munit-generator");
   const xml = generateMunit({
