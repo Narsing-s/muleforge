@@ -17,7 +17,7 @@ test("production generators create Postman, environment and CI assets", () => {
   assert.equal(postman.item.length, 2);
   assert.equal(postman.item[0].request.method, "POST");
   assert.match(generateEnvironment("dev"), /MuleForge/);
-  assert.match(generateGithubActions(data), /Static project gate/); assert.match(generateGithubActions(data), /mvn -B -DskipTests=false clean package/);
+  assert.match(generateGithubActions(data), /Static project gate/); assert.match(generateGithubActions(data), /mvn -B -DskipTests=false clean package/); assert.match(generateGithubActions(data), /run: \|[\s\S]*munit\.coverage\.failBuild=false/);
   assert.equal(fs.existsSync(root), true);
 });
 
