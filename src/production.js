@@ -85,7 +85,7 @@ jobs:
         run: mvn -B -ntp -s "$HOME/.m2/settings.xml" -DskipTests=false clean package
           -Dmunit.coverage.failBuild=false
       - name: Upload Maven/MUnit reports
-        if: ${{ always() }}
+        if: \${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: muleforge-maven-reports
