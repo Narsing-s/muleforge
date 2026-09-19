@@ -33,6 +33,33 @@ function validateContract(file = "muleforge.yaml") {
     if (op.successStatus !== undefined && !/^[1-5][0-9][0-9]$/.test(String(op.successStatus))) {
       errors.push(`Invalid successStatus for ${name || route}`);
     }
+
+    for (const [fieldGroup, fields] of [["requestFields", op.requestFields], ["responseFields", op.responseFields]]) {
+      if (fields == null) continue;
+      if (!Array.isArray(fields)) {
+        errors.push(`${name || route}: ${fieldGroup} must be an array.`);
+        continue;
+      }
+      for (const field of fields) {
+        if (!field || typeof field !== "object" || !String(field.name || "").trim()) {
+          errors.push(`${name || route}: every ${fieldGroup} entry must have a name.`);
+          continue;
+        }
+        const type = String(field.type || "string").toLowerCase();
+        if (!FIELD_TYPES.has(type)) errors.push(`${name || route}: unsupported ${fieldGroup} type for ${field.name}: ${type}`);
+        if (field.required != null && typeof field.required !== "boolean") {
+          errors.push(`${name || route}: ${fieldGroup} required must be boolean for ${field.name}.`);
+        }
+      }
+    }
+
+    if (op.errors != null) {
+      if (!Array.isArray(op.errors)) errors.push(`${name || route}: errors must be an array.`);
+      else for (const declared of op.errors) {
+        const status = Number(declared && (declared.status ?? declared.code));
+        if (!ERROR_STATUSES.has(status)) errors.push(`${name || route}: unsupported declared error status: ${declared && (declared.status ?? declared.code)}`);
+      }
+    }
   }
 
   if (!ops.length) errors.push("At least one API operation is required.");
@@ -91,6 +118,12 @@ function validateDeployment(deployment = {}) {
   const target = String(deployment.target || "").toLowerCase();
   const allowed = ["none", "cloudhub", "cloudhub2", "rtf", "onprem"];
   if (deployment.target && !allowed.includes(target)) errors.push("deployment.target must be one of: " + allowed.join(", "));
+  if (target !== "none" && deployment.applicationName != null && !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,254}$/.test(String(deployment.applicationName))) {
+    errors.push("deployment.applicationName contains unsupported characters.");
+  }
+  if (target !== "none" && deployment.version != null && !String(deployment.version).trim()) {
+    errors.push("deployment.version must not be empty.");
+  }
   const replicas = deployment.replicas ?? deployment.replicaCount;
   if (replicas != null && (!Number.isInteger(Number(replicas)) || Number(replicas) < 1)) errors.push("deployment.replicas must be a positive integer.");
   const vCores = deployment.vCores ?? deployment.vcores;
