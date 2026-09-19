@@ -200,3 +200,7 @@ test("APIKit generator emits router and config", () => {
   assert.match(generateApiKitConfig({ artifactId: "demo" }), /apikit:config/);
   assert.match(generateApiKitFlow({ artifactId: "demo", basePath: "/api/v1" }), /apikit:router/);
 });
+
+
+test("semantic IR normalizes operations and validates supported connectors",()=>{const {buildIntegrationIR,validateIntegrationIR}=require("../src/semantic-ir");const ir=buildIntegrationIR({operations:[{name:"get",method:"GET",path:"/x",connector:"http",requestFields:[{name:"id",required:true}]}]});assert.equal(ir.operations[0].requestFields[0].required,true);assert.equal(validateIntegrationIR(ir).valid,true);});
+test("security scanner and SBOM inventory are exposed",()=>{const {scanDependencies,sbom}=require("../src/security-scan");assert.ok(Array.isArray(scanDependencies(".").npm));assert.equal(sbom(".").bomFormat,"CycloneDX");});
