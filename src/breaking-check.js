@@ -10,9 +10,9 @@ function mapOps(model) {
 }
 function normalizedFields(fields = []) {
   return (Array.isArray(fields) ? fields : []).map(field => typeof field === "string"
-    ? { name: field, type: "string", required: false }
+    ? { name: field, type: "string", required: false, enum: [] }
     : field && typeof field === "object"
-      ? { name: field.name || field.field || field.key, type: String(field.type || "string").toLowerCase(), required: Boolean(field.required) }
+      ? { name: field.name || field.field || field.key, type: String(field.type || "string").toLowerCase(), required: Boolean(field.required), enum: Array.isArray(field.enum) ? field.enum.map(String) : [] }
       : null).filter(Boolean).filter(field => field.name).map(field => ({ ...field, name: String(field.name) }));
 }
 function fieldMap(fields) { return new Map(normalizedFields(fields).map(field => [field.name, field])); }
@@ -20,13 +20,14 @@ function compareFields(changes, key, kind, oldFields, newFields) {
   const oldMap = fieldMap(oldFields), newMap = fieldMap(newFields);
   for (const [name, oldField] of oldMap) {
     if (!newMap.has(name)) changes.push({ type: `${kind}-field-removed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} was removed` });
-    else if (oldField.type !== newMap.get(name).type) changes.push({ type: `${kind}-field-type-changed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} type changed from ${oldField.type} to ${newMap.get(name).type}` });
+    else {
+      const next = newMap.get(name);
+      if (oldField.type !== next.type) changes.push({ type: `${kind}-field-type-changed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} type changed from ${oldField.type} to ${next.type}` });
+      if (!oldField.required && next.required) changes.push({ type: "required-field-added", key, field: name, severity: "breaking", detail: `${kind} field ${name} became required` });
+      if (oldField.enum.length && next.enum.length && oldField.enum.some(v => !next.enum.includes(v))) changes.push({ type: `${kind}-enum-value-removed`, key, field: name, severity: "breaking", detail: `${kind} field ${name} removed enum values` });
+    }
   }
-  if (kind === "request") {
-    for (const [name, next] of newMap) if (next.required && (!oldMap.has(name) || !oldMap.get(name).required)) changes.push({ type: "required-field-added", key, field: name, severity: "breaking", detail: `Required request field ${name} was added` });
-  } else {
-    for (const [name, next] of newMap) if (next.required && !oldMap.has(name)) changes.push({ type: "required-response-field-added", key, field: name, severity: "breaking", detail: `Required response field ${name} was added` });
-  }
+  for (const [name, next] of newMap) if (!oldMap.has(name) && next.required) changes.push({ type: "required-field-added", key, field: name, severity: "breaking", detail: `Required ${kind} field ${name} was added` });
 }
 function parameterNames(pathValue) {
   return new Set([...String(pathValue || "").matchAll(/\{([^}]+)\}/g)].map(match => match[1]));
