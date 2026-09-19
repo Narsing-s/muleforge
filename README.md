@@ -212,7 +212,6 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge sync-docs [config]` | Synchronize application documentation and traceability |
 | `muleforge openapi [config]` | Generate an OpenAPI 3.x contract from the project model |
 | `muleforge runtime-test [directory] --start` | Run Maven tests and optionally start Mule and probe a readiness endpoint |
-
 | `muleforge trace [config]` | Generate requirement-to-asset traceability with source references |
 | `muleforge postman [config]` | Generate a Postman collection with documented response assertions |
 | `muleforge cicd [config]` | Generate CI/CD environment and workflow assets |
@@ -279,7 +278,8 @@ customer-api/
     ├── 07-configuration/
     ├── 08-testing/
     ├── 09-deployment/
-    └── 10-troubleshooting/
+    ├── 10-troubleshooting/
+    └── 11-traceability.md
 ```
 
 The generated `docs/` folder describes the specific application. The MuleForge repository `docs/` folder describes how to use and develop MuleForge itself.
