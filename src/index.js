@@ -185,6 +185,7 @@ function releaseCheck(directory = ".") {
   add("generator template", fs.existsSync(path.join(root, "templates", "pom.xml.hbs")), "Generated Maven template is required.");
   add("connector audit", fs.existsSync(path.join(root, "src", "connector-audit.js")), "Connector integrity audit is required.");
   add("MUnit scenario generator", fs.existsSync(path.join(root, "src", "munit-generator.js")), "MUnit scenario generation is required.");
+  add("breaking-change checker", fs.existsSync(path.join(root, "src", "breaking-check.js")), "API compatibility checker is required.");
   add("RAML schema generator", fs.existsSync(path.join(root, "src", "schema-generator.js")), "Detailed RAML request/response schema generation is required.");
   add("gitignore", fs.existsSync(path.join(root, ".gitignore")), ".gitignore is required.");
   const forbidden = [];
