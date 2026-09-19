@@ -11,6 +11,14 @@ test("enterprise connectors resolve", () => {
   assert.deepEqual(ids, ["file","email","jms","kafka","salesforce"]);
 });
 
+test("traceability preserves the confirmed singular requirement", () => {
+  const { buildTraceability } = require("../src/traceability");
+  const report = buildTraceability({ requirement: "Build a customer API", operations: [] });
+  assert.equal(report.requirementCount, 1);
+  assert.equal(report.requirements[0].requirementId, "REQ-001");
+  assert.equal(report.requirements[0].text, "Build a customer API");
+});
+
 test("traceability maps operations", () => {
   const report = buildTraceability({ operations: [{name:"getCustomer",method:"GET",path:"/customers"}], requirements: [] });
   assert.equal(report.operationCount, 1);
