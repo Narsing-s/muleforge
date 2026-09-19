@@ -6,7 +6,7 @@ function extract(xml,file){const out=[];const re=/<flow(?=[\s>])[^>]*name="([^"]
 for(const m2 of xml.matchAll(/<([\w-]+):([\w-]+)\b([^>]*)\/?>(?:<\/\1:\2>)?/g)){const ns=m2[1].toLowerCase(),op=m2[2].toLowerCase();if(["db","snowflake","sftp","kafka","jms","ibm-mq","anypoint-mq","sfdc"].includes(ns))out.push({name:ns+"-"+op,method:"EVENT",path:"/",connector:ns,action:op,source:file});}return out;}
 function unique(values){return [...new Set(values.filter(Boolean).map(String))];}
 function extractSemantics(xml){
-  const flows=[...xml.matchAll(/<(flow|sub-flow|private|template)\b[^>]*\bname="([^"]+)"/gi)].map(m=>({type:m[1].toLowerCase(),name:m[2]}));
+  const flows=[...xml.matchAll(/<(flow|sub-flow|private|template)(?=[\s>])[^>]*\bname="([^"]+)"/gi)].map(m=>({type:m[1].toLowerCase(),name:m[2]}));
   const flowRefs=[...xml.matchAll(/<flow-ref\b[^>]*\bname="([^"]+)"/gi)].map(m=>m[1]);
   const transforms=[...xml.matchAll(/<(ee:transform|transform-message)\b/gi)].map(()=>"transform");
   const errorHandlers=[...xml.matchAll(/<(on-error-(?:continue|propagate)|on-error)\b[^>]*>([\s\S]*?)<\/on-error[^>]*>/gi)].map(m=>{const a=attrs(m[0]);return {type:m[1].toLowerCase(),errorType:a.type||a.errorType||null};});
