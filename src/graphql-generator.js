@@ -1,0 +1,4 @@
+const fs=require("node:fs"),path=require("node:path");
+function generateGraphqlSchema(config={}){const name=config.project?.artifactId||"mule-api";const ops=config.operations||[];const fields=ops.map(o=>`  ${o.name||"operation"}: String`).join("\n");return `# MuleForge GraphQL contract scaffold: ${name}\ntype Query {\n${fields||"  health: String"}\n}\n`;}
+function writeGraphql(root,config){const p=path.join(path.resolve(root),"src/main/resources/api/schema.graphql");fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,generateGraphqlSchema(config),"utf8");return p;}
+module.exports={generateGraphqlSchema,writeGraphql};
