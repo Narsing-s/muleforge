@@ -57,8 +57,9 @@ function validateContract(file = "muleforge.yaml") {
     if (op.errors != null) {
       if (!Array.isArray(op.errors)) errors.push(`${name || route}: errors must be an array.`);
       else for (const declared of op.errors) {
-        const status = Number(declared && (declared.status ?? declared.code));
-        if (!ERROR_STATUSES.has(status)) errors.push(`${name || route}: unsupported declared error status: ${declared && (declared.status ?? declared.code)}`);
+        const rawStatus = declared && typeof declared === "object" ? (declared.status ?? declared.code) : String(declared || "").match(/\b([1-5][0-9]{2})\b/)?.[1];
+        const status = Number(rawStatus);
+        if (!ERROR_STATUSES.has(status)) errors.push(`${name || route}: unsupported declared error status: ${rawStatus ?? "undefined"}`);
       }
     }
   }
