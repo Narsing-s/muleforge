@@ -208,6 +208,38 @@ test("APIKit generator preserves the real request payload and declared error han
   assert.match(flow, /value="400"/);
 });
 
+test("verification accepts structured requirements", () => {
+  const { verifyProject } = require("../src/verify");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-structured-requirement-"));
+  try {
+    fs.mkdirSync(path.join(root, "src/main/resources/api"), { recursive: true });
+    fs.mkdirSync(path.join(root, "src/main/mule"), { recursive: true });
+    fs.mkdirSync(path.join(root, "src/main/resources/properties"), { recursive: true });
+    fs.mkdirSync(path.join(root, "src/test/munit"), { recursive: true });
+    fs.mkdirSync(path.join(root, "postman"), { recursive: true });
+    fs.mkdirSync(path.join(root, "docs"), { recursive: true });
+    fs.writeFileSync(path.join(root, "muleforge.yaml"), [
+      "requirements:", "  - id: REQ-001", "    text: Build a customer API", "project:", "  name: demo",
+      "api:", "  name: Demo", "  basePath: /api/v1", "operations:", "  - name: get", "    method: GET", "    path: /customers"
+    ].join("\n"));
+    fs.writeFileSync(path.join(root, "pom.xml"), "<project></project>");
+    fs.writeFileSync(path.join(root, "mule-artifact.json"), "{}");
+    fs.writeFileSync(path.join(root, "src/main/resources/application.yaml"), "http:\n  port: 8081\n");
+    fs.writeFileSync(path.join(root, "src/main/resources/api/demo.raml"), "#%RAML 1.0\nbaseUri: /api/v1\n/customers:\n  get:\n");
+    fs.writeFileSync(path.join(root, "src/main/mule/demo.xml"), "<mule><http:listener-config name=\"HTTP_Listener_config\"/><flow name=\"demo-get-flow\"><http:listener path=\"/customers\" allowedMethods=\"GET\"/></flow></mule>");
+    fs.writeFileSync(path.join(root, "src/test/munit/demo-test.xml"), "<munit/>");
+    fs.writeFileSync(path.join(root, "muleforge-traceability.json"), "{}");
+    fs.writeFileSync(path.join(root, "docs/11-traceability.md"), "# Traceability\n");
+    const report = verifyProject(path.join(root, "muleforge.yaml"));
+    assert.equal(report.checks.find(x => x.name === "Requirement exists").ok, true, JSON.stringify(report.failed));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("verification understands APIKit router projects", () => {
   const { verifyProject } = require("../src/verify");
   const fs = require("node:fs");
