@@ -1,3 +1,10 @@
+## 0.9.16
+
+- Added generated retry execution using until-successful policy configuration.
+- Added HTTP downstream response timeout generation when an operation declares timeout.
+- Extended generated artifact auditing to verify HTTP timeout evidence.
+- Added regression coverage for retry and timeout generation.
+
 ## 0.9.15
 
 - Made policy generation audits operation-specific to reduce false positives across unrelated flows.
