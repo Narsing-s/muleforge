@@ -1,3 +1,11 @@
+## Unreleased
+
+- Added OpenAPI 3.x contract generation from the MuleForge project model.
+- Added APIKit router and operation implementation scaffolding.
+- Added `muleforge runtime-test` for Maven verification and optional live Mule readiness probing.
+- Added semantic contract diffing and deeper breaking-change detection for required fields, enums, pagination and idempotency.
+- Centralized connector inference in the interactive create workflow so it uses the same connector registry as generation.
+
 ## 0.9.17
 
 - Added generated API Manager rate-limiting policy manifests for operations declaring rate limits.
