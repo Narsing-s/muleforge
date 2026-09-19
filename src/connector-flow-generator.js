@@ -121,13 +121,7 @@ ${source(op, data, endpoint, method, status)}    <snowflake:select config-ref="S
       <snowflake:sql><![CDATA[${snowflakeSelect}]]></snowflake:sql>
       <snowflake:input-parameters><![CDATA[#[${JSON.stringify(snowflakeInput)}]]]></snowflake:input-parameters>
     </snowflake:select>
-    ${op.pagination ? `<ee:transform doc:name="Build pagination response"><ee:message><ee:set-payload><![CDATA[%dw 2.0
-output application/json
-var rows = payload default []
-var total = if (isEmpty(rows)) 0 else (rows[0].TOTAL_COUNT default 0)
-var data = rows map ((row) -> row - "TOTAL_COUNT")
----
-{ data: data, page: vars.page, pageSize: vars.pageSize, total: total, hasNext: (vars.page * vars.pageSize) < total }]]></ee:set-payload></ee:message></ee:transform>` : ""}
+
     <set-variable variableName="httpStatus" value="${status}" />`);
   }
 
