@@ -1,14 +1,27 @@
 const fs = require('fs');
 const path = require('path');
 
+function lineRef(root, file, needles = []) {
+  if (!root || !file) return null;
+  const full = path.join(root, file);
+  if (!fs.existsSync(full) || !fs.statSync(full).isFile()) return null;
+  const lines = fs.readFileSync(full, 'utf8').split(/\r?\n/);
+  const values = (Array.isArray(needles) ? needles : [needles]).filter(Boolean).map(String);
+  for (let i = 0; i < lines.length; i++) {
+    if (values.some(value => value && lines[i].includes(value))) return { file, line: i + 1 };
+  }
+  return { file, line: null };
+}
+
 function buildTraceability(config = {}, root = null) {
   const operations = Array.isArray(config.operations) ? config.operations : [];
   const assets = (op) => { const id = String(op.name || `${op.method}-${op.path}`).replace(/[^A-Za-z0-9_-]/g, '-').toLowerCase(); const artifactId = String((config.project || {}).artifactId || (config.project || {}).name || 'mule-api'); return { raml: `src/main/resources/api/${artifactId}.raml`, mule: `src/main/mule/${artifactId}.xml`, dataweave: [`src/main/resources/dwl/${id}-request.dwl`, `src/main/resources/dwl/${id}-response.dwl`], munit: `src/test/munit/${artifactId}-test.xml`, postman: `postman/${artifactId}.collection.json`, documentation: 'docs/' }; };
   const requirements = Array.isArray(config.requirements) ? config.requirements : [];
   return {
-    version: '1.0', generatedBy: 'MuleForge', requirementCount: requirements.length, operationCount: operations.length,
+    version: '1.1', generatedBy: 'MuleForge', requirementCount: requirements.length, operationCount: operations.length,
     requirements: requirements.map(req => ({ requirementId: req.id, source: req.source, text: req.text, status: 'review', targets: ['architecture','implementation','munit','postman','documentation'] })),
-    operations: operations.map(op => ({ operation: op.name, method: op.method, path: op.path, connector: op.connector || 'http', targets: ['raml','mule','dataweave','munit','postman','documentation'], assets: assets(op), generated: root ? Object.fromEntries(Object.entries(assets(op)).map(([k,v]) => [k, Array.isArray(v) ? v.every(file => fs.existsSync(path.join(root,file))) : fs.existsSync(path.join(root,v))])) : {} }))
+    operations: operations.map(op => ({ operation: op.name, method: op.method, path: op.path, connector: op.connector || 'http', targets: ['raml','mule','dataweave','munit','postman','documentation'], assets: assets(op), generated: root ? Object.fromEntries(Object.entries(assets(op)).map(([k,v]) => [k, Array.isArray(v) ? v.every(file => fs.existsSync(path.join(root,file))) : fs.existsSync(path.join(root,v))])) : {},
+      references: root ? (() => { const a = assets(op); const n = [op.path, op.name]; return { raml: lineRef(root, a.raml, n), mule: lineRef(root, a.mule, n), dataweave: a.dataweave.map(file => lineRef(root, file, n)).filter(Boolean), munit: lineRef(root, a.munit, n), postman: lineRef(root, a.postman, n) }; })() : {} }))
   };
 }
 
@@ -23,4 +36,4 @@ function writeTraceability(root, config) {
   return report;
 }
 
-module.exports = { buildTraceability, writeTraceability };
+module.exports = { buildTraceability, writeTraceability, lineRef };
