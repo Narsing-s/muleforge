@@ -1,0 +1,6 @@
+const fs=require("node:fs"),path=require("node:path");
+const SECRET=/((password|passwd|secret|token|api[_-]?key|client[_-]?secret)\s*[:=]\s*)(["']?)[^\s"'`]+\3/i;
+function walk(root,skip=new Set([".git","node_modules","target","dist"])){const out=[];function visit(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){if(skip.has(e.name))continue;const p=path.join(dir,e.name);if(e.isDirectory())visit(p);else if(/\.(js|ts|json|yaml|yml|xml|properties|dwl|raml|md)$/.test(e.name)){const text=fs.readFileSync(p,"utf8");if(SECRET.test(text))out.push(path.relative(root,p));}}}visit(root);return out;}
+function scanDependencies(root="."){const pkg=fs.existsSync(path.join(root,"package.json"))?JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8")):{};return {npm:Object.keys({...pkg.dependencies,...pkg.devDependencies})};}
+function sbom(root="."){const pkg=fs.existsSync(path.join(root,"package.json"))?JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8")):{};return {bomFormat:"CycloneDX",specVersion:"1.5",components:Object.entries({...pkg.dependencies,...pkg.devDependencies}).map(([name,version])=>({type:"library",name,version}))};}
+module.exports={scanSecrets:walk,scanDependencies,sbom};
