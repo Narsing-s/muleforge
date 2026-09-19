@@ -102,6 +102,12 @@
 
 # Changelog
 
+## 0.9.14
+
+- Added policy-aware MUnit scenarios for retry exhaustion and transaction rollback.
+- Made generated error scenarios aware of declared API error statuses while preserving baseline coverage when no statuses are declared.
+
+
 ## 0.9.13
 
 - Added generated operation coverage checks for RAML, Mule flows and MUnit happy-path suites.
