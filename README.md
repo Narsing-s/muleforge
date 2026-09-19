@@ -217,6 +217,9 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge cicd [config]` | Generate CI/CD environment and workflow assets |
 | `muleforge promotion-plan [config]` | Generate environment promotion and rollback metadata |
 | `muleforge config-check [config]` | Validate required, typed and allowed configuration values |
+| `muleforge governance-check [config]` | Validate API governance conventions, operation uniqueness, schemas, statuses, security and error contracts |
+| `muleforge compatibility-check [config] [directory]` | Validate declared Java/Mule runtime compatibility and generated Maven alignment |
+| `muleforge environment-diff <from> <to>` | Compare environment models while redacting sensitive values |
 | `muleforge contract-check [config]` | Validate API operation contracts before generation |
 | `muleforge event-check [config]` | Validate event and messaging trigger definitions |
 | `muleforge ir-check [config]` | Validate the semantic integration model |
@@ -307,6 +310,9 @@ The generated `docs/` folder describes the specific application. The MuleForge r
 - APIKit router and operation implementation scaffolding
 - Maven + optional live Mule readiness runtime verification
 - Semantic API contract diff and deeper breaking-change detection
+- API governance validation
+- Java/Mule runtime compatibility checks
+- Secret-safe environment configuration diffing
 
 ## ⚠️ Current limitations
 
