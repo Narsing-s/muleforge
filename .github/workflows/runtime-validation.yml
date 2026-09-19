@@ -54,7 +54,12 @@ jobs:
             exit 1
           fi
           mkdir -p "$HOME/.m2"
+          case "$MAVEN_SETTINGS_XML" in
+            *"<settings"*"</settings>"*) ;;
+            *) echo "::error::MAVEN_SETTINGS_XML does not look like a complete Maven settings.xml document."; exit 1 ;;
+          esac
           printf '%s' "$MAVEN_SETTINGS_XML" > "$HOME/.m2/settings.xml"
+          test -s "$HOME/.m2/settings.xml"
 
       - name: Set up Java
         if: ${{ inputs.skip_maven == false }}
@@ -71,7 +76,7 @@ jobs:
         run: |
           PROJECT_DIR="$(dirname "$PROJECT_MODEL")"
           cd "$PROJECT_DIR"
-          mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false clean test -Dmunit.coverage.failBuild=false
+          mvn -B -ntp -s "$HOME/.m2/settings.xml" -DskipTests=false clean test -Dmunit.coverage.failBuild=false
 
       - name: Package generated Mule application
         if: ${{ inputs.skip_maven == false }}
@@ -80,7 +85,7 @@ jobs:
         run: |
           PROJECT_DIR="$(dirname "$PROJECT_MODEL")"
           cd "$PROJECT_DIR"
-          mvn -B -s "$HOME/.m2/settings.xml" -DskipTests=false package -Dmunit.coverage.failBuild=false
+          mvn -B -ntp -s "$HOME/.m2/settings.xml" -DskipTests=false package -Dmunit.coverage.failBuild=false
 
       - name: Upload generated runtime reports
         if: ${{ always() && inputs.skip_maven == false }}
