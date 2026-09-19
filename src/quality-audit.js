@@ -49,10 +49,10 @@ function auditProject(file = 'muleforge.yaml') {
   const policyChecks = [];
   for (const op of operations) {
     const label = op.name || op.path || 'operation';
-    if (op.retry && !/<until-successful\\b/.test(muleFiles)) policyChecks.push(label + ': retry');
-    if (op.pagination && !/queryParams\\.page/.test(muleFiles)) policyChecks.push(label + ': pagination');
+    if (op.retry && !/<until-successful\b/.test(muleFiles)) policyChecks.push(label + ': retry');
+    if (op.pagination && !/queryParams\.page/.test(muleFiles)) policyChecks.push(label + ': pagination');
     if (op.idempotency && !/Idempotency-Key/.test(muleFiles)) policyChecks.push(label + ': idempotency');
-    if (op.transaction && !/<try\\b/.test(muleFiles)) policyChecks.push(label + ': transaction');
+    if (op.transaction && !/<try\b/.test(muleFiles)) policyChecks.push(label + ': transaction');
   }
   add('Policy generation evidence', policyChecks.length === 0, policyChecks.length ? 'Configured policies without obvious generated evidence: ' + policyChecks.join(', ') : 'Configured retry, pagination, idempotency and transaction policies have generated evidence where enabled.');
   const names = operations.map(o => String(o.name || '')).filter(Boolean);
