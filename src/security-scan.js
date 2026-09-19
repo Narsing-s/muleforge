@@ -3,10 +3,10 @@ const SECRET_KEY=/\b(password|passwd|secret|token|api[_-]?key|client[_-]?secret)
 const PLACEHOLDER=/^(?:\$\{\{.*\}\}|\$\{[^}]+\}|#\[.*\]|\{\{.*\}\}|\*+|<[^>]+>|YOUR_[A-Z0-9_]+|CHANGE_ME|REPLACE_ME|ENV_[A-Z0-9_]+)$/i;
 const SAFE_WORDS=new Set(["environment","environments","variable","variables","placeholder","placeholders","required","optional","true","false","null","undefined","example","examples","secret","secrets","token","tokens","password","passwords","value","values"]);
 function suspiciousValue(value){
-  const v=String(value||"").trim().replace(/[;,]$/,"").replace(/^\\\\(?=\\$\\{|#\\[|\\{\\{)/,"");
+  const v=String(value||"").trim().replace(/[;,]$/,"").replace(/^\\(?=\$\{|#\[|\{\{)/,"");
   if(!v || PLACEHOLDER.test(v)) return false;
-  if(/^\\?\\$\\{\\{.*\\}\\}$/.test(v) || /^\\?\\$\\{[^}]+\\}$/.test(v)) return false;
-  if(/^(?:prop|property|p|env|lookup)\\s*\\(/i.test(v) || /\\b(?:secrets|vars|process\\.env)\\b/i.test(v)) return false;
+  if(/^\\?\$\{\{.*\}\}$/.test(v) || /^\\?\$\{[^}]+\}$/.test(v)) return false;
+  if(/^(?:prop|property|p|env|lookup)\s*\(/i.test(v) || /\b(?:secrets|vars|process\.env)\b/i.test(v)) return false;
   if(SAFE_WORDS.has(v.toLowerCase())) return false;
   if(/^(?:secrets|vars|env|process\.env)\./i.test(v)) return false;
   if(/^(?:\$\{|#\[|\{\{)/.test(v)) return false;
