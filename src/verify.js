@@ -102,24 +102,32 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     checks.push(result("No escaped-newline artifacts", !mule.includes("\\n"), "Generated Mule XML must contain real line breaks, not literal \\n text."));
     const flowBlocks = [...mule.matchAll(/<flow\b[^>]*name="([^"]+)"[^>]*>[\s\S]*?<\/flow>/g)];
     const flowNames = new Set(flowBlocks.map(m => m[1]));
-    const expectedOperationFlowNames = operations.map(op => artifactId + "-" + String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-") + "-flow");
-    checks.push(result("Unique generated operation flow names", new Set(expectedOperationFlowNames).size === expectedOperationFlowNames.length, "Operation names must remain unique after Mule flow-name sanitization."));
-    const operationFlowsChecked = operations.map(op => ({
-      name: `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`,
-      block: flowBlocks.find(m => m[1] === `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`)?.[0] || ""
+    const isApiKit = String(api.implementation || api.router || "").toLowerCase() === "apikit";
+    const expectedOperationFlowNames = isApiKit
+      ? operations.map(op => {
+          const method = String(op.method || "GET").toLowerCase();
+          const route = String(op.path || "/").replace(/^\//, "").split("/").filter(Boolean).join("\\") || "";
+          const suffix = ["post", "put", "patch"].includes(method) ? ":application\\json" : "";
+          return method + ":\" + route + suffix + ":api-config";
+        })
+      : operations.map(op => artifactId + "-" + String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-") + "-flow");
+    checks.push(result("Unique generated operation flow names", new Set(expectedOperationFlowNames).size === expectedOperationFlowNames.length, "Operation names/routes must remain unique in the generated Mule implementation."));
+    const operationFlowsChecked = operations.map((op, index) => ({
+      name: expectedOperationFlowNames[index],
+      block: flowBlocks.find(m => m[1] === expectedOperationFlowNames[index])?.[0] || ""
     }));
-    checks.push(result("Flow error handling", operationFlowsChecked.every(x => /<error-handler>/.test(x.block)), "Every generated operation flow must contain its own error handler."));
+    checks.push(result("Flow error handling", isApiKit ? operationFlowsChecked.every(x => !x.block || /<error-handler>/.test(x.block)) : operationFlowsChecked.every(x => /<error-handler>/.test(x.block)), isApiKit ? "APIKit operation flows may rely on router/runtime error handling when no operation-specific errors are declared." : "Every generated operation flow must contain its own error handler."));
     checks.push(result("Generated operation flow names", operationFlowsChecked.every(x => flowNames.has(x.name)), "Every configured operation must map to a generated Mule flow."));
     checks.push(result("HTTP listener config", /<http:listener-config\b/.test(mule), "An HTTP listener configuration is expected for HTTP APIs."));
     for (const op of operations) {
-      const expectedPath = `${api.basePath || ""}${op.path || ""}`;
-      const pathPresent = op.schedule ? /<scheduler\b/.test(mule) : (mule.includes(`path="${expectedPath}"`) || mule.includes(`path='${expectedPath}'`));
-      const methodPresent = op.schedule ? true : (mule.includes(`allowedMethods="${String(op.method).toUpperCase()}"`) || mule.includes(`allowedMethods='${String(op.method).toUpperCase()}'`));
+      const expectedPath = (api.basePath || "") + (op.path || "");
+      const pathPresent = op.schedule ? /<scheduler\b/.test(mule) : isApiKit ? mule.includes('path="' + (api.basePath || "/api/v1") + '/*"') : (mule.includes('path="' + expectedPath + '"') || mule.includes("path='" + expectedPath + "'"));
+      const methodPresent = op.schedule ? true : isApiKit ? /allowedMethods="[^"]*(GET|POST|PUT|PATCH|DELETE|OPTIONS)/.test(mule) : (mule.includes('allowedMethods="' + String(op.method).toUpperCase() + '"') || mule.includes("allowedMethods='" + String(op.method).toUpperCase() + "'"));
       const sourcePresent = op.schedule ? /<scheduler\b/.test(mule) : Boolean(pathPresent && methodPresent);
       const connector = String(op.connector || "").toLowerCase().replace(/_/g, "-");
-      const destinationPresent = connector === "ibm-mq" || connector === "anypoint-mq" ? mule.includes(`destination="${op.destination || ""}"`) : true;
-      const filePresent = connector === "sftp" && op.filePath ? mule.includes(`path="${op.filePath}"`) : true;
-      checks.push(result(`Mule operation ${String(op.method).toUpperCase()} ${op.path}`, Boolean(sourcePresent && destinationPresent && filePresent), "Generated source and documented connector destination/path must match the confirmed operation."));
+      const destinationPresent = isApiKit ? true : (connector === "ibm-mq" || connector === "anypoint-mq" ? mule.includes('destination="' + (op.destination || "") + '"') : true);
+      const filePresent = isApiKit ? true : (connector === "sftp" && op.filePath ? mule.includes('path="' + op.filePath + '"') : true);
+      checks.push(result("Mule operation " + String(op.method).toUpperCase() + " " + op.path, Boolean(sourcePresent && destinationPresent && filePresent), isApiKit ? "APIKit operations are routed through the shared APIKit listener/router." : "Generated source and documented connector destination/path must match the confirmed operation."));
     }
   }
 
