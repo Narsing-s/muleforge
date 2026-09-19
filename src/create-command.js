@@ -5,6 +5,7 @@ const { stdin, stdout } = require("process");
 const YAML = require("yaml");
 const { spawnSync } = require("child_process");
 const { buildRequirementModel, missingQuestions, writeDocumentation } = require("./requirement-model");
+const { CONNECTORS, normalizeConnector, resolveConnectors } = require("./connectors");
 
 async function ask(question, fallback = "") {
   const rl = readline.createInterface({ input: stdin, output: stdout });
@@ -17,17 +18,11 @@ const list = value => String(value || "").split(/,|\n/).map(v => v.trim()).filte
 
 function normalizeBackendConnectors(value) {
   const text = String(value || "").toLowerCase();
-  const connectors = ["http"];
-  if (/snowflake/.test(text)) connectors.push("snowflake");
-  else if (/\b(mysql|mariadb|postgres|postgresql|oracle|database|db)\b/.test(text)) connectors.push("database");
-  if (/\b(sftp|file transfer)\b/.test(text)) connectors.push("sftp");
-  if (/ibm\s*mq|queue manager/.test(text)) connectors.push("ibm-mq");
-  if (/anypoint\s*mq/.test(text)) connectors.push("anypoint-mq");
-  if (/object\s*store|objectstore|cache/.test(text)) connectors.push("object-store");
-  if (connectors.length === 1 && text.trim()) {
-    throw new Error(`Unsupported backend/connector description: ${value}. Supported examples: MySQL, PostgreSQL, Oracle, Snowflake, SFTP, IBM MQ, Anypoint MQ, Object Store.`);
-  }
-  return [...new Set(connectors)];
+  const matches = Object.entries(CONNECTORS)
+    .filter(([id, meta]) => id === "http" || text.includes(id) || text.includes(String(meta.name || "").toLowerCase()) || (id === "database" && /mysql|mariadb|postgres|postgresql|oracle|database|db/.test(text)) || (id === "sftp" && /file transfer/.test(text)) || (id === "ibm-mq" && /queue manager/.test(text)) || (id === "object-store" && /objectstore|cache/.test(text)))
+    .map(([id]) => id);
+  if (text.trim() && matches.length === 1 && matches[0] === "http" && !/^http\b/.test(text)) throw new Error(`Unsupported backend/connector description: ${value}. Supported connectors: ${Object.keys(CONNECTORS).join(", ")}.`);
+  return resolveConnectors(matches.length ? matches : ["http"]).map(c => c.id);
 }
 function parseOperations(value) {
   return list(value).map(item => {
