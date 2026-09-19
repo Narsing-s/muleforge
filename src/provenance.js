@@ -1,0 +1,4 @@
+const crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path");
+function artifactManifest(root="."){const base=path.resolve(root),files=[];function walk(d){if(!fs.existsSync(d))return;for(const e of fs.readdirSync(d,{withFileTypes:true})){if([".git","node_modules","target"].includes(e.name))continue;const p=path.join(d,e.name);if(e.isDirectory())walk(p);else{const h=crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");files.push({path:path.relative(base,p).replace(/\\/g,"/"),sha256:h});}}}walk(base);return {version:"1.0",algorithm:"sha256",files};}
+function writeManifest(root="."){const out=path.join(path.resolve(root),"artifact-manifest.json");fs.writeFileSync(out,JSON.stringify(artifactManifest(root),null,2)+"\n","utf8");return out;}
+module.exports={artifactManifest,writeManifest};
