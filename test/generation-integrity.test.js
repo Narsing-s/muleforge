@@ -222,3 +222,9 @@ test("GraphQL generator creates a schema",()=>{const {generateGraphqlSchema}=req
 test("SOAP scaffold requires an explicit WSDL",()=>{const {generateSoapScaffold}=require("../src/soap-generator");assert.equal(generateSoapScaffold({project:{name:"demo"}}),null);});
 test("artifact signing uses an environment-provided secret",()=>{const {signManifest}=require("../src/artifact-signing");assert.equal(typeof signManifest,"function");});
 test("IDE manifest is generated from CLI capabilities",()=>{const {writeIdeManifest}=require("../src/ide-manifest");assert.equal(typeof writeIdeManifest,"function");});
+
+
+test("DataWeave runtime adapter never fakes execution when CLI is unavailable",()=>{const {executeDataWeave}=require("../src/dataweave-runtime");const r=executeDataWeave("%dw 2.0\noutput application/json\n---\npayload",{});assert.equal(typeof r.executed,"boolean");if(!r.available)assert.equal(r.executed,false);});
+test("golden regression suite covers multiple integration classes",()=>{const {runGolden}=require("../src/golden-regression");const r=runGolden();assert.ok(r.length>=4);assert.equal(r.every(x=>x.pass),true);});
+test("native CI renderer supports all configured targets",()=>{const {render}=require("../src/ci-native");for(const t of ["gitlab","azure-devops","jenkins","bitbucket"])assert.ok(render(t).length>20);});
+test("deeper importer preserves source review metadata",()=>{const {importProject}=require("../src/import-project");const r=importProject(".");assert.equal(r.migration.preserveSource,true);assert.ok(r.inventory.files>0);});
