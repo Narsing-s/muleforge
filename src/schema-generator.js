@@ -1,49 +1,6 @@
-function safeName(value) {
-  return String(value || "field").replace(/[^A-Za-z0-9_-]/g, "");
-}
-
-function normalizeField(field, fallbackType = "string") {
-  if (typeof field === "string") return { name: field, type: fallbackType, required: false };
-  if (!field || typeof field !== "object") return null;
-  const name = field.name || field.field || field.key;
-  if (!name) return null;
-  const rawType = String(field.type || fallbackType).toLowerCase();
-  const typeMap = {
-    int: "integer",
-    long: "integer",
-    integer: "integer",
-    float: "number",
-    double: "number",
-    decimal: "number",
-    number: "number",
-    bool: "boolean",
-    boolean: "boolean",
-    date: "date-only",
-    datetime: "datetime",
-    "date-time": "datetime"
-  };
-  return {
-    name: safeName(name),
-    type: typeMap[rawType] || "string",
-    required: Boolean(field.required),
-    description: field.description ? String(field.description).replace(/\n/g, " ") : null
-  };
-}
-
-function normalizeFields(fields = []) {
-  return (Array.isArray(fields) ? fields : [])
-    .map(field => normalizeField(field))
-    .filter(Boolean)
-    .filter(field => field.name);
-}
-
-function renderProperties(fields, indent = "            ") {
-  const normalized = normalizeFields(fields);
-  if (!normalized.length) return "";
-  return normalized.map(field => {
-    const description = field.description ? `\n${indent}  description: ${field.description}` : "";
-    return `${indent}${field.name}:\n${indent}  type: ${field.type}\n${indent}  required: ${field.required}${description}`;
-  }).join("\n");
-}
-
-module.exports = { normalizeField, normalizeFields, renderProperties };
+function safeName(value){return String(value||"field").replace(/[^A-Za-z0-9_-]/g,"");}
+function normalizeField(field,fallbackType="string"){if(typeof field==="string")return {name:field,type:fallbackType,required:false};if(!field||typeof field!=="object")return null;const name=field.name||field.field||field.key;if(!name)return null;const raw=String(field.type||fallbackType).toLowerCase();const map={int:"integer",long:"integer",integer:"integer",float:"number",double:"number",decimal:"number",number:"number",bool:"boolean",boolean:"boolean",date:"date-only",datetime:"datetime","date-time":"datetime",object:"object",array:"array"};return {name:safeName(name),type:map[raw]||raw,required:Boolean(field.required),description:field.description?String(field.description).replace(/\n/g," "):null,enum:Array.isArray(field.enum)?field.enum.map(String):undefined,items:field.items||undefined,fields:Array.isArray(field.fields)?normalizeFields(field.fields):undefined};}
+function normalizeFields(fields=[]){return (Array.isArray(fields)?fields:[]).map(f=>normalizeField(f)).filter(Boolean).filter(f=>f.name);}
+function renderField(field,indent="            "){const f=normalizeField(field)||field;let out=indent+f.name+":\n"+indent+"  type: "+f.type+"\n"+indent+"  required: "+f.required;if(f.description)out+="\n"+indent+"  description: "+f.description;if(f.enum?.length)out+="\n"+indent+"  enum: ["+f.enum.map(v=>JSON.stringify(v)).join(", ")+"]";if(f.type==="array"&&f.items){const item=typeof f.items==="string"?f.items:(f.items.type||"string");out+="\n"+indent+"  items: "+item;}if(f.fields?.length){out+="\n"+indent+"  properties:\n"+f.fields.map(v=>renderField(v,indent+"    ")).join("\n");}return out;}
+function renderProperties(fields,indent="            "){return normalizeFields(fields).map(f=>renderField(f,indent)).join("\n");}
+module.exports={normalizeField,normalizeFields,renderProperties,renderField};
