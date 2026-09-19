@@ -3,6 +3,8 @@ const path = require("path");
 const YAML = require("yaml");
 
 const METHODS = new Set(["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS"]);
+const FIELD_TYPES = new Set(["string","integer","number","boolean","date","date-only","datetime","array","object"]);
+const ERROR_STATUSES = new Set([400,401,403,404,409,422,429,500,502,503,504]);
 
 function validateContract(file = "muleforge.yaml") {
   const absolute = path.resolve(file);
@@ -64,6 +66,17 @@ function validateOperationPolicies(operations = []) {
     if (op.idempotency && !["POST","PUT","PATCH"].includes(method)) errors.push(`${name}: idempotency is intended for POST, PUT or PATCH.`);
     if (op.transaction && !["POST","PUT","PATCH","DELETE"].includes(method)) errors.push(`${name}: transaction is intended for write operations.`);
     if (op.security && !["none","client-id","oauth2","basic"].includes(String(op.security).toLowerCase())) errors.push(`${name}: unsupported security mode.`);
+    if (op.rateLimit != null) {
+      const r = op.rateLimit;
+      if (typeof r !== "object") errors.push(`${name}: rateLimit must be an object.`);
+      else {
+        if (r.requests != null && (!Number.isInteger(Number(r.requests)) || Number(r.requests) < 1)) errors.push(`${name}: rateLimit.requests must be a positive integer.`);
+        if (r.periodSeconds != null && (!Number.isInteger(Number(r.periodSeconds)) || Number(r.periodSeconds) < 1)) errors.push(`${name}: rateLimit.periodSeconds must be a positive integer.`);
+      }
+    }
+    if (op.timeout != null && (!Number.isInteger(Number(op.timeout)) || Number(op.timeout) < 1)) {
+      errors.push(`${name}: timeout must be a positive integer in milliseconds.`);
+    }
     if (op.idempotency === true) warnings.push(`${name}: idempotency is enabled; configure a persistent store for production-scale deduplication.`);
   }
   return { valid: errors.length === 0, errors, warnings };
