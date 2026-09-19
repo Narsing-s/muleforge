@@ -38,7 +38,11 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   const operations = Array.isArray(config.operations) ? config.operations : [];
   const checks = [];
 
-  checks.push(result("Requirement exists", Boolean(config.requirement && String(config.requirement).trim()), "muleforge.yaml must contain the confirmed requirement."));
+  const hasRequirement = Boolean(
+    (config.requirement && String(config.requirement).trim()) ||
+    (Array.isArray(config.requirements) && config.requirements.some(req => req && String(req.text || req.requirement || '').trim()))
+  );
+  checks.push(result("Requirement exists", hasRequirement, "muleforge.yaml must contain a confirmed requirement."));
   checks.push(result("Project metadata", Boolean(project.name), "project.name is required."));
   checks.push(result("API metadata", Boolean(api.name && api.basePath), "api.name and api.basePath are required."));
   checks.push(result("Operations defined", operations.length > 0, "At least one confirmed API operation is required."));
