@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Strengthened contract validation for request/response schemas, declared error statuses, rate limits and timeouts.
+- Corrected generated MUnit connector failure mocks to use module-specific Mule error types.
+
+## Unreleased
+
 - Added `muleforge breaking-check` for API compatibility analysis before releases.
 - Detects removed operations, success-status changes, security changes, removed fields, and newly required request fields.
 
