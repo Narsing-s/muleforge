@@ -270,6 +270,9 @@ program.name("muleforge").description("Open-source CLI for requirement-driven Mu
   console.log(JSON.stringify(diff, null, 2));
 });
 
+
+program.command("breaking-check <from> [to]").description("Detect potentially breaking API contract changes between two muleforge.yaml files").action((from, to = "muleforge.yaml") => { const r = runBreakingCheck(from, to); console.log(JSON.stringify(r, null, 2)); if (r.breaking) process.exitCode = 1; });
+
 program.command("self-test").description("Run local generation, contract, connector, verification and audit smoke gates").action(() => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-self-test-"));
   try {
