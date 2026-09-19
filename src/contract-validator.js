@@ -41,14 +41,15 @@ function validateContract(file = "muleforge.yaml") {
         continue;
       }
       for (const field of fields) {
-        if (!field || typeof field !== "object" || !String(field.name || "").trim()) {
+        const normalized = typeof field === "string" ? { name: field, type: "string" } : field;
+        if (!normalized || typeof normalized !== "object" || !String(normalized.name || "").trim()) {
           errors.push(`${name || route}: every ${fieldGroup} entry must have a name.`);
           continue;
         }
-        const type = String(field.type || "string").toLowerCase();
+        const type = String(normalized.type || "string").toLowerCase();
         if (!FIELD_TYPES.has(type)) errors.push(`${name || route}: unsupported ${fieldGroup} type for ${field.name}: ${type}`);
-        if (field.required != null && typeof field.required !== "boolean") {
-          errors.push(`${name || route}: ${fieldGroup} required must be boolean for ${field.name}.`);
+        if (normalized.required != null && typeof normalized.required !== "boolean") {
+          errors.push(`${name || route}: ${fieldGroup} required must be boolean for ${normalized.name}.`);
         }
       }
     }
