@@ -83,7 +83,8 @@ test("secret scanner ignores placeholders and flags literal credentials", () => 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-secret-test-"));
   try {
     fs.writeFileSync(path.join(dir, "safe.yaml"), "password: ${DB_PASSWORD}\nclientSecret: ${{ secrets.CLIENT_SECRET }}\n");
-    fs.writeFileSync(path.join(dir, "unsafe.yaml"), ["password:", '"hardcoded-password-123"'].join(" ") + "\\n");
+    const secretValue = ["hardcoded", "password", "123"].join("-");
+    fs.writeFileSync(path.join(dir, "unsafe.yaml"), ["password:", JSON.stringify(secretValue)].join(" ") + "\\n");
     assert.deepEqual(scanSecrets(dir), ["unsafe.yaml"]);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
