@@ -37,22 +37,17 @@ function context(config) {
 }
 
 function generateRaml(config, d) {
-  let out = `#%RAML 1.0\ntitle: ${d.apiName}\nversion: ${d.apiVersion}\nbaseUri: ${d.basePath}\n\n`;
-  const groups = new Map();
-  for (const op of config.operations || []) {
-    if (!groups.has(op.path)) groups.set(op.path, []);
-    groups.get(op.path).push(op);
-  }
-  for (const [resource, ops] of groups) {
-    out += `${resource}:\n`;
-    for (const op of ops) {
-      const code = op.successStatus || (String(op.method).toUpperCase() === "POST" ? 201 : 200);
-      out += `  ${String(op.method).toLowerCase()}:\n    description: ${op.name || `${op.method} ${op.path}`}\n    responses:\n      ${code}:\n        body:\n          application/json:\n            type: object\n`;
-    }
-  }
+  let out = `#%RAML 1.0\ntitle: ${d.apiName}\nversion: ${d.apiVersion}\nbaseUri: ${d.basePath}\n`;
+  const r=config.raml||{};
+  const types=Array.isArray(r.types)?r.types:[]; const traits=Array.isArray(r.traits)?r.traits:[]; const resources=Array.isArray(r.resourceTypes)?r.resourceTypes:[];
+  if(types.length){out+="\ntypes:\n";for(const t of types){out+=`  ${t.name}:\n    type: ${t.type||"object"}\n`;if(t.description)out+=`    description: ${String(t.description).replace(/\n/g," ")}\n`;if(Array.isArray(t.fields)&&t.fields.length){out+="    properties:\n";for(const f of t.fields){out+=`      ${f.name}: ${f.type||"string"}${f.required===false?"?":""}\n`;}}if(Array.isArray(t.enum)&&t.enum.length)out+=`    enum: [${t.enum.map(v=>JSON.stringify(v)).join(", ")}]\n`;}}
+  if(traits.length){out+="\ntraits:\n";for(const t of traits){out+=`  - ${t.name}:\n`;if(t.description)out+=`      description: ${String(t.description).replace(/\n/g," ")}\n`;if(t.headers?.length){out+="      headers:\n";for(const h of t.headers)out+=`        ${h.name}:\n          type: ${h.type||"string"}\n`;}}}
+  if(resources.length){out+="\nresourceTypes:\n";for(const t of resources)out+=`  - ${t.name}:\n      description: ${String(t.description||"Reusable resource type").replace(/\n/g," ")}\n`;}
+  out+="\n";
+  const groups=new Map();for(const op of config.operations||[]){if(!groups.has(op.path))groups.set(op.path,[]);groups.get(op.path).push(op);}
+  for(const [resource,ops] of groups){out+=`${resource}:\n`;for(const op of ops){const method=String(op.method).toLowerCase(),code=op.successStatus||(method==="post"?201:200);out+=`  ${method}:\n    description: ${op.name||`${op.method} ${op.path}`}\n`;if(op.traits?.length)out+=`    is: [${op.traits.join(", ")}]\n`;if(op.requestType)out+=`    body:\n      application/json:\n        type: ${op.requestType}\n`;out+=`    responses:\n      ${code}:\n        body:\n          application/json:\n            type: ${op.responseType||"object"}\n`;if(op.example)out+=`            example: ${JSON.stringify(op.example)}\n`;}}
   return out;
 }
-
 function namespaces(d) {
   const ids = new Set(d.connectors.map(c => c.id));
   return [
