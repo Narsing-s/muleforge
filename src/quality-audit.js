@@ -47,12 +47,16 @@ function auditProject(file = 'muleforge.yaml') {
     add('MUnit operation coverage', missingMunit.length === 0, missingMunit.length ? 'Missing generated MUnit happy-path tests: ' + missingMunit.map(o => o.name || o.path).join(', ') : 'Every configured operation has a generated MUnit happy-path test.');
   }
   const policyChecks = [];
+  const artifact = String((config.project || {}).artifactId || (config.project || {}).name || 'mule-api');
   for (const op of operations) {
     const label = op.name || op.path || 'operation';
-    if (op.retry && !/<until-successful\b/.test(muleFiles)) policyChecks.push(label + ': retry');
-    if (op.pagination && !/queryParams\.page/.test(muleFiles)) policyChecks.push(label + ': pagination');
-    if (op.idempotency && !/Idempotency-Key/.test(muleFiles)) policyChecks.push(label + ': idempotency');
-    if (op.transaction && !/<try\b/.test(muleFiles)) policyChecks.push(label + ': transaction');
+    const safe = String(op.name || (String(op.method || 'GET') + '-' + String(op.path || '/'))).replace(/[^A-Za-z0-9_-]/g, '-');
+    const flowPattern = new RegExp('<flow\\s+name="' + escapeRegex(artifact) + '-' + escapeRegex(safe) + '-flow"([\\s\\S]*?)(?=<flow\\s+name="|</mule>)');
+    const flow = generatedMule.match(flowPattern)?.[1] || '';
+    if (op.retry && !/<until-successful\b/.test(flow)) policyChecks.push(label + ': retry');
+    if (op.pagination && !/queryParams\.page/.test(flow)) policyChecks.push(label + ': pagination');
+    if (op.idempotency && !/Idempotency-Key/.test(flow)) policyChecks.push(label + ': idempotency');
+    if (op.transaction && !/<try\b/.test(flow)) policyChecks.push(label + ': transaction');
   }
   add('Policy generation evidence', policyChecks.length === 0, policyChecks.length ? 'Configured policies without obvious generated evidence: ' + policyChecks.join(', ') : 'Configured retry, pagination, idempotency and transaction policies have generated evidence where enabled.');
   const names = operations.map(o => String(o.name || '')).filter(Boolean);
