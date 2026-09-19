@@ -1,3 +1,11 @@
+## 0.9.17
+
+- Added generated API Manager rate-limiting policy manifests for operations declaring rate limits.
+- Added per-operation HTTP method/path pointcuts and millisecond quota conversion for rate-limit deployment configuration.
+- Extended quality auditing to verify rate-limit manifest completeness and values.
+- Added regression coverage for generated rate-limit policy artifacts.
+- Synchronized package, lockfile and CLI versions.
+
 ## 0.9.16
 
 - Added generated retry execution using until-successful policy configuration.
