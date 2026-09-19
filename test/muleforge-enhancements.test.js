@@ -48,7 +48,9 @@ test("MUnit generation adds policy-aware scenarios", () => {
 
 test("generated Maven MUnit configuration reserves a dynamic HTTP port", () => {
   const template = fs.readFileSync(path.resolve(__dirname, "../templates/pom.xml.hbs"), "utf8");
-  assert.match(template, /<dynamicPorts>[\\s\\S]*<dynamicPort>http\\.port<\\/dynamicPort>[\\s\\S]*<\\/dynamicPorts>/);
+  assert.ok(template.includes("<dynamicPorts>"));
+  assert.ok(template.includes("<dynamicPort>http.port</dynamicPort>"));
+  assert.ok(template.includes("</dynamicPorts>"));
 });
 
 test("generated MUnit mocks external connector processors", () => {
