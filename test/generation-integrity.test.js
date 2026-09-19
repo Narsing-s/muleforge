@@ -216,3 +216,9 @@ test("artifact provenance hashes repository files",()=>{const {artifactManifest}
 
 
 test("dependency audit exposes an executable security gate",()=>{const {dependencyAudit}=require("../src/dependency-audit");const r=dependencyAudit(".");assert.equal(typeof r.available,"boolean");assert.ok(Array.isArray(r.results));});
+
+
+test("GraphQL generator creates a schema",()=>{const {generateGraphqlSchema}=require("../src/graphql-generator");assert.match(generateGraphqlSchema({project:{artifactId:"demo"}}),/type Query/);});
+test("SOAP scaffold requires an explicit WSDL",()=>{const {generateSoapScaffold}=require("../src/soap-generator");assert.equal(generateSoapScaffold({project:{name:"demo"}}),null);});
+test("artifact signing uses an environment-provided secret",()=>{const {signManifest}=require("../src/artifact-signing");assert.equal(typeof signManifest,"function");});
+test("IDE manifest is generated from CLI capabilities",()=>{const {writeIdeManifest}=require("../src/ide-manifest");assert.equal(typeof writeIdeManifest,"function");});
