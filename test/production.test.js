@@ -19,3 +19,26 @@ test("production generators create Postman, environment and CI assets", () => {
   assert.match(generateGithubActions(data), /Static project gate/); assert.match(generateGithubActions(data), /mvn -B -DskipTests=false clean package/);
   assert.equal(fs.existsSync(root), true);
 });
+
+test("Postman generation includes path variables, security and schema response assertions", () => {
+  const config = { operations: [{
+    name: "Get customer", method: "GET", path: "/customers/{customerId}", security: "oauth2",
+    responseFields: [{ name: "id" }, { name: "status", type: "string" }]
+  }] };
+  const collection = JSON.parse(generatePostman(config, { apiName: "Customer API", basePath: "/api/v1" }));
+  const item = collection.item[0];
+  assert.deepEqual(item.request.url.variable, [{ key: "customerId", value: "{{customerId}}" }]);
+  assert.equal(item.request.auth.type, "bearer");
+  assert.ok(item.event[0].script.exec.some(line => line.includes("Response body contains documented fields")));
+  assert.ok(item.event[0].script.exec.some(line => line.includes("Missing response field: ")));
+});
+
+test("Postman request bodies preserve structured requirement fields", () => {
+  const config = { operations: [{
+    name: "Create", method: "POST", path: "/customers",
+    requestFields: [{ name: "email", type: "string", required: true }, { name: "age", type: "integer" }]
+  }] };
+  const collection = JSON.parse(generatePostman(config, { apiName: "Customer API", basePath: "/api/v1" }));
+  const body = JSON.parse(collection.item[0].request.body.raw);
+  assert.deepEqual(Object.keys(body), ["email", "age"]);
+});
