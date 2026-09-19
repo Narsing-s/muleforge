@@ -67,12 +67,23 @@ function isCustomerNotFoundScenario(op, data) {
     /customers?\/\{[^}]+\}$/i.test(String(op.path || ""))
   );
 }
+function declaredStatuses(operation = {}) {
+  return new Set((Array.isArray(operation.errors) ? operation.errors : [])
+    .map(error => Number(error && (error.status ?? error.code)))
+    .filter(Number.isFinite));
+}
 function deriveScenarioPlan(operation = {}) {
+  const declared = declaredStatuses(operation);
+  const hasDeclaredErrors = declared.size > 0;
   const scenarios = [
-    { name: "happy path", type: "success", status: operation.successStatus || 200 },
-    { name: "validation failure", type: "validation", status: 400 },
-    { name: "connector failure", type: "connector-error", status: 500 }
+    { name: "happy path", type: "success", status: operation.successStatus || 200 }
   ];
+  if (!hasDeclaredErrors || declared.has(400) || (Array.isArray(operation.validation) && operation.validation.length)) {
+    scenarios.push({ name: "validation failure", type: "validation", status: 400 });
+  }
+  if (!hasDeclaredErrors || [500, 502, 503, 504].some(status => declared.has(status))) {
+    scenarios.push({ name: "connector failure", type: "connector-error", status: 503 });
+  }
   if (operation.method === "GET" && String(operation.path || "").includes("{")) {
     scenarios.push({ name: "resource not found", type: "not-found", status: 404 });
   }
@@ -114,6 +125,30 @@ function generateMunit(config, data) {
     </munit:execution>
     <munit:validation>
       <munit-tools:assert-that expression="#[vars.httpStatus default 503]" is="#[MunitTools::equalTo(503)]"/>
+    </munit:validation>
+  </munit:test>`);
+    }
+    if (op.retry) {
+      tests.push(`  <munit:test name="${testName(op, "retry-exhaustion")}">
+    <munit:behavior>${failureMocks}
+    </munit:behavior>
+    <munit:execution>
+      <munit:set-event><munit:set-payload value="#[{}]"/></munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 503]" is="#[MunitTools::equalTo(503)]"/>
+    </munit:validation>
+  </munit:test>`);
+    }
+    if (op.transaction) {
+      tests.push(`  <munit:test name="${testName(op, "transaction-rollback")}">
+    <munit:execution>
+      <munit:set-event><munit:set-payload value="#[{}]"/></munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 500]" is="#[MunitTools::equalTo(500)]"/>
     </munit:validation>
   </munit:test>`);
     }
