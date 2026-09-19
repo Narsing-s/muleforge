@@ -9,16 +9,13 @@ MuleForge treats CI/CD as an extension of the generated project, not as a replac
 - Generated-project verification
 - Secret-hygiene gate
 - CI artifact collection
+- Portable pipeline model (`github-actions`, `gitlab`, `azure-devops`, `jenkins`, `bitbucket`)
+- Environment promotion/rollback planning
+- SHA-256 artifact provenance manifests
 
-## Planned
+## Still planned
 
-- `muleforge cicd init`
-- GitLab CI template
-- Azure DevOps template
-- Jenkins template
-- CloudHub deployment templates
-- CloudHub 2.0 deployment templates
-- Runtime Fabric deployment templates
-- Environment promotion helpers
+- Native first-class templates for GitLab CI, Azure DevOps, Jenkins and Bitbucket
+- `muleforge cicd init` interactive configuration
 
 See [GitHub Actions](github-actions.md) for setup and security guidance.
