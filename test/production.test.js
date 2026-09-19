@@ -43,4 +43,12 @@ test("Postman request bodies preserve structured requirement fields", () => {
   const body = JSON.parse(collection.item[0].request.body.raw);
   assert.deepEqual(Object.keys(body), ["email", "age"]);
 });
-\ntest("native CI templates use Mule Maven build and security gates", () => {\n  for (const target of ["gitlab", "azure-devops", "jenkins", "bitbucket"]) {\n    const output = render(target);\n    assert.match(output, /mvn -B -DskipTests=false clean package -ntp/);\n    assert.match(output, /mule-artifact\.json/);\n    assert.match(output, /muleforge security-scan/);\n  }\n});\n
+
+test("native CI templates use Mule Maven build and security gates", () => {
+  for (const target of ["gitlab", "azure-devops", "jenkins", "bitbucket"]) {
+    const output = render(target);
+    assert.match(output, /mvn -B -DskipTests=false clean package -ntp/);
+    assert.match(output, /mule-artifact\.json/);
+    assert.match(output, /muleforge security-scan/);
+  }
+});
