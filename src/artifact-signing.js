@@ -1,0 +1,3 @@
+const crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path");
+function signManifest(root,secret){const p=path.join(path.resolve(root),"artifact-manifest.json");if(!fs.existsSync(p))throw new Error("Run artifact-manifest first.");if(!secret)throw new Error("Signing secret/key is required; never commit it.");const data=fs.readFileSync(p);const signature=crypto.createHmac("sha256",secret).update(data).digest("hex");const out=path.join(path.resolve(root),"artifact-manifest.sig.json");fs.writeFileSync(out,JSON.stringify({algorithm:"HMAC-SHA256",manifest:"artifact-manifest.json",signature},null,2)+"\n");return out;}
+module.exports={signManifest};
