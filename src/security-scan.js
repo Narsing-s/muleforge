@@ -69,7 +69,7 @@ function mavenComponents(root){
   const components=[];
   for(const file of findFiles(path.resolve(root),"pom.xml")){
     const xml=fs.readFileSync(file,"utf8");
-    for(const m of xml.matchAll(/<dependency>\\s*<groupId>([^<]+)<\\/groupId>\\s*<artifactId>([^<]+)<\\/artifactId>\\s*<version>([^<]+)<\\/version>/g)){
+    for(const m of xml.matchAll(/<dependency>\s*<groupId>([^<]+)<\/groupId>\s*<artifactId>([^<]+)<\/artifactId>\s*<version>([^<]+)<\/version>/g)){
       components.push({type:"library",group:m[1].trim(),name:m[2].trim(),version:m[3].trim(),purl:"pkg:maven/"+m[1].trim()+"/"+m[2].trim()+"@"+m[3].trim()});
     }
   }
