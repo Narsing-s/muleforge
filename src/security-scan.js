@@ -41,11 +41,44 @@ function walk(root,skip=new Set([".git","node_modules","target","dist"])){
   return out;
 }
 function scanDependencies(root="."){
-  const pkg=fs.existsSync(path.join(root,"package.json"))?JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8")):{};
-  return {npm:Object.keys({...pkg.dependencies,...pkg.devDependencies})};
+  const npm=[];
+  const pkgPath=path.join(root,"package.json");
+  const lockPath=path.join(root,"package-lock.json");
+  const pkg=fs.existsSync(pkgPath)?JSON.parse(fs.readFileSync(pkgPath,"utf8")):{};
+  const direct={...pkg.dependencies,...pkg.devDependencies};
+  if(fs.existsSync(lockPath)){
+    const lock=JSON.parse(fs.readFileSync(lockPath,"utf8"));
+    for(const [key,value] of Object.entries(lock.packages||{})){
+      if(!key.startsWith("node_modules/")||!value?.version) continue;
+      npm.push({name:key.slice("node_modules/"),version:String(value.version)});
+    }
+  }
+  if(!npm.length) for(const [name,version] of Object.entries(direct)) npm.push({name,version:String(version)});
+  return {npm:npm.sort((a,b)=>a.name.localeCompare(b.name))};
+}
+function findFiles(root,name,out=[]){
+  if(!fs.existsSync(root)) return out;
+  for(const e of fs.readdirSync(root,{withFileTypes:true})){
+    if([".git","node_modules","target","dist"].includes(e.name)) continue;
+    const p=path.join(root,e.name);
+    if(e.isDirectory()) findFiles(p,name,out); else if(e.name===name) out.push(p);
+  }
+  return out;
+}
+function mavenComponents(root){
+  const components=[];
+  for(const file of findFiles(path.resolve(root),"pom.xml")){
+    const xml=fs.readFileSync(file,"utf8");
+    for(const m of xml.matchAll(/<dependency>\\s*<groupId>([^<]+)<\\/groupId>\\s*<artifactId>([^<]+)<\\/artifactId>\\s*<version>([^<]+)<\\/version>/g)){
+      components.push({type:"library",group:m[1].trim(),name:m[2].trim(),version:m[3].trim(),purl:"pkg:maven/"+m[1].trim()+"/"+m[2].trim()+"@"+m[3].trim()});
+    }
+  }
+  return components;
 }
 function sbom(root="."){
-  const pkg=fs.existsSync(path.join(root,"package.json"))?JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8")):{};
-  return {bomFormat:"CycloneDX",specVersion:"1.5",components:Object.entries({...pkg.dependencies,...pkg.devDependencies}).map(([name,version])=>({type:"library",name,version}))};
+  const dependencies=scanDependencies(root).npm.map(x=>({type:"library",name:x.name,version:x.version,purl:"pkg:npm/"+x.name+"@"+x.version.replace(/^\^|^~/,"")}));
+  const components=[...dependencies,...mavenComponents(root)];
+  const unique=[...new Map(components.map(c=>[c.purl,c])).values()].sort((a,b)=>a.purl.localeCompare(b.purl));
+  return {bomFormat:"CycloneDX",specVersion:"1.5",version:1,components:unique};
 }
 module.exports={scanSecrets:walk,scanDependencies,sbom};
