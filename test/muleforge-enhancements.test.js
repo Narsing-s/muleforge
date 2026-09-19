@@ -89,6 +89,30 @@ test("secret scanner ignores placeholders and flags literal credentials", () => 
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("artifact signing detects tampering and malformed signatures", () => {
+  const os = require("node:os");
+  const { writeManifest } = require("../src/provenance");
+  const { generateSigningKeys, signManifest, verifyManifest } = require("../src/artifact-signing");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-signing-"));
+  try {
+    fs.writeFileSync(path.join(root, "payload.txt"), "immutable artifact\\n", "utf8");
+    writeManifest(root);
+    const keys = generateSigningKeys(root);
+    signManifest(root, keys.privateKey);
+
+    const verified = verifyManifest(root, keys.publicKey);
+    assert.equal(verified.verified, true);
+
+    fs.writeFileSync(path.join(root, "artifact-manifest.json"), JSON.stringify({ version: "1.1", algorithm: "sha256", files: [] }) + "\\n", "utf8");
+    assert.equal(verifyManifest(root, keys.publicKey).verified, false);
+
+    fs.writeFileSync(path.join(root, "artifact-manifest.sig.json"), "{not-json", "utf8");
+    const malformed = verifyManifest(root, keys.publicKey);
+    assert.equal(malformed.verified, false);
+    assert.match(malformed.reason, /Invalid signature file JSON/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("CloudHub 2 deployment workflow uses Maven deployment and secret settings", () => {
   const { generateGithubActions } = require("../src/production");
   const { deploymentArtifacts } = require("../src/deployment-artifacts");
