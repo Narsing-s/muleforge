@@ -214,3 +214,19 @@ test("release readiness checks include version synchronization gates", () => {
   assert.match(source, /changelog version/);
   assert.match(source, /workflow syntax/);
 });
+
+
+test("connector flow generates retry policy and HTTP timeout", () => {
+  const { connectorFlow } = require("../src/connector-flow-generator");
+  const retry = connectorFlow({
+    name: "get-customer", method: "GET", path: "/customers/{id}", connector: "database",
+    retry: { maxRetries: 4, millisBetweenRetries: 250 }
+  }, { artifactId: "demo", basePath: "/api", databaseTable: "CUSTOMER", hasDatabase: true });
+  assert.match(retry, /<until-successful maxRetries="4" millisBetweenRetries="250">/);
+  assert.match(retry, /<\/until-successful>/);
+  const http = connectorFlow({
+    name: "downstream", method: "GET", path: "/downstream", connector: "http",
+    downstreamEndpoint: "https://example.test", timeout: 5000
+  }, { artifactId: "demo", basePath: "/api" });
+  assert.match(http, /responseTimeout="5000"/);
+});
