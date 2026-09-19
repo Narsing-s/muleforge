@@ -102,6 +102,14 @@
 
 # Changelog
 
+## 0.9.13
+
+- Added generated operation coverage checks for RAML, Mule flows and MUnit happy-path suites.
+- Added static evidence checks for configured retry, pagination, idempotency and transaction policies.
+- Added dynamic HTTP port configuration to generated MUnit Maven builds for CI reliability.
+- Hardened manual Maven/MUnit runtime validation with settings preflight and quieter Maven logs.
+
+
 All notable MuleForge changes are documented here.
 
 ## [0.3.0] - Development
