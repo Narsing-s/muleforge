@@ -292,3 +292,6 @@ test("OpenAPI clientId security creates the declared scheme",()=>{
   assert.deepEqual(doc.paths["/x"].get.security,[{clientId:[]}]);
 });
 test("runtime verification requires the expected readiness status",()=>{const source=fs.readFileSync(path.resolve(__dirname,"../src/runtime-test.js"),"utf8");assert.match(source,/expectedStatus\|\|200/);assert.match(source,/result\.request\.status===expected/);});
+
+
+test("configuration schema is exposed as a CLI validation gate",()=>{const {validateConfigValues}=require("../src/config-schema");const good=validateConfigValues({properties:{region:{required:true,default:"ap-south-1",allowedValues:["ap-south-1","us-east-1"]}}});assert.equal(good.valid,true);const bad=validateConfigValues({properties:{region:{required:true,default:"eu-west-1",allowedValues:["ap-south-1","us-east-1"]}}});assert.equal(bad.valid,false);const source=fs.readFileSync(path.resolve(__dirname,"../src/index.js"),"utf8");assert.match(source,/config-check \[config\]/);assert.match(source,/validateConfigValues/);});
