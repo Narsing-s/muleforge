@@ -196,14 +196,14 @@ test("semantic breaking checker detects enum, required and policy removals", () 
   assert.ok(result.some(x => x.type === "pagination-removed"));
   assert.ok(result.some(x => x.type === "idempotency-removed"));
 });
-test("APIKit generator preserves request examples and declared error handlers", () => {
+test("APIKit generator preserves the real request payload and declared error handlers", () => {
   const { generateApiKitFlow } = require("../src/apikit-generator");
   const flow = generateApiKitFlow({ artifactId: "demo", basePath: "/api/v1", operations: [{
-    method: "POST", path: "/customers", requestFields: [{ name: "email" }], responseFields: ["id"],
+    method: "POST", path: "/customers", requestFields: [{ name: "email" }],
     errors: [{ type: "VALIDATION:BAD_REQUEST", status: 400, description: "Invalid customer" }]
   }]});
-  assert.match(flow, /APIKit request example/);
-  assert.match(flow, /email/);
+  assert.doesNotMatch(flow, /APIKit request example/);
+  assert.match(flow, /post:\\customers:application\\json:api-config/);
   assert.match(flow, /on-error-continue type="VALIDATION:BAD_REQUEST"/);
   assert.match(flow, /value="400"/);
 });
