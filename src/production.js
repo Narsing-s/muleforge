@@ -72,7 +72,7 @@ jobs:
           test -d src/test/munit
       - name: Validate Maven settings
         env:
-          MAVEN_SETTINGS_XML: ${{ secrets.MAVEN_SETTINGS_XML }}
+          MAVEN_SETTINGS_XML: \${{ secrets.MAVEN_SETTINGS_XML }}
         run: |
           if [ -z "$MAVEN_SETTINGS_XML" ]; then
             echo "::error::MAVEN_SETTINGS_XML is required to build generated Mule applications."
