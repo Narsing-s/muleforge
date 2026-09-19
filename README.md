@@ -177,8 +177,8 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge create` | Start requirement-driven project creation |
 | `muleforge init <name>` | Initialize a project/configuration |
 | `muleforge generate` | Generate files from `muleforge.yaml` |
-| `muleforge validate` | Ru
-- `muleforge breaking-check <old.yaml> [new.yaml]` — detect potentially breaking contract changesn verification, contract, deployment, policy, connector and quality gates |
+| `muleforge validate` | Run verification, contract, deployment, policy, connector and quality gates |
+| `muleforge breaking-check <old.yaml> [new.yaml]` | Detect potentially breaking API contract changes |
 | `muleforge verify` | Check requirement-to-project coverage |
 | `muleforge verify --build` | Verify and run Maven tests when static checks pass |
 | `muleforge test` | Run Maven tests |
@@ -191,6 +191,8 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge policy-check [config]` | Validate retry, pagination, idempotency, transaction and security policies |
 | `muleforge connector-check [config]` | Verify connector dependencies, namespaces, configs and generated operations |
 | `muleforge sync-docs [config]` | Synchronize application documentation and traceability |
+| `muleforge openapi [config]` | Generate an OpenAPI 3.x contract from the project model |
+| `muleforge runtime-test [directory] --start` | Run Maven tests and optionally start Mule and probe a readiness endpoint |
 
 
 Run:
@@ -330,6 +332,10 @@ When adding a feature, update the implementation, tests and user documentation t
 - [x] CLI verification
 - [x] Local Web UI
 - [ ] Production-grade requirement-to-flow generation
+- [x] OpenAPI contract generation
+- [x] APIKit router generation
+- [x] Runtime verification command
+- [x] Semantic breaking-change detection
 - [x] Connector-specific implementation generation
 - [x] Requirement-derived MUnit scenarios
 - [x] Complete requirement-to-code traceability
