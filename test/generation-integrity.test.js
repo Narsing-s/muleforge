@@ -196,6 +196,25 @@ test("semantic breaking checker detects enum, required and policy removals", () 
   assert.ok(result.some(x => x.type === "pagination-removed"));
   assert.ok(result.some(x => x.type === "idempotency-removed"));
 });
+test("APIKit generator preserves request examples and declared error handlers", () => {
+  const { generateApiKitFlow } = require("../src/apikit-generator");
+  const flow = generateApiKitFlow({ artifactId: "demo", basePath: "/api/v1", operations: [{
+    method: "POST", path: "/customers", requestFields: [{ name: "email" }], responseFields: ["id"],
+    errors: [{ type: "VALIDATION:BAD_REQUEST", status: 400, description: "Invalid customer" }]
+  }]});
+  assert.match(flow, /APIKit request example/);
+  assert.match(flow, /email/);
+  assert.match(flow, /on-error-continue type="VALIDATION:BAD_REQUEST"/);
+  assert.match(flow, /value="400"/);
+});
+
+test("runtime verification exposes timeout and status diagnostics", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/runtime-test.js"), "utf8");
+  assert.match(source, /Readiness endpoint returned HTTP/);
+  assert.match(source, /Timed out waiting for/);
+  assert.match(source, /result\.error/);
+});
+
 test("APIKit generator emits router and config", () => {
   const { generateApiKitFlow, generateApiKitConfig } = require("../src/apikit-generator");
   assert.match(generateApiKitConfig({ artifactId: "demo" }), /apikit:config/);
