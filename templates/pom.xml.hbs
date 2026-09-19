@@ -65,6 +65,9 @@
           <munit.runtimeversion>${app.runtime}</munit.runtimeversion>
           <enableSurefireReports>true</enableSurefireReports>
           <skipAfterFailure>false</skipAfterFailure>
+          <dynamicPorts>
+            <dynamicPort>http.port</dynamicPort>
+          </dynamicPorts>
           <coverage>
             <runCoverage>true</runCoverage>
             <failBuild>false</failBuild>
