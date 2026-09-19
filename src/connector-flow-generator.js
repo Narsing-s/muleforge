@@ -47,6 +47,7 @@ function source(op, data, endpoint, method, status) {
       </when>
     </choice>
     <os:store config-ref="ObjectStore_Config" key="#[vars.idempotencyKey]" value="#[{ status: 'IN_PROGRESS', correlationId: vars.correlationId }]" failIfPresent="true" />`);
+  if (op.retry) policy.push(`    <until-successful maxRetries="${Number(op.retry.maxRetries || 3)}" millisBetweenRetries="${Number(op.retry.millisBetweenRetries || 1000)}">`);
   if (op.pagination) policy.push(`    <set-variable variableName="page" value="#[(attributes.queryParams.page default 1) as Number]" />
     <set-variable variableName="pageSize" value="#[(attributes.queryParams.pageSize default ${Number(op.pagination.defaultPageSize || 20)}) as Number]" />`);
   if (op.transaction) policy.push(`    <try transactionalAction="ALWAYS_BEGIN" transactionType="LOCAL">`);
@@ -67,7 +68,8 @@ function params(fields = []) {
 
 function withErrorHandler(body) {
   const closeTransaction = body.includes('<try transactionalAction="ALWAYS_BEGIN"') ? "    </try>\n" : "";
-  return `${body}\n${closeTransaction}${generatedErrorHandler()}\n  </flow>\n`;
+  const closeRetry = body.includes("<until-successful ") ? "    </until-successful>\n" : "";
+  return `${body}\n${closeTransaction}${closeRetry}${generatedErrorHandler()}\n  </flow>\n`;
 }
 
 function connectorFlow(op, data) {
@@ -88,7 +90,7 @@ function connectorFlow(op, data) {
         <http:body><![CDATA[#[payload]]]></http:body>
       </http:error-response>
     </http:listener>
-    <http:request method="${method}" url="${url}" doc:name="Call documented downstream API">
+    <http:request method="${method}" url="${url}"${op.timeout ? ` responseTimeout="${Number(op.timeout)}"` : ''} doc:name="Call documented downstream API">
       <http:headers><![CDATA[#[{}]]]></http:headers>
     </http:request>
     <set-variable variableName="httpStatus" value="${status}" />`);
