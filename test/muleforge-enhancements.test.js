@@ -26,7 +26,7 @@ test("traceability includes source line references when generated assets exist",
   fs.mkdirSync(path.join(root, "src/test/munit"), { recursive: true });
   fs.mkdirSync(path.join(root, "postman"), { recursive: true });
   fs.writeFileSync(path.join(root, "src/main/resources/api/demo.raml"), "#%RAML 1.0\n/customers:\n  get:\n");
-  fs.writeFileSync(path.join(root, "src/main/mule/demo.xml"), "<flow name=\"getCustomer\"></flow>\n");
+  fs.writeFileSync(path.join(root, "src/main/mule/demo.xml"), '<flow name="getCustomer"></flow>\n');
   fs.writeFileSync(path.join(root, "src/main/resources/dwl/getcustomer-request.dwl"), "// getCustomer\n");
   fs.writeFileSync(path.join(root, "src/main/resources/dwl/getcustomer-response.dwl"), "// getCustomer\n");
   fs.writeFileSync(path.join(root, "src/test/munit/demo-test.xml"), "<test name=\"getCustomer\"></test>\n");
