@@ -1,3 +1,9 @@
+## 0.9.12
+
+- Hardened contract validation for request/response field schemas and declared error statuses.
+- Added deployment application-name/version validation.
+- Added regression coverage for invalid schema contracts.
+
 ## 0.9.11
 
 - Hardened breaking-change detection by separating request and response compatibility checks.
