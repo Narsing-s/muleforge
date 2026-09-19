@@ -6,6 +6,14 @@ MuleForge is an open-source CLI for requirement-driven Mule 4 project generation
 
 > **Design first. Generate second. Verify everything.**
 
+## New engineering gates
+
+- Semantic integration IR validation
+- Security secret scan and dependency inventory
+- CycloneDX SBOM generation
+- Schema-driven MUnit response assertions
+- Safe repair of missing support scaffolding
+
 ## 👥 Who is MuleForge for?
 
 MuleForge is intended for MuleSoft developers, integration teams and API teams that want to reduce manual project scaffolding and keep requirements, implementation and documentation aligned.
