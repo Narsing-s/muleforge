@@ -69,14 +69,19 @@ function inferProjectName(text, file) {
   return title ? slug(title.replace(/^#+\s*/, "").replace(/api$/i, "")) : slug(path.basename(file, path.extname(file)));
 }
 function inferFields(text, endpoint) {
-  const fields = [];
+  const candidates = [];
   for (const field of ["id","customerId","accountId","name","firstName","lastName","email","phone","mobileNumber","address","amount","status","date","createdAt","updatedAt"]) {
-    if (new RegExp("\\b" + field.replace(/[A-Z]/g, m => "[" + m.toLowerCase() + m + "]") + "\\b", "i").test(text)) fields.push(field);
+    if (new RegExp("\\b" + field.replace(/[A-Z]/g, m => "[" + m.toLowerCase() + m + "]") + "\\b", "i").test(text)) candidates.push(field);
   }
-  const line = text.match(/(?:request|input|payload|fields?)\s*[:\-]\s*([^\n]+)/i);
-  if (line) fields.push(...line[1].split(/,|\band\b/i).map(v => v.trim().split(/[:(]/)[0].replace(/[^A-Za-z0-9_]/g, "")).filter(Boolean));
-  const unique = [...new Set(fields)];
-  return /^(GET|DELETE)$/i.test(endpoint.method) ? unique.filter(v => /id|status|date|name/i.test(v)) : unique;
+  const line = text.match(/(?:request|input|payload|fields?)\\s*[:\\-]\\s*([^\\n]+)/i);
+  if (line) candidates.push(...line[1].split(/,|\\band\\b/i).map(v => v.trim().split(/[:(]/)[0].replace(/[^A-Za-z0-9_]/g, "")).filter(Boolean));
+  const unique = [...new Set(candidates)].filter(Boolean);
+  const selected = /^(GET|DELETE)$/i.test(endpoint.method) ? unique.filter(v => /id|status|date|name/i.test(v)) : unique;
+  return selected.map(name => {
+    const escaped = String(name).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
+    const required = new RegExp("(?:\\\\brequired\\\\b|\\\\bmandatory\\\\b|\\\\bmust be provided\\\\b|\\\\bcannot be empty\\\\b)[^\\\\n]{0,80}\\\\b" + escaped + "\\\\b|\\\\b" + escaped + "\\\\b[^\\\\n]{0,80}(?:\\\\brequired\\\\b|\\\\bmandatory\\\\b|\\\\bmust be provided\\\\b|\\\\bcannot be empty\\\\b)", "i").test(text);
+    return required ? { name, type: "string", required: true } : name;
+  });
 }
 function inferValidation(text, fields) {
   const rules = [];
