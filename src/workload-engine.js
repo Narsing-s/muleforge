@@ -399,5 +399,10 @@ module.exports = {
   classifyWorkload,
   buildEngineeringPlan,
   explainImportedProject,
-  writeEngineeringPlan
+  writeEngineeringPlan,
+  LIFECYCLE,
+  certaintyState,
+  buildLifecycleState,
+  buildDeveloperHandoff,
+  explainOperation
 };
