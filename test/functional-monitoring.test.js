@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { generateFunctionalMonitoringSuite, writeFunctionalMonitoring } = require("../src/functional-monitoring");
+const { generateFunctionalMonitoringSuite, generateBatManifest, generateBatConfig, writeFunctionalMonitoring } = require("../src/functional-monitoring");
+const YAML = require("yaml");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -33,4 +34,27 @@ test("functional monitoring artifacts are written only for API workloads", () =>
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+
+test("generated BAT manifest is valid YAML and points to the generated test", () => {
+  const manifest = generateBatManifest("customer-api");
+  const parsed = YAML.parse(manifest);
+  assert.equal(parsed.suite.name, "customer-api Functional Monitoring");
+  assert.deepEqual(parsed.files, [{ file: "tests/customer-api.dwl" }]);
+  assert.ok(Array.isArray(parsed.reporters));
+});
+
+test("generated BAT config contains only required non-secret placeholders", () => {
+  const config = JSON.parse(generateBatConfig({
+    operations: [
+      { method: "GET", path: "/customers", security: "oauth2" },
+      { method: "POST", path: "/customers", security: "client-id" }
+    ]
+  }));
+  assert.equal(config.baseUrl, "https://SET_ME");
+  assert.equal(config.clientId, "SET_ME");
+  assert.equal(config.accessToken, "SET_ME");
+  assert.equal(config.basicAuth, undefined);
+  assert.doesNotMatch(JSON.stringify(config), /REPLACE_WITH_|CLIENT_SECRET|ACCESS_TOKEN/i);
 });
