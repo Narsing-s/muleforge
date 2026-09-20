@@ -33,6 +33,7 @@ function expectedArtifacts(config = {}) {
     { id: "deployment-matrix", path: "docs/09-deployment/deployment-matrix.md", required: true, category: "deployment" },
     { id: "ci-workflow", path: ".github/workflows/ci-generated.yml", required: true, category: "cicd" },
     { id: "postman", path: "postman", required: api, category: "api-client" },
+    { id: "functional-monitoring", path: "functional-monitoring/tests", required: api, category: "runtime-testing" },
     { id: "raml", path: `src/main/resources/api/${artifactId}.raml`, required: api, category: "api-contract" },
     { id: "graphql-contract", path: "src/main/resources/api/schema.graphql", required: graphql, category: "api-contract" },
     { id: "soap-contract", path: `src/main/resources/api/${artifactId}.wsdl`, required: soap && Boolean(config.wsdl || config.api?.wsdl), category: "api-contract" },
