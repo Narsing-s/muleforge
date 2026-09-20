@@ -392,8 +392,12 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const operations = endpoints.map(endpoint => {
     const operationText = operationSection(endpoint) || combined;
     const requestFields = inferFields(operationText, endpoint);
-    const description = operationText.split("\n").map(line => line.trim()).filter(Boolean).find(line => !/^\s*(?:connector|request|input|payload|fields?)\s*:/i.test(line) && !/^(?:use|using|publish|send|receive|connect|authenticate)\b/i.test(line) && !new RegExp("^" + endpoint.method + "\\s+" + endpoint.path.replace(/[.*+?^$()|[\\]\\]/g, "\\    const operationText = operationSection(endpoint) || combined;
-    const requestFields = inferFields(operationText, endpoint);") + "$", "i").test(line)) || undefined;
+    const description = operationText
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean)
+      .find(line => line.toLowerCase() !== (String(endpoint.method) + " " + String(endpoint.path)).toLowerCase() && !/^(?:connector|request|input|payload|fields?)\s*:/i.test(line) && !/^(?:use|using|publish|send|receive|connect|authenticate)\b/i.test(line)) || undefined;
+    const connector = operationConnector(endpoint);") + "$", "i").test(line)) || undefined;
     const connector = operationConnector(endpoint);
     const local = connector ? operationConnectivity(endpoint, connector) : null;
     const httpEvidence = httpEvidenceForOperation(endpoint);
