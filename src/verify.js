@@ -140,7 +140,39 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     checks.push(result("MUnit scaffold", Boolean(munit), `Expected ${munitPath}.`));
   }
 
+  function declaredErrorStatuses(op) {
+    const statuses = new Set(Array.isArray(op.errorStatuses) ? op.errorStatuses.map(Number).filter(Number.isInteger) : []);
+    for (const error of Array.isArray(op.errors) ? op.errors : []) {
+      const text = typeof error === "string" ? error : JSON.stringify(error || "");
+      for (const match of text.matchAll(/\\b([4-5]\\d\\d)\\b/g)) statuses.add(Number(match[1]));
+      const statusMap = {
+        bad_request: 400, validation: 400, unauthorized: 401, forbidden: 403,
+        not_found: 404, conflict: 409, too_many_requests: 429,
+        unavailable: 503, timeout: 504, internal: 500, server_error: 500
+      };
+      for (const [key, status] of Object.entries(statusMap)) if (new RegExp(key.replace("_", "[ _-]"), "i").test(text)) statuses.add(status);
+    }
+    return [...statuses];
+  }
+
   for (const op of operations) {
+    const operationXml = operationFlowsChecked.find(x => x.name === expectedOperationFlowNames[operations.indexOf(op)])?.block || mule;
+    if (Array.isArray(op.validation) && op.validation.length) {
+      const validationImplemented = /VALIDATION:VALIDATION|VALIDATION_ERROR|Invalid email|isEmpty\\(payload/i.test(operationXml);
+      checks.push(result(
+        `Business validation coverage ${op.name}`,
+        validationImplemented,
+        "Every confirmed validation rule must have observable validation logic/error handling in the generated Mule implementation."
+      ));
+    }
+    const errorStatuses = declaredErrorStatuses(op);
+    for (const status of errorStatuses) {
+      checks.push(result(
+        `Business error status ${op.name} ${status}`,
+        operationXml.includes(`value="${status}"`) || operationXml.includes(`default ${status}`) || operationXml.includes(`statusCode="${status}"`) || operationXml.includes(`status: ${status}`),
+        `Confirmed business/dependency error status ${status} must be represented in the generated operation implementation.`
+      ));
+    }
     for (const field of op.requestFields || []) {
       const fieldName = typeof field === "string" ? field : field && field.name;
       const mentioned = Boolean(fieldName) && (raml.includes(String(fieldName)) || mule.includes(String(fieldName)));
@@ -148,6 +180,11 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     }
     if (op.successStatus) {
       checks.push(result(`Success status ${op.name}`, raml.includes(String(op.successStatus)), "Confirmed success status should appear in the RAML contract."));
+    }
+    for (const field of op.responseFields || []) {
+      const fieldName = typeof field === "string" ? field : field && field.name;
+      const mentioned = Boolean(fieldName) && (raml.includes(String(fieldName)) || mule.includes(String(fieldName)));
+      checks.push(result(`Response field ${fieldName || "(unnamed)"}`, mentioned, "Confirmed response field should be represented in the generated API or implementation."));
     }
   }
 
