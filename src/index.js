@@ -34,6 +34,7 @@ const { buildIntegrationIR, validateIntegrationIR } = require("./semantic-ir");
 const { scanSecrets, scanDependencies, sbom } = require("./security-scan");
 const { validateDirectory, validateScript } = require("./dataweave-validator");
 const { writeImportedModel } = require("./import-project");
+const { writeReconciliation } = require("./reconciliation");
 const { writePromotionPlan } = require("./promotion");
 const { buildEventModel, validateEventModel } = require("./event-model");
 const { generateHealthFlows } = require("./health-generator");
@@ -436,7 +437,7 @@ program.command("dataweave-run <file>").description("Execute DataWeave only when
 program.command("golden-test [directory]").description("Run MuleForge golden generation regression fixtures").action((directory=".")=>{const r=writeGoldenReport(directory);console.log(JSON.stringify(r,null,2));if(!r.passed)process.exitCode=1;});
 program.command("ci-native <target> [directory]").description("Generate a native CI template for gitlab, azure-devops, jenkins or bitbucket").action((target,directory=".")=>console.log("✔ Native CI template written to "+writeNative(directory,target)));
 program.command("dataweave-validate <file>").description("Validate one DataWeave script").action(file=>{const r=validateScript(fs.readFileSync(path.resolve(file),"utf8"));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
-program.command("import [directory]").description("Reverse-engineer an existing Mule project into a reviewable MuleForge model").action((directory=".")=>{const r=writeImportedModel(directory);console.log("✔ Imported model written to "+r.target);console.log(JSON.stringify(r.model,null,2));});
+program.command("import [directory]").description("Reverse-engineer an existing Mule project into a reviewable MuleForge model").action((directory=".")=>{const r=writeImportedModel(directory);console.log("✔ Imported model written to "+r.target);console.log(JSON.stringify(r.model,null,2));});\nprogram.command("reconcile [config] [directory]").description("Reconcile confirmed requirements against an existing Mule repository without duplicating or overwriting source assets").action((config="muleforge.yaml",directory=".")=>{const r=writeReconciliation(config,directory);console.log(JSON.stringify(r,null,2));if(r.summary.missing || r.summary.connectorDrift) process.exitCode=1;});
 program.command("db-migration <from> <to> [directory]").description("Generate reviewable SQL for schema drift between two JSON schema models").action((from,to,directory=".")=>{const a=JSON.parse(fs.readFileSync(path.resolve(from),"utf8")),b=JSON.parse(fs.readFileSync(path.resolve(to),"utf8"));const {writeSchemaMigration}=require("./db-schema");console.log("✔ Migration written to "+writeSchemaMigration(directory,a,b));});
 program.command("promotion-plan [config]").description("Generate an environment promotion and rollback plan").action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config));console.log("✔ Promotion plan written to "+writePromotionPlan(root,model));});
 program.command("ir-check [config]").description("Validate the semantic integration model").action((config="muleforge.yaml")=>{const r=validateIntegrationIR(buildIntegrationIR(loadConfig(config)));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
