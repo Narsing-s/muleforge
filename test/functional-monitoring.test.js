@@ -27,7 +27,7 @@ test("functional monitoring artifacts are written only for API workloads", () =>
     }, { workloadType: "api", artifactId: "customer-api", basePath: "/api/v1" });
     assert.equal(result.suite, "functional-monitoring/tests/customer-api.dwl");
     assert.ok(fs.existsSync(path.join(root, result.suite)));
-    assert.ok(fs.existsSync(path.join(root, "functional-monitoring/bat.yaml")));
+    assert.ok(fs.existsSync(path.join(root, "functional-monitoring/config/dev-environment.dwl")));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
