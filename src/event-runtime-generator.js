@@ -19,7 +19,7 @@ function generateEventRuntime(config={}){
     const destination=e.destination?c.pub(e):"";
     const failure=dlq?`<error-handler>
         <on-error-propagate type="ANY">
-          ${c.pub({...e,destination:dlq,queue:dlq})}
+          ${c.pub({...e,destination:dlq,queue:dlq,topic:dlq})}
         </on-error-propagate>
       </error-handler>`:"";
     return `  <flow name="muleforge-event-${id}">
