@@ -19,7 +19,7 @@ function fieldsSchema(fields = []) {
   if (required.length) schema.required = required;
   return schema;
 }
-function pathParameters(pathname) { return [...String(pathname || "").matchAll(/\\{([^}]+)\\}/g)].map(m => m[1]); }
+function pathParameters(pathname) { return [...String(pathname || "").matchAll(/\{([^}]+)\}/g)].map(m => m[1]); }
 function generateOpenApi(config = {}, options = {}) {
   const api = config.api || {}, project = config.project || {};
   const version = String(options.version || config.openapiVersion || "3.0.3");
