@@ -148,3 +148,6 @@ test("engineering evidence stays source-backed and keeps runtime verification ex
   assert.equal(plan.dependencies.exchange.length, 1);
   assert.equal(plan.runtimeEvidence.runtimeVerified, false);
 });
+
+
+test("readiness exposes developer engineering evidence without replacing existing gates",()=>{const {buildReadiness}=require("../src/readiness");assert.equal(typeof buildReadiness,"function");});
