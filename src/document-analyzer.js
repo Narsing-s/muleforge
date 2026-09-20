@@ -76,6 +76,7 @@ function inferFieldType(name, annotation = "") {
     if (["float", "double", "decimal"].includes(explicit)) return "number";
     if (explicit === "bool") return "boolean";
     if (explicit === "date-time") return "datetime";
+    if (explicit === "date") return "date-only";
     return explicit;
   }
   const value = String(name || "").toLowerCase();
@@ -178,6 +179,11 @@ function inferFields(text, endpoint) {
     }
     const rootName = parts[0].replace(/\[\]$/, "");
     let root = roots.get(rootName);
+    if (root && root.type === "string") {
+      root.type = parts[0].endsWith("[]") ? "array" : "object";
+      root.fields = [];
+      if (root.type === "array") root.items = { type: "object", fields: root.fields };
+    }
     if (!root) {
       root = { name: rootName, type: parts[0].endsWith("[]") ? "array" : "object", required: false, fields: [] };
       if (root.type === "array") root.items = { type: "object", fields: root.fields };
