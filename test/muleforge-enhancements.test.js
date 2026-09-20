@@ -22,7 +22,7 @@ test("traceability preserves the confirmed singular requirement", () => {
 test("traceability maps operations", () => {
   const report = buildTraceability({ operations: [{name:"getCustomer",method:"GET",path:"/customers"}], requirements: [] });
   assert.equal(report.operationCount, 1);
-  assert.deepEqual(report.operations[0].targets, ["raml","mule","dataweave","munit","postman","documentation"]);
+  assert.deepEqual(report.operations[0].targets, ["raml","mule","dataweave","munit","postman","functional-monitoring","documentation","deployment"]);
 });
 
 test("traceability includes source line references when generated assets exist", () => {
