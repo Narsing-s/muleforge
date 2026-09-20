@@ -123,7 +123,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   checks.push(result("Postman collection", !apiWorkload || exists(root, "postman"), apiWorkload ? "API projects should include a Postman artifact directory." : "Postman is not required for non-API workloads."));
   checks.push(result(
     "Functional monitoring suite",
-    !apiWorkload || (exists(root, "functional-monitoring/bat.yaml") && exists(root, "functional-monitoring/tests")),
+    !apiWorkload || (exists(root, "functional-monitoring/config/dev-environment.dwl") && exists(root, "functional-monitoring/tests")),
     apiWorkload ? "API projects should include a MuleSoft API Functional Monitoring/BAT suite for black-box runtime checks." : "Functional Monitoring is not required for non-API workloads."
   ));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
