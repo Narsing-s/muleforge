@@ -82,7 +82,7 @@ function setInputMode(mode){
   inputMode=mode;
   const hint=document.getElementById('modeHint'),req=document.getElementById('req'),file=document.getElementById('file');
   if(mode==='repository'){hint.textContent='Select the complete MuleSoft repository folder. MuleForge will inspect flows, connectors, RAML, DataWeave, MUnit, configuration and deployment metadata without changing source files.';req.value='';req.disabled=true;file.setAttribute('webkitdirectory','');document.getElementById('saveBtn').disabled=true}
-  else{hint.textContent='Upload requirement documents or paste requirement text.';req.disabled=false;file.removeAttribute('webkitdirectory')}
+  else{hint.textContent='Upload requirement documents or paste requirement text.';req.disabled=false;}
 }
 function renderRepository(data){
   const p=data.plan||{},w=p.workload||{},i=p.existingProject||{},inv=i.inventory||{};
