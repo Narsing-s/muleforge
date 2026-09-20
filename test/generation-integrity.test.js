@@ -363,3 +363,21 @@ test("runtime verification requires the expected readiness status",()=>{const so
 
 
 test("configuration schema is exposed as a CLI validation gate",()=>{const {validateConfigValues}=require("../src/config-schema");const good=validateConfigValues({properties:{region:{required:true,default:"ap-south-1",allowedValues:["ap-south-1","us-east-1"]},enabled:{required:true,value:false,type:"boolean"},retries:{required:true,value:0,type:"integer"}}});assert.equal(good.valid,true);const bad=validateConfigValues({properties:{region:{required:true,default:"eu-west-1",allowedValues:["ap-south-1","us-east-1"]},enabled:{value:"false",type:"boolean"},mode:{value:"invalid",allowedValues:["safe","strict"]}}});assert.equal(bad.valid,false);assert.ok(bad.errors.some(x=>x.includes("Invalid value for mode")));assert.ok(bad.errors.some(x=>x.includes("Invalid type for enabled")));const source=fs.readFileSync(path.resolve(__dirname,"../src/index.js"),"utf8");assert.match(source,/config-check \[config\]/);assert.match(source,/validateConfigValues/);});
+
+
+test("artifact provenance manifest is deterministic and binds the staged tree", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-provenance-export-"));
+  fs.mkdirSync(path.join(root, "src"), { recursive: true });
+  fs.writeFileSync(path.join(root, "src", "a.txt"), "hello");
+  const { writeManifest } = require("../src/provenance");
+  const manifestPath = writeManifest(root);
+  const first = fs.readFileSync(manifestPath, "utf8");
+  const firstHash = require("node:crypto").createHash("sha256").update(first).digest("hex");
+  fs.writeFileSync(path.join(root, "src", "a.txt"), "changed");
+  writeManifest(root);
+  const second = fs.readFileSync(manifestPath, "utf8");
+  const secondHash = require("node:crypto").createHash("sha256").update(second).digest("hex");
+  assert.notEqual(firstHash, secondHash);
+  assert.match(second, /"a.txt"/);
+  fs.rmSync(root, { recursive: true, force: true });
+});
