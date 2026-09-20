@@ -1,5 +1,5 @@
 const crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path");
-const EXCLUDED_FILES=new Set(["artifact-manifest.json","artifact-manifest.sig.json","muleforge-ed25519-private.pem","muleforge-ed25519-public.pem"]);
+const EXCLUDED_FILES=new Set(["artifact-manifest.json","artifact-manifest.sig.json","muleforge-ed25519-private.pem","muleforge-ed25519-public.pem","muleforge-generation-report.json"]);
 function artifactManifest(root="."){
   const base=path.resolve(root),files=[];
   function walk(d){
