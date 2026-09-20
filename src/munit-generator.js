@@ -68,9 +68,15 @@ function isCustomerNotFoundScenario(op, data) {
   );
 }
 function declaredStatuses(operation = {}) {
-  return new Set((Array.isArray(operation.errors) ? operation.errors : [])
-    .map(error => Number(error && (error.status ?? error.code)))
+  const statuses = new Set((Array.isArray(operation.errorStatuses) ? operation.errorStatuses : [])
+    .map(Number)
     .filter(Number.isFinite));
+  for (const error of Array.isArray(operation.errors) ? operation.errors : []) {
+    const value = typeof error === "object" ? (error.status ?? error.code) : Number(error);
+    const status = Number(value);
+    if (Number.isFinite(status)) statuses.add(status);
+  }
+  return statuses;
 }
 function deriveScenarioPlan(operation = {}) {
   const declared = declaredStatuses(operation);
@@ -87,7 +93,7 @@ function deriveScenarioPlan(operation = {}) {
   if (operation.method === "GET" && String(operation.path || "").includes("{")) {
     scenarios.push({ name: "resource not found", type: "not-found", status: 404 });
   }
-  if (["POST", "PUT", "PATCH"].includes(String(operation.method || "").toUpperCase())) {
+  if (declared.has(409) || ["POST", "PUT", "PATCH"].includes(String(operation.method || "").toUpperCase())) {
     scenarios.push({ name: "conflict or duplicate", type: "conflict", status: 409 });
   }
   return scenarios;
