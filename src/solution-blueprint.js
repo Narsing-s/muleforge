@@ -14,8 +14,15 @@ function requirementItems(model) {
       source: item.source || null
     })).filter(item => item.text);
   }
-  return text(model.requirement)
-    ? [{ id: "REQ-001", text: text(model.requirement), source: "confirmed-model" }]
+  if (text(model.requirement)) return [{ id: "REQ-001", text: text(model.requirement), source: "confirmed-model" }];
+  const hasProjectModel = Boolean(
+    model.project &&
+    (Array.isArray(model.operations) && model.operations.length ||
+      Array.isArray(model.connectors) && model.connectors.length ||
+      model.api)
+  );
+  return hasProjectModel
+    ? [{ id: "MODEL-001", text: "Existing project model supplied; generate from the confirmed project configuration.", source: "project-model" }]
     : [];
 }
 
