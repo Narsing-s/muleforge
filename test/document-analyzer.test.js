@@ -276,3 +276,19 @@ test("preserves documented field validation constraints", () => {
   assert.equal(fields.amount.maximum, 100000);
   assert.equal(fields.customerCode.pattern, "[A-Z0-9]{6}");
 });
+
+
+test("preserves documented field and operation descriptions", () => {
+  const model = analyzeRequirementDocument(
+    [
+      "POST /customers creates a customer profile.",
+      "Request fields: customerId: string description: Unique customer identifier, email: string description: Primary contact email.",
+      "customerId and email are required."
+    ].join("\n"),
+    "descriptions.md"
+  );
+  const op = model.operations[0];
+  assert.equal(op.description, "POST /customers creates a customer profile.");
+  assert.equal(op.requestFields.find(f => f.name === "customerId").description, "Unique customer identifier");
+  assert.equal(op.requestFields.find(f => f.name === "email").description, "Primary contact email");
+});
