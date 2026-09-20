@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Extended the existing MUnit scenario planner to generate executable coverage for any declared HTTP error status not already covered by the specialized validation, conflict, or connector-error scenarios.
+
 - Made the existing verification gate enforce rule-level traceability: confirmed behavior rules must resolve to an existing generated Mule asset and the executable MUnit test named by the traceability manifest.
 
 - Added rule-level traceability linking confirmed validation, error-status and reliability-policy requirements to their generated MUnit tests and Mule implementation assets.
