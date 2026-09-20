@@ -141,6 +141,7 @@ function inferFields(text, endpoint) {
       const normalized = sentence.replace(/[^A-Za-z0-9_.\[\]]+/g, " ").toLowerCase();
       const normalizedField = escaped.toLowerCase().replace(/\\\./g, " ");
       return new RegExp("(^|\\s)" + normalizedField + "(\\s|$)").test(normalized);
+    });
     const required = annotationRequired || sentenceRequired;
     const annotation = annotations.get(String(name).toLowerCase()) || "";
     const enumMatch = annotation.match(/(?:enum|values?)\s*[:=]?\s*\[?([^\]]+)\]?/i);
