@@ -143,7 +143,6 @@ function inferFields(text, endpoint) {
     const annotation = annotations.get(String(name).toLowerCase()) || "";
     const annotationRequired = /^(?:required|mandatory|cannot be empty|must be provided)$/i.test(annotation.trim());
     const required = explicitlyRequired.has(String(name).toLowerCase()) || annotationRequired;
-    const annotation = annotations.get(String(name).toLowerCase()) || "";
     const enumMatch = annotation.match(/(?:enum|values?)\s*[:=]?\s*\[?([^\]]+)\]?/i);
     const enumValues = enumMatch
       ? enumMatch[1].split(/,|\|/).map(v => v.trim().replace(/^[\"']|[\"']$/g, "")).filter(Boolean)
