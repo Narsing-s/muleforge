@@ -10,6 +10,8 @@
 - Generated CI validation now makes the API-contract directory requirement workload-aware.
 - Added explicit developer-action/unknown states instead of inventing workload decisions.
 - Added tests covering REST, messaging, file, unknown and existing-repository paths.
+- Added read-only UI repository mode for complete Mule project folders, including temporary-copy import and developer flow summary.
+- Added trigger/transport/deployment intent to the workload plan and kept composite workloads explicit instead of flattening them into an API classification.
 
 ## Unreleased
 
