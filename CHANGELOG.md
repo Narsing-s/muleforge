@@ -1,5 +1,8 @@
 ## Unreleased
 
+- Added server-side save invariants requiring explicit solution approval and blocking unresolved conflicts/configuration before Desktop export.
+- Fixed UI file-change invalidation to fingerprint every uploaded requirement file and synchronized the UI health version with `package.json`.
+
 - Added requirement-document extraction for nested request structures such as address.city and items[].sku.
 - Reuses the existing nested schema model so generated RAML/OpenAPI/DataWeave/MUnit/Postman artifacts consume the same field structure.
 - Added regression coverage for nested objects, arrays of objects, field types and required nested fields.
