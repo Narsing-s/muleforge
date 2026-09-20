@@ -151,6 +151,9 @@ function inferFields(text, endpoint) {
     const format = captureText(/format\s*[:=]\s*([A-Za-z][A-Za-z0-9_-]*)/i);
     const patternMatch = annotation.match(/pattern\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|([^,;]+))/i);
     const pattern = patternMatch ? (patternMatch[1] || patternMatch[2] || patternMatch[3]).trim() : undefined;
+    const descriptionMatch = annotation.match(/(?:description|desc)\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|(.+?))(?=\s+(?:enum|values?|format|pattern|min(?:imum)?Length|max(?:imum)?Length|min(?:imum)?|max(?:imum)?)\s*[:=]|$)/i);
+    const description = descriptionMatch ? (descriptionMatch[1] || descriptionMatch[2] || descriptionMatch[3]).trim() : undefined;
+    if (description) field.description = description.replace(/[.;]+$/, "").trim();
     if (minimum !== undefined) field.minimum = minimum;
     if (maximum !== undefined) field.maximum = maximum;
     if (minLength !== undefined) field.minLength = minLength;
@@ -389,6 +392,8 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   const operations = endpoints.map(endpoint => {
     const operationText = operationSection(endpoint) || combined;
     const requestFields = inferFields(operationText, endpoint);
+    const description = operationText.split("\n").map(line => line.trim()).filter(Boolean).find(line => !/^\s*(?:connector|request|input|payload|fields?)\s*:/i.test(line) && !/^(?:use|using|publish|send|receive|connect|authenticate)\b/i.test(line) && !new RegExp("^" + endpoint.method + "\\s+" + endpoint.path.replace(/[.*+?^$()|[\\]\\]/g, "\\    const operationText = operationSection(endpoint) || combined;
+    const requestFields = inferFields(operationText, endpoint);") + "$", "i").test(line)) || undefined;
     const connector = operationConnector(endpoint);
     const local = connector ? operationConnectivity(endpoint, connector) : null;
     const httpEvidence = httpEvidenceForOperation(endpoint);
@@ -401,6 +406,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
       connector,
       table: /\/products(?:\/|$)/i.test(endpoint.path) ? "PRODUCT" : /\/orders(?:\/|$)/i.test(endpoint.path) ? "ORDERS" : null,
       connectorAmbiguous: connector === null || (connector !== "http" && !local),
+      description,
       downstreamEndpoint: httpLocal?.endpoint || null,
       schedule: local?.schedule || null,
       filePath: local?.path || null,
