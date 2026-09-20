@@ -159,6 +159,35 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
             "Every operation with confirmed validation rules must have a generated validation MUnit test."
           ));
         }
+        const declaredStatuses = new Set((Array.isArray(op.errorStatuses) ? op.errorStatuses : []).map(Number).filter(Number.isInteger));
+        for (const error of Array.isArray(op.errors) ? op.errors : []) {
+          const text = typeof error === "string" ? error : JSON.stringify(error || "");
+          for (const match of text.matchAll(/\b([4-5]\d\d)\b/g)) declaredStatuses.add(Number(match[1]));
+        }
+        if (declaredStatuses.has(409)) {
+          const conflict = new RegExp('name="[^"]*' + safe + '-conflict-or-duplicate-test"');
+          checks.push(result("MUnit conflict coverage " + op.name, conflict.test(munit), "A confirmed 409 conflict/duplicate outcome must have a generated conflict MUnit test."));
+        }
+        if ([500, 502, 503, 504].some(status => declaredStatuses.has(status))) {
+          const connector = new RegExp('name="[^"]*' + safe + '-connector-error-test"');
+          checks.push(result("MUnit connector-error coverage " + op.name, connector.test(munit), "A confirmed server/dependency failure outcome must have a generated connector-error MUnit test."));
+        }
+        if (op.retry) {
+          const retry = new RegExp('name="[^"]*' + safe + '-retry-exhaustion-test"');
+          checks.push(result("MUnit retry coverage " + op.name, retry.test(munit), "A confirmed retry policy must have a generated retry-exhaustion MUnit test."));
+        }
+        if (op.transaction) {
+          const transaction = new RegExp('name="[^"]*' + safe + '-transaction-rollback-test"');
+          checks.push(result("MUnit transaction coverage " + op.name, transaction.test(munit), "A confirmed transaction policy must have a generated rollback MUnit test."));
+        }
+        if (op.idempotency) {
+          const idempotency = new RegExp('name="[^"]*' + safe + '-idempotency-duplicate-test"');
+          checks.push(result("MUnit idempotency coverage " + op.name, idempotency.test(munit), "A confirmed idempotency policy must have a generated duplicate-request MUnit test."));
+        }
+        if (op.pagination) {
+          const pagination = new RegExp('name="[^"]*' + safe + '-pagination-test"');
+          checks.push(result("MUnit pagination coverage " + op.name, pagination.test(munit), "A confirmed pagination policy must have a generated pagination MUnit test."));
+        }
       }
     }
   }
