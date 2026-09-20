@@ -136,7 +136,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   }
 
   const operationFlowsForCoverage = mule
-    ? [...mule.matchAll(/<flow\\b[^>]*name="([^"]+)"[^>]*>[\\s\\S]*?<\\/flow>/g)].map(m => ({ name: m[1], block: m[0] }))
+    ? [...mule.matchAll(/<flow\b[^>]*name="([^"]+)"[^>]*>[\s\\S]*?<\/flow>/g)].map(m => ({ name: m[1], block: m[0] }))
     : [];
 
   if ((config.testing || {}).munit !== false) {
