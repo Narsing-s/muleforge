@@ -46,8 +46,7 @@ function importProject(root="."){
   for(const f of files.filter(x=>path.basename(x)==="exchange.json")){try{const value=JSON.parse(fs.readFileSync(f,"utf8"));const assets=Array.isArray(value.assets)?value.assets:Array.isArray(value.dependencies)?value.dependencies:[];for(const a of assets){if(a&&(a.groupId||a.artifactId||a.assetId||a.name))exchangeDependencies.push({groupId:a.groupId||null,artifactId:a.artifactId||a.assetId||a.name,version:a.version||null,source:relative(base,f),kind:"exchange"});}}catch{}}
   const workload=classifyWorkload({model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},imported:{semantics}});
   const architecture=inferApiLedArchitecture({
-    text: raml.map(f=>fs.readFileSync(f,"utf8")).join("
-"),
+    text: raml.map(f=>fs.readFileSync(f,"utf8")).join("\n"),
     operations: uniqueOps,
     existingArtifacts: sourceAssets
   });
