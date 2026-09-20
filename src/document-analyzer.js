@@ -100,7 +100,7 @@ function inferFields(text, endpoint) {
   };
 
   for (const field of ["id","customerId","accountId","name","firstName","lastName","email","phone","mobileNumber","address","amount","status","date","createdAt","updatedAt"]) {
-    if (new RegExp("\\b" + field.replace(/[A-Z]/g, m => "[" + m.toLowerCase() + m + "]") + "\\b", "i").test(text)) addCandidate(field);
+    if (new RegExp("\b" + field.replace(/[A-Z]/g, m => "[" + m.toLowerCase() + m + "]") + "\b", "i").test(text)) addCandidate(field);
   }
 
   for (const line of String(text || "").split("\n")) {
@@ -123,7 +123,7 @@ function inferFields(text, endpoint) {
   const leafFields = selected.map(name => {
     const escaped = String(name).replace(/[.*+?^$()|[\]\\]/g, "\\$&");
     const required = new RegExp(
-      "(?:\\b(required|mandatory|must be provided|cannot be empty)\\b)[^\\n]{0,100}\\b" + escaped + "\\b|\\b" + escaped + "\\b[^\\n]{0,100}(?:\\b(required|mandatory|must be provided|cannot be empty)\\b)",
+      "(?:\b(required|mandatory|must be provided|cannot be empty)\b)[^\n]{0,100}\b" + escaped + "\b|\b" + escaped + "\b[^\n]{0,100}(?:\b(required|mandatory|must be provided|cannot be empty)\b)",
       "i"
     ).test(text);
     const annotation = annotations.get(String(name).toLowerCase()) || "";
@@ -145,10 +145,10 @@ function inferFields(text, endpoint) {
       const m = annotation.match(pattern);
       return m ? m[1].trim().replace(/^[\"']|[\"']$/g, "") : undefined;
     };
-    const minimum = captureNumber(/(?:min(?:imum)?|minimum)\s*[:=]\s*(-?\\d+(?:\\.\\d+)?)/i);
-    const maximum = captureNumber(/(?:max(?:imum)?|maximum)\s*[:=]\s*(-?\\d+(?:\\.\\d+)?)/i);
-    const minLength = captureNumber(/min(?:imum)?Length\s*[:=]\s*(\\d+)/i);
-    const maxLength = captureNumber(/max(?:imum)?Length\s*[:=]\s*(\\d+)/i);
+    const minimum = captureNumber(/(?:min(?:imum)?|minimum)\s*[:=]\s*(-?\d+(?:\\.\d+)?)/i);
+    const maximum = captureNumber(/(?:max(?:imum)?|maximum)\s*[:=]\s*(-?\d+(?:\\.\d+)?)/i);
+    const minLength = captureNumber(/min(?:imum)?Length\s*[:=]\s*(\d+)/i);
+    const maxLength = captureNumber(/max(?:imum)?Length\s*[:=]\s*(\d+)/i);
     const format = captureText(/format\s*[:=]\s*([A-Za-z][A-Za-z0-9_-]*)/i);
     const patternMatch = annotation.match(/pattern\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|([^,;]+))/i);
     const pattern = patternMatch ? (patternMatch[1] || patternMatch[2] || patternMatch[3]).trim() : undefined;
@@ -224,7 +224,7 @@ function inferFields(text, endpoint) {
 function inferValidation(text, fields) {
   const rules = [];
   for (const field of fields) {
-    if (new RegExp(field + "[^\\n]{0,60}(required|mandatory|must be provided|cannot be empty)", "i").test(text) || new RegExp("(?:required|mandatory)[^\\n]{0,60}" + field, "i").test(text)) rules.push(field + " is required");
+    if (new RegExp(field + "[^\n]{0,60}(required|mandatory|must be provided|cannot be empty)", "i").test(text) || new RegExp("(?:required|mandatory)[^\n]{0,60}" + field, "i").test(text)) rules.push(field + " is required");
     if (/email/i.test(field) && /email/i.test(text)) rules.push("email must be a valid email address");
   }
   if (/positive|greater than zero|must be >\s*0/i.test(text)) rules.push("numeric values must be greater than zero");
@@ -337,7 +337,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
 
   function operationSection(endpoint) {
     const escapedPath = endpoint.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const marker = new RegExp("\\b" + endpoint.method + "\\s+" + escapedPath + "(?=\\s|$|[.,;:)])", "i");
+    const marker = new RegExp("\b" + endpoint.method + "\s+" + escapedPath + "(?=\s|$|[.,;:)])", "i");
     const hit = marker.exec(combined);
     if (!hit) return "";
     const start = hit.index;
@@ -350,12 +350,12 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
   function evidenceForOperation(endpoint) {
     const window = operationSection(endpoint);
     const patterns = {
-      "ibm-mq": "ibm\\s*mq|websphere\\s*mq|queue\\s*manager",
-      "anypoint-mq": "anypoint\\s*mq",
-      sftp: "\\bsftp\\b|secure\\s+file\\s+transfer",
-      snowflake: "\\bsnowflake\\b",
-      database: "\\b(mysql|postgres(?:ql)?|oracle|database|sql)\\b",
-      "object-store": "object\\s*store|objectstore"
+      "ibm-mq": "ibm\s*mq|websphere\s*mq|queue\s*manager",
+      "anypoint-mq": "anypoint\s*mq",
+      sftp: "\bsftp\b|secure\s+file\s+transfer",
+      snowflake: "\bsnowflake\b",
+      database: "\b(mysql|postgres(?:ql)?|oracle|database|sql)\b",
+      "object-store": "object\s*store|objectstore"
     };
     return connectivity.filter(c => c.type !== "http" && patterns[c.type] && new RegExp(patterns[c.type], "i").test(window));
   }
