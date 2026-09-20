@@ -54,9 +54,9 @@ function generateBatConfig() {
   return [
     "# MuleForge API Functional Monitoring configuration",
     "# Supply the deployed endpoint through the BAT environment/profile; never commit credentials.",
-    "baseUrl: p("MULEFORGE_SMOKE_URL")",
-    "clientId: p("MULEFORGE_CLIENT_ID")",
-    "accessToken: p("MULEFORGE_ACCESS_TOKEN")",
+    "baseUrl: p(\"MULEFORGE_SMOKE_URL\")",
+    "clientId: p(\"MULEFORGE_CLIENT_ID\")",
+    "accessToken: p(\"MULEFORGE_ACCESS_TOKEN\")",
     ""
   ].join("\n");
 }
