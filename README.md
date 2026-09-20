@@ -336,6 +336,8 @@ For an existing project:
     muleforge explain ./existing-mule-project
     muleforge plan muleforge.yaml
 
+The local UI also has **Existing MuleSoft repository** mode. A complete repository folder can be selected for read-only reverse engineering; MuleForge copies it to a temporary workspace, reconstructs its semantics and workload, and never edits the supplied source during analysis.
+
 MuleForge reports confirmed/inferred/unknown decisions and preserves developer-owned and external assets during regeneration. The existing importer, semantic IR, traceability and verification engines remain the source of engineering evidence; this workload layer does not duplicate them.
 
 ## 🔄 Existing repository reconciliation
