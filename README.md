@@ -506,7 +506,7 @@ PDF extraction uses `pdftotext` when available; DOCX/PPTX/XLSX extraction uses t
 Existing-repository analysis now extends the same semantic model with:
 
 - change-impact evidence across contract, Mule implementation, DataWeave, MUnit, traceability, CI/CD and deployment;
-- operation coverage showing confirmed, missing, unknown and not-applicable evidence instead of assuming every project is an API;
+- operation coverage showing confirmed, missing, unknown and not-applicable evidence instead of assuming every project is an API; trigger/router evidence from imported Mule XML for scheduler, batch, HTTP and other source types;
 - Maven dependency and `exchange.json` dependency evidence when present, preserving external asset identity/version without copying or mutating it;
 - an explicit deployment/runtime boundary that distinguishes **DEPLOYED** from **RUNTIME-VERIFIED**;
 - lifecycle-aware developer handoff so modernization and regeneration remain review-first and ownership-safe.
