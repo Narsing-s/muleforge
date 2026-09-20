@@ -13,6 +13,28 @@ function lineRef(root, file, needles = []) {
   return { file, line: null };
 }
 
+function ruleTraceability(op, assets) {
+  const safe = String(op.name || (op.method + '-' + op.path)).replace(/[^A-Za-z0-9_-]/g, '-');
+  const rules = [];
+  (Array.isArray(op.validation) ? op.validation : []).forEach((rule, index) => {
+    const text = typeof rule === 'string' ? rule : JSON.stringify(rule);
+    rules.push({ ruleId: safe + '-validation-' + (index + 1), type: 'validation', source: text, munitTest: safe + '-validation-test', mule: assets.mule });
+  });
+  const statuses = new Set((Array.isArray(op.errorStatuses) ? op.errorStatuses : []).map(Number).filter(Number.isInteger));
+  for (const error of Array.isArray(op.errors) ? op.errors : []) {
+    const value = typeof error === 'object' ? (error.status ?? error.code) : Number(error);
+    if (Number.isInteger(Number(value))) statuses.add(Number(value));
+  }
+  [...statuses].sort((a,b) => a-b).forEach(status => {
+    const suffix = status === 409 ? 'conflict-or-duplicate' : [500,502,503,504].includes(status) ? 'connector-error' : 'status-' + status;
+    rules.push({ ruleId: safe + '-status-' + status, type: 'error-status', status, source: 'HTTP ' + status, munitTest: safe + '-' + suffix + '-test', mule: assets.mule });
+  });
+  if (op.retry) rules.push({ ruleId: safe + '-retry', type: 'retry', source: JSON.stringify(op.retry), munitTest: safe + '-retry-exhaustion-test', mule: assets.mule });
+  if (op.transaction) rules.push({ ruleId: safe + '-transaction', type: 'transaction', source: 'transaction policy enabled', munitTest: safe + '-transaction-rollback-test', mule: assets.mule });
+  if (op.idempotency) rules.push({ ruleId: safe + '-idempotency', type: 'idempotency', source: 'idempotency policy enabled', munitTest: safe + '-idempotency-duplicate-test', mule: assets.mule });
+  if (op.pagination) rules.push({ ruleId: safe + '-pagination', type: 'pagination', source: JSON.stringify(op.pagination), munitTest: safe + '-pagination-test', mule: assets.mule });
+  return rules;
+}
 function buildTraceability(config = {}, root = null) {
   const operations = Array.isArray(config.operations) ? config.operations : [];
   const assets = (op) => { const id = String(op.name || `${op.method}-${op.path}`).replace(/[^A-Za-z0-9_-]/g, '-').toLowerCase(); const artifactId = String((config.project || {}).artifactId || (config.project || {}).name || 'mule-api'); return { raml: `src/main/resources/api/${artifactId}.raml`, mule: `src/main/mule/${artifactId}.xml`, dataweave: [`src/main/resources/dwl/${id}-request.dwl`, `src/main/resources/dwl/${id}-response.dwl`], munit: `src/test/munit/${artifactId}-test.xml`, postman: `postman/${artifactId}.collection.json`, documentation: 'docs/' }; };
@@ -22,7 +44,7 @@ function buildTraceability(config = {}, root = null) {
   return {
     version: '1.1', generatedBy: 'MuleForge', requirementCount: requirements.length, operationCount: operations.length,
     requirements: requirements.map(req => ({ requirementId: req.id, source: req.source, text: req.text, status: 'review', targets: ['architecture','implementation','munit','postman','documentation'] })),
-    operations: operations.map(op => ({ operation: op.name, method: op.method, path: op.path, connector: op.connector || 'http', targets: ['raml','mule','dataweave','munit','postman','documentation'], assets: assets(op), generated: root ? Object.fromEntries(Object.entries(assets(op)).map(([k,v]) => [k, Array.isArray(v) ? v.every(file => fs.existsSync(path.join(root,file))) : fs.existsSync(path.join(root,v))])) : {},
+    operations: operations.map(op => ({ operation: op.name, method: op.method, path: op.path, connector: op.connector || 'http', targets: ['raml','mule','dataweave','munit','postman','documentation'], assets: assets(op), rules: ruleTraceability(op, assets(op)), generated: root ? Object.fromEntries(Object.entries(assets(op)).map(([k,v]) => [k, Array.isArray(v) ? v.every(file => fs.existsSync(path.join(root,file))) : fs.existsSync(path.join(root,v))])) : {},
       references: root ? (() => { const a = assets(op); const n = [op.path, op.name]; return { raml: lineRef(root, a.raml, n), mule: lineRef(root, a.mule, n), dataweave: a.dataweave.map(file => lineRef(root, file, n)).filter(Boolean), munit: lineRef(root, a.munit, n), postman: lineRef(root, a.postman, n) }; })() : {} }))
   };
 }
