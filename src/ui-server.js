@@ -7,6 +7,7 @@ const { prepareAndSave } = require("./local-export");
 const { version } = require("../package.json");
 const { importProject } = require("./import-project");
 const { buildEngineeringPlan, explainImportedProject, classifyWorkload } = require("./workload-engine");
+const { buildSolutionBlueprint, validateSolutionBlueprint } = require("./solution-blueprint");
 
 function json(res, status, value) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -142,7 +143,9 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
         }
         const assets = generateUiAssets(model);
         const plan = buildEngineeringPlan(model);
-        return json(res, 200, { ok: true, ...assets, model, plan });
+        const blueprint = buildSolutionBlueprint(model);
+        const blueprintValidation = validateSolutionBlueprint(model, blueprint);
+        return json(res, 200, { ok: true, ...assets, model, plan, blueprint, blueprintValidation });
       } catch (error) {
         return json(res, 400, { error: error.message });
       }
