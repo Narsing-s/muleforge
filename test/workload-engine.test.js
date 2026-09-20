@@ -71,3 +71,30 @@ test("classifies scheduled file/database workloads without inventing an API", ()
   assert.ok(result.capabilities.includes("file-transfer"));
   assert.equal(result.ramlRequired, false);
 });
+
+
+test("retains trigger and transport evidence for composite file/schedule integrations", () => {
+  const result = classifyWorkload({
+    model: {
+      requirement: "Every night read customer files from SFTP and load them into the database.",
+      connectors: ["sftp", "database"],
+      deployment: { target: "cloudhub-2" }
+    }
+  });
+  assert.equal(result.type, TYPES.FILE);
+  assert.equal(result.trigger, "scheduler");
+  assert.ok(result.transports.includes("sftp"));
+  assert.equal(result.deploymentTarget, "cloudhub-2");
+});
+
+test("engineering plan exposes workload-specific artifacts without duplicating generators", () => {
+  const plan = buildEngineeringPlan({
+    requirement: "Consume order events from Anypoint MQ and publish to Salesforce.",
+    connectors: ["anypoint-mq", "salesforce"],
+    testing: { munit: true }
+  });
+  assert.equal(plan.workload.type, TYPES.EVENT);
+  assert.deepEqual(plan.artifactPlan.contract, ["workload-specific Mule implementation", "MUnit"]);
+  assert.ok(plan.pipeline.includes("deployment-preflight"));
+  assert.ok(plan.ownership.classes.includes("EXTERNAL"));
+});
