@@ -38,9 +38,10 @@ function makeProject(root, api = true) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-e2e-"));
   makeProject(root, true);
   const config = {
+    requirement: "Build a customer health API.",
     project: { name: "demo", artifactId: "demo" },
     testing: { munit: true },
-    operations: [{ method: "GET", path: "/health" }],
+    operations: [{ method: "GET", path: "/health", responseFields: [{ name: "status", type: "string" }], errors: [{ code: "NOT_FOUND", status: 404 }] }],
     architecture: { style: "MuleSoft API-led connectivity", confidence: "high", decision: "Use the documented three-layer API-led structure." }
   };
   const report = writeEndToEndReport(root, { ...config, workloadType: "api" });
@@ -56,10 +57,23 @@ function makeProject(root, api = true) {
   const config = {
     project: { name: "demo", artifactId: "demo" },
     testing: { munit: false },
-    operations: [{ method: "POST", path: "/process" }]
+    requirement: "Create a processing API.",
+    operations: [{ method: "POST", path: "/process", responseFields: [{ name: "status", type: "string" }], errors: [{ code: "BAD_REQUEST", status: 400 }] }]
   };
   const report = checkEndToEndArtifacts(root, { ...config, workloadType: "api" });
   assert.equal(report.complete, false);
   assert.ok(report.missing.some(item => item.path === "src/main/resources/api/demo.raml"));
   assert.ok(report.missing.some(item => item.path === "postman"));
+}
+
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-e2e-workload-"));
+  makeProject(root, false);
+  fs.mkdirSync(path.join(root, "src/main/resources/api"), { recursive: true });
+  fs.writeFileSync(path.join(root, "src/main/resources/api/schema.graphql"), "type Query { health: String }");
+  fs.writeFileSync(path.join(root, "src/main/mule/muleforge-events.xml"), "<mule/>");
+  const graphql = checkEndToEndArtifacts(root, { requirement: "GraphQL API", project: { name: "demo", artifactId: "demo" }, workloadType: "graphql", operations: [{ method: "GET", path: "/graphql", responseFields: [{ name: "data", type: "object" }], errors: [{ code: "BAD_REQUEST", status: 400 }] }] });
+  assert.equal(graphql.missing.some(item => item.id === "graphql-contract"), false);
+  const event = checkEndToEndArtifacts(root, { requirement: "Consume events", project: { name: "demo", artifactId: "demo" }, workloadType: "event", events: [{ type: "kafka", topic: "orders" }] });
+  assert.equal(event.missing.some(item => item.id === "event-runtime"), false);
 }
