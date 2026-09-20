@@ -51,10 +51,6 @@ function importProject(root="."){
     source: sourceAssets
   };
   const operationEvidence = uniqueOps.map(op => { const flow = semantics.flows.find(f => f.source === op.source && f.name === op.name); return { operation: [op.method, op.path].filter(Boolean).join(" "), connector: op.connector || null, action: op.action || null, source: op.source || null, flow: flow ? { name: flow.name, source: flow.source, type: flow.type } : null, state: "confirmed" }; });
-  const dependencyEvidence=[];
-  for(const pomFile of files.filter(x=>path.basename(x)==="pom.xml")){const pomText=fs.readFileSync(pomFile,"utf8");for(const m of pomText.matchAll(/<dependency\\b[^>]*>([\\s\\S]*?)<\\/dependency>/gi)){const block=m[1];const value=tag=>{const hit=block.match(new RegExp("<"+tag+">\\\\s*([^<]+)\\\\s*</"+tag+">","i"));return hit?hit[1].trim():null;};const groupId=value("groupId"),artifactId=value("artifactId");if(groupId&&artifactId)dependencyEvidence.push({groupId,artifactId,version:value("version"),scope:value("scope"),classifier:value("classifier"),source:relative(base,pomFile),kind:"maven"});}}
-  const exchangeDependencies=[];
-  for(const f of files.filter(x=>path.basename(x)==="exchange.json")){try{const value=JSON.parse(fs.readFileSync(f,"utf8"));const assets=Array.isArray(value.assets)?value.assets:Array.isArray(value.dependencies)?value.dependencies:Object.values(value.dependencies||{});for(const a of assets){if(a&&(a.groupId||a.artifactId||a.assetId||a.name))exchangeDependencies.push({groupId:a.groupId||null,artifactId:a.artifactId||a.assetId||a.name,version:a.version||null,source:relative(base,f),kind:"exchange"});}}catch{}}
   const workload=classifyWorkload({
     model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},
     imported:{semantics, triggers: semantics.triggers, routers: semantics.routers}
