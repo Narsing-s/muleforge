@@ -259,7 +259,7 @@ function buildEngineeringPlan(model = {}, options = {}) {
       sourceOfTruth: "existing semantic model and traceability",
       note: "Changes should be evaluated against affected contract, flow, transformation, tests, CI/CD and deployment assets before regeneration."
     },
-    gaps: workload.developerActionRequired ? workload.assumptions : [],
+    coverage: buildCoverageMatrix(model, options.imported || {}),\n    dependencies: buildDependencyEvidence(options.imported || {}),\n    runtimeEvidence: buildRuntimeEvidence(model, options.imported || {}),\n    gaps: workload.developerActionRequired ? workload.assumptions : [],
     artifactPlan: {
       contract: workload.apiContractRequired ? (workload.ramlRequired ? ["RAML", "Mule implementation", "MUnit", "Postman"] : ["API contract", "Mule implementation", "MUnit"]) : ["workload-specific Mule implementation", "MUnit"],
       integration: ["DataWeave", "connector configuration", "error/retry handling"],
