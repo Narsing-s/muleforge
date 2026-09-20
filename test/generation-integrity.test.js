@@ -273,7 +273,7 @@ test("verification understands APIKit router projects", () => {
     fs.writeFileSync(path.join(root, "muleforge-traceability.json"), "{}");
     fs.writeFileSync(path.join(root, "docs/11-traceability.md"), "# Traceability\n");
     const report = verifyProject(path.join(root, "muleforge.yaml"));
-    assert.equal(report.checks.find(x => x.name === "Generated operation flow names").pass, true, JSON.stringify(report.failed));
+    assert.equal(report.checks.find(x => x.name === "APIKit router").pass, true, JSON.stringify(report.failed));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
