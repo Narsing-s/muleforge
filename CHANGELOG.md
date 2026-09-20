@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Added requirement-document extraction for nested request structures such as address.city and items[].sku.
+- Reuses the existing nested schema model so generated RAML/OpenAPI/DataWeave/MUnit/Postman artifacts consume the same field structure.
+- Added regression coverage for nested objects, arrays of objects, field types and required nested fields.
+
+
+
 - Added API governance validation with duplicate-operation, path, method, schema, status, security and error-contract checks.
 - Added Java/Mule runtime compatibility validation and generated Maven alignment checks.
 - Added secret-safe environment model diffing with sensitive-value redaction.
