@@ -312,6 +312,42 @@ function explainImportedProject(imported = {}) {
   };
 }
 
+function explainOperation(imported = {}, selector = "") {
+  const target = String(selector || "").trim().toLowerCase();
+  const operations = Array.isArray(imported.operations) ? imported.operations : [];
+  const matches = operations.filter(op => {
+    const key = [op.method, op.path].filter(Boolean).join(":").toLowerCase();
+    return !target || key === target || key.includes(target);
+  });
+  return {
+    selector,
+    found: matches.length > 0,
+    operations: matches.map(op => {
+      const flow = (imported.semantics?.flows || []).find(f => f.source === op.source && String(f.name || "").toLowerCase() === String(op.name || "").toLowerCase());
+      return {
+        operation: [op.method, op.path].filter(Boolean).join(" "),
+        source: op.source || null,
+        connector: op.connector || null,
+        action: op.action || null,
+        flow: flow?.name || op.name || null,
+        flowRefs: imported.semantics?.flowRefs || [],
+        transformations: imported.semantics?.transformCount || 0,
+        errorHandling: imported.semantics?.errorHandlers || [],
+        testAssets: imported.inventory?.munit || 0,
+        contractAssets: imported.inventory?.raml || 0,
+        certainty: "confirmed"
+      };
+    }),
+    remediation: matches.length ? null : {
+      what: "Operation was not found in imported evidence.",
+      where: selector,
+      why: "No matching HTTP/connector operation was reconstructed.",
+      howToFix: "Check the source Mule XML, listener configuration, generated/subflow references and importer coverage.",
+      affectedArtifacts: ["implementation", "tests", "traceability", "deployment"]
+    }
+  };
+}
+
 function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan.json") {
   const base = path.resolve(root);
   fs.writeFileSync(path.join(base, filename), JSON.stringify(plan, null, 2) + "\n", "utf8");
