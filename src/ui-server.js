@@ -22,10 +22,15 @@ function readBody(req, limit = 30_000_000) {
     req.on("error", reject);
   });
 }
+function safeDocumentName(value, fallback) {
+  const raw = String(value || fallback || "requirement.txt").replace(/\\/g, "/");
+  const parts = raw.split("/").filter(part => part && part !== "." && part !== "..");
+  return parts.length ? parts.join("/") : String(fallback || "requirement.txt");
+}
 function normalizeDocuments(input) {
   if (Array.isArray(input.documents) && input.documents.length) {
     return input.documents.map((doc, i) => {
-      const name = path.basename(String(doc.name || "requirement-" + (i + 1) + ".txt"));
+      const name = safeDocumentName(doc.name, "requirement-" + (i + 1) + ".txt");
       if (doc.text != null) return { name, type: path.extname(name).slice(1) || "txt", text: String(doc.text) };
       if (doc.base64) {
         const extracted = extractDocumentBuffer(Buffer.from(String(doc.base64), "base64"), name);
@@ -36,7 +41,7 @@ function normalizeDocuments(input) {
   }
   const text = String(input.text || "").trim();
   if (!text) throw new Error("Requirement document is empty.");
-  const filename = path.basename(String(input.filename || "requirement.txt"));
+  const filename = safeDocumentName(input.filename, "requirement.txt");
   return [{ name: filename, type: path.extname(filename).slice(1) || "txt", text }];
 }
 function applyResolutions(model, resolutions = []) {
