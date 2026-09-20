@@ -121,6 +121,11 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   checks.push(result("Traceability integrity", traceability.valid, traceability.detail));
   checks.push(result("Generated environment properties", ["dev","qa","uat","prod"].every(e => exists(root, "src/main/resources/properties/application-" + e + ".yaml")), "DEV/QA/UAT/PROD property files should be present."));
   checks.push(result("Postman collection", !apiWorkload || exists(root, "postman"), apiWorkload ? "API projects should include a Postman artifact directory." : "Postman is not required for non-API workloads."));
+  checks.push(result(
+    "Functional monitoring suite",
+    !apiWorkload || (exists(root, "functional-monitoring/config/dev-environment.dwl") && exists(root, "functional-monitoring/tests")),
+    apiWorkload ? "API projects should include a MuleSoft API Functional Monitoring/BAT suite for black-box runtime checks." : "Functional Monitoring is not required for non-API workloads."
+  ));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
   checks.push(result("RAML exists", !workload.ramlRequired || Boolean(raml), workload.ramlRequired ? `Expected ${ramlPath}.` : "RAML is not required for this workload."));
   checks.push(result("Mule implementation exists", Boolean(mule), `Expected ${mulePath}.`));

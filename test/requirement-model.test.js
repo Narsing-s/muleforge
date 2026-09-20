@@ -52,3 +52,19 @@ test("preserves wizard answers when operations were initially created without fi
   assert.equal(model.operations[0].connector, "database");
   assert.equal(model.operations[1].connector, "database");
 });
+
+
+test("preserves meaningful requirement statements as stable traceable REQ items", () => {
+  const model = buildRequirementModel([
+    "# Customer API",
+    "The API must validate customer email.",
+    "- Duplicate email must return 409.",
+    "- GET /customers/{customerId} returns customer details."
+  ].join("\n"), { projectName: "customer-api" });
+
+  assert.equal(model.requirements.length, 4);
+  assert.deepEqual(model.requirements.map(x => x.id), ["REQ-001", "REQ-002", "REQ-003", "REQ-004"]);
+  assert.equal(model.requirements[0].source, "requirement:line:1");
+  assert.match(model.requirements[1].text, /validate customer email/i);
+  assert.match(model.requirements[2].text, /409/);
+});
