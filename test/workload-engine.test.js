@@ -142,10 +142,10 @@ test("engineering evidence includes change impact, coverage, dependencies and ru
   assert.equal(plan.coverage.operations[0].implementation, "confirmed");
   assert.equal(plan.dependencies.status, "confirmed");
   assert.equal(plan.runtimeEvidence.status, "not-verified");
-  assert.equal(plan.impact.operations[0].reviewBeforeRegeneration, true);
+  assert.equal(plan.impact.changes[0].reviewBeforeRegeneration, true);
   assert.equal(buildDependencyEvidence(imported).exchange.length, 1);
   assert.equal(buildRuntimeEvidence(model, imported).runtime.verified, false);
-  assert.equal(buildChangeImpact(model, imported).operations.length, 1);
+  assert.equal(buildChangeImpact(model, imported).changes.length, 1);
   assert.equal(buildCoverageMatrix(model, imported).totals.confirmedTests, 1);
 });
 
