@@ -186,8 +186,43 @@ function copyProjectToDesktop(root) {
   fs.cpSync(root, desktopRoot, { recursive: true });
   return desktopRoot;
 }
-function generateProject(file = "muleforge.yaml", options = {}) { const config = loadConfig(file), d = context(config), root = path.resolve(path.dirname(file)), t = path.resolve(__dirname, "../templates");
-  if (d.apiImplementation === "apikit") d.connectorDependencies.push({ groupId: "org.mule.modules", artifactId: "mule-apikit-module", version: "1.11.1", classifier: "mule-plugin" }); write(path.join(root, "pom.xml"), render(fs.readFileSync(path.join(t, "pom.xml.hbs"), "utf8"), d)); write(path.join(root, "mule-artifact.json"), render(fs.readFileSync(path.join(t, "mule-artifact.json.hbs"), "utf8"), d)); write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d)); write(path.join(root, "src/main/resources/api", `${d.artifactId}.raml`), generateRaml(config, d)); write(path.join(root, "src/main/mule", `${d.artifactId}.xml`), generateMuleXml(config, d).replace(/\\n/g, "\n")); if ((config.events || config.triggers || []).length) writeEventRuntime(root, config); for (const mapping of generateDataWeaveFiles(config)) { write(path.join(root, "src/main/resources/dwl", `${mapping.name}-request.dwl`), mapping.request); write(path.join(root, "src/main/resources/dwl", `${mapping.name}-response.dwl`), mapping.response); } if ((config.testing || {}).munit !== false) write(path.join(root, "src/test/munit", `${d.artifactId}-test.xml`), generateMunit(config, d)); writeProductionArtifacts(root, config, d); writeTraceability(root, config); deploymentArtifacts(root, config, d);   const desktopRoot = options.copyDesktop === false ? null : copyProjectToDesktop(root);   console.log(`\n✔ Mule project generated\n✔ Requirement-derived operations: ${(config.operations || []).length}\n✔ Connectors: ${d.connectors.map(c => c.name).join(", ") || "none"}\n✔ Maven dependencies: ${d.connectorDependencies.length}\n✔ End-to-end Mule XML generated\n✔ Reusable DataWeave mappings generated\n✔ Requirement-derived MUnit scenarios generated\n✔ Postman collection generated\n✔ DEV/QA/UAT/PROD property files generated\n✔ GitHub Actions CI generated\n✔ Local project: ${root}\n${desktopRoot ? `✔ Desktop project: ${desktopRoot}` : "ℹ Desktop folder not found; local project kept only."}\n`); }
+function generateProject(file = "muleforge.yaml", options = {}) {
+  const config = loadConfig(file), d = context(config), root = path.resolve(path.dirname(file)), t = path.resolve(__dirname, "../templates");
+  const ownershipFile = path.join(root, ".muleforge-generated.json");
+  if (fs.existsSync(ownershipFile)) {
+    try {
+      const ownership = JSON.parse(fs.readFileSync(ownershipFile, "utf8"));
+      for (const relative of Array.isArray(ownership.files) ? ownership.files : []) {
+        if (!relative || relative === "muleforge.yaml" || relative === ".muleforge-generated.json") continue;
+        const target = path.resolve(root, relative);
+        if (target === root || !target.startsWith(root + path.sep) || !fs.existsSync(target)) continue;
+        if (fs.statSync(target).isFile()) fs.rmSync(target, { force: true });
+      }
+    } catch (error) {
+      throw new Error("Existing MuleForge generated-file manifest is invalid. Refusing regeneration to avoid deleting the wrong files.");
+    }
+  }
+  if (d.apiImplementation === "apikit") d.connectorDependencies.push({ groupId: "org.mule.modules", artifactId: "mule-apikit-module", version: "1.11.1", classifier: "mule-plugin" });
+  write(path.join(root, "pom.xml"), render(fs.readFileSync(path.join(t, "pom.xml.hbs"), "utf8"), d));
+  write(path.join(root, "mule-artifact.json"), render(fs.readFileSync(path.join(t, "mule-artifact.json.hbs"), "utf8"), d));
+  write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d));
+  write(path.join(root, "src/main/resources/api", `${d.artifactId}.raml`), generateRaml(config, d));
+  write(path.join(root, "src/main/mule", `${d.artifactId}.xml`), generateMuleXml(config, d).replace(/\\n/g, "\n"));
+  if ((config.events || config.triggers || []).length) writeEventRuntime(root, config);
+  for (const mapping of generateDataWeaveFiles(config)) {
+    write(path.join(root, "src/main/resources/dwl", `${mapping.name}-request.dwl`), mapping.request);
+    write(path.join(root, "src/main/resources/dwl", `${mapping.name}-response.dwl`), mapping.response);
+  }
+  if ((config.testing || {}).munit !== false) write(path.join(root, "src/test/munit", `${d.artifactId}-test.xml`), generateMunit(config, d));
+  writeProductionArtifacts(root, config, d);
+  writeTraceability(root, config);
+  deploymentArtifacts(root, config, d);
+  const generated = snapshot(root).filter(relative => relative !== ".muleforge-generated.json" && relative !== "muleforge.yaml");
+  write(ownershipFile, JSON.stringify({ version: "1.0", files: generated }, null, 2) + "\n");
+  const desktopRoot = options.copyDesktop === false ? null : copyProjectToDesktop(root);
+  console.log(`\n✔ Mule project generated\n✔ Requirement-derived operations: ${(config.operations || []).length}\n✔ Connectors: ${d.connectors.map(c => c.name).join(", ") || "none"}\n✔ Maven dependencies: ${d.connectorDependencies.length}\n✔ End-to-end Mule XML generated\n✔ Reusable DataWeave mappings generated\n✔ Requirement-derived MUnit scenarios generated\n✔ Postman collection generated\n✔ DEV/QA/UAT/PROD property files generated\n✔ GitHub Actions CI generated\n✔ Local project: ${root}\n${desktopRoot ? `✔ Desktop project: ${desktopRoot}` : "ℹ Desktop folder not found; local project kept only."}\n`);
+}
+
 function validate(file = "muleforge.yaml") { const verification = verifyProject(file); const contract = validateContract(file); const model = loadConfig(file); const configuration = validateConfigValues(model); const deployment = validateDeployment(model.deployment || {}); const policies = validateOperationPolicies(model.operations || []); const connectors = auditConnectors(file); const audit = auditProject(file); printReport(verification); console.log("\nContract gate:"); console.log(JSON.stringify(contract, null, 2)); console.log("\nConfiguration gate:"); console.log(JSON.stringify(configuration, null, 2)); console.log("\nDeployment gate:"); console.log(JSON.stringify(deployment, null, 2)); console.log("\nPolicy gate:"); console.log(JSON.stringify(policies, null, 2)); console.log("\nConnector integrity gate:"); console.log(JSON.stringify(connectors, null, 2)); printAudit(audit); if (!verification.ready || !contract.valid || !configuration.valid || !deployment.valid || !policies.valid || !connectors.ready || !audit.ready) process.exitCode = 1; }
 function syncDocs(file = "muleforge.yaml") {
   const model = loadConfig(file);
