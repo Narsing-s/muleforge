@@ -81,18 +81,24 @@ function classifyWorkload(input = {}) {
   const apiWords = /\b(rest|http|https|api|raml|openapi|endpoint|resource|apikit)\b/.test(text);
   if (apiWords) ev.push(evidence("requirement/model", "api-language", "Requirement or model contains API/HTTP contract terminology."));
 
+  const importedTriggers = imported?.semantics?.triggers || imported?.triggers || [];
+  const importedRouters = imported?.semantics?.routers || imported?.routers || [];
+  const hasSchedulerTrigger = importedTriggers.some(x => /scheduler|timer/i.test(String(x.type || "")));
+  const hasBatchTrigger = importedTriggers.some(x => /batch/i.test(String(x.type || "")));
+  const hasHttpRouter = importedRouters.some(x => /apikit:router/i.test(String(x.type || "")));
   const eventConnectors = connectors.filter(c => CONNECTOR_HINTS[c] === TYPES.EVENT);
+  if (hasHttpRouter) ev.push(evidence("repository.router", "apikit-router", "APIKit router evidence detected in the imported Mule source."));
   if (eventConnectors.length) ev.push(evidence("connectors", "messaging", "Messaging connector detected: " + [...new Set(eventConnectors)].join(", ")));
 
   const fileConnectors = connectors.filter(c => CONNECTOR_HINTS[c] === TYPES.FILE);
   if (fileConnectors.length) ev.push(evidence("connectors", "file-transfer", "File/SFTP connector detected: " + [...new Set(fileConnectors)].join(", ")));
 
   const scheduled = /\b(schedule|scheduled|cron|every\s+(day|hour|night|week)|daily|hourly|timer|poll)\b/.test(text)
-    || connectors.includes("scheduler");
+    || connectors.includes("scheduler") || hasSchedulerTrigger;
   if (scheduled) ev.push(evidence("requirement/model", "scheduled-trigger", "Schedule/timer language or scheduler trigger detected."));
 
   const batch = /\b(batch|batch job|large volume|chunk|partition|bulk processing)\b/.test(text)
-    || connectors.includes("batch") || connectors.includes("batch-job");
+    || connectors.includes("batch") || connectors.includes("batch-job") || hasBatchTrigger;
   if (batch) ev.push(evidence("requirement/model", "batch-processing", "Batch-processing language or batch capability detected."));
 
   const soap = /\b(soap|wsdl|web service)\b/.test(text) || Boolean(model.wsdl);
