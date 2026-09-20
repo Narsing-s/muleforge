@@ -54,9 +54,9 @@ function generateBatConfig() {
   return [
     "# MuleForge API Functional Monitoring configuration",
     "# Supply the deployed endpoint through the BAT environment/profile; never commit credentials.",
-    "baseUrl: $(MULEFORGE_SMOKE_URL)",
-    "clientId: $(MULEFORGE_CLIENT_ID)",
-    "accessToken: $(MULEFORGE_ACCESS_TOKEN)",
+    "baseUrl: p(MULEFORGE_SMOKE_URL)",
+    "clientId: p(MULEFORGE_CLIENT_ID)",
+    "accessToken: p(MULEFORGE_ACCESS_TOKEN)",
     ""
   ].join("\n");
 }
@@ -67,7 +67,8 @@ function writeFunctionalMonitoring(root, config, data) {
   fs.mkdirSync(testDir, { recursive: true });
   const artifact = safe(data.artifactId);
   fs.writeFileSync(path.join(testDir, artifact + ".dwl"), generateFunctionalMonitoringSuite(config, data), "utf8");
-  fs.writeFileSync(path.join(dir, "bat.yaml"), generateBatConfig(), "utf8");
+  fs.mkdirSync(path.join(dir, "config"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "config", "dev-environment.dwl"), generateBatConfig(), "utf8");
   fs.writeFileSync(path.join(dir, "README.md"), "# API Functional Monitoring\n\nGenerated from the confirmed MuleForge API contract.\n\nThe .dwl suite provides black-box smoke tests for every confirmed API operation using the documented success status and request contract. Point it at a deployed environment before execution.\n\nMuleForge does not claim live runtime verification until these tests actually execute against the deployed API.\n", "utf8");
   return { directory: "functional-monitoring", suite: "functional-monitoring/tests/" + artifact + ".dwl" };
 }
