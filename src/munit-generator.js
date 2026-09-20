@@ -96,6 +96,11 @@ function deriveScenarioPlan(operation = {}) {
   if (declared.has(409) || ["POST", "PUT", "PATCH"].includes(String(operation.method || "").toUpperCase())) {
     scenarios.push({ name: "conflict or duplicate", type: "conflict", status: 409 });
   }
+  for (const status of [...declared].sort((a, b) => a - b)) {
+    if (![400, 409, 500, 502, 503, 504].includes(status)) {
+      scenarios.push({ name: "status " + status, type: "declared-status", status });
+    }
+  }
   return scenarios;
 }
 
@@ -147,6 +152,17 @@ ${assertionForFields(op.responseFields)}
     </munit:validation>
   </munit:test>`);
     const scenarioPlan = deriveScenarioPlan({ ...op, method });
+    for (const scenario of scenarioPlan.filter(s => s.type === "declared-status")) {
+      tests.push(`  <munit:test name="${testName(op, "status-" + scenario.status)}">
+    <munit:execution>
+      <munit:set-event><munit:set-payload value="#[{}]"/></munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default ${scenario.status}]" is="#[MunitTools::equalTo(${scenario.status})]"/>
+    </munit:validation>
+  </munit:test>`);
+    }
     if (scenarioPlan.some(s => s.type === "connector-error")) {
       tests.push(`  <munit:test name="${testName(op, "connector-error")}">
     <munit:behavior>${failureMocks}</munit:behavior>
