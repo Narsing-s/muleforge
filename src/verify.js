@@ -23,6 +23,48 @@ function result(name, pass, detail) {
   return { name, pass, detail };
 }
 
+function traceabilityIntegrity(root, config) {
+  const file = path.join(root, "muleforge-traceability.json");
+  if (!fs.existsSync(file)) return { valid: false, detail: "muleforge-traceability.json is missing." };
+  try {
+    const actual = JSON.parse(fs.readFileSync(file, "utf8"));
+    const expected = buildTraceability(config);
+    const actualRequirements = Array.isArray(actual.requirements) ? actual.requirements : [];
+    const actualOperations = Array.isArray(actual.operations) ? actual.operations : [];
+    const expectedRequirements = expected.requirements || [];
+    const expectedOperations = expected.operations || [];
+    const requirementOk = actualRequirements.length === expectedRequirements.length &&
+      actualRequirements.every((item, index) =>
+        item.requirementId === expectedRequirements[index].requirementId &&
+        item.text === expectedRequirements[index].text
+      );
+    const operationOk = actualOperations.length === expectedOperations.length &&
+      actualOperations.every((item, index) => {
+        const exp = expectedOperations[index];
+        const actualRules = Array.isArray(item.rules) ? item.rules : [];
+        const expectedRules = Array.isArray(exp.rules) ? exp.rules : [];
+        return item.operation === exp.operation && item.method === exp.method && item.path === exp.path &&
+          item.connector === exp.connector &&
+          actualRules.length === expectedRules.length &&
+          actualRules.every((rule, ruleIndex) =>
+            rule.ruleId === expectedRules[ruleIndex].ruleId &&
+            rule.type === expectedRules[ruleIndex].type &&
+            rule.munitTest === expectedRules[ruleIndex].munitTest
+          );
+      });
+    return {
+      valid: actual.version === expected.version && requirementOk && operationOk,
+      detail: actual.version !== expected.version
+        ? "Traceability manifest version does not match the current generator."
+        : requirementOk && operationOk
+          ? "Traceability manifest matches the confirmed project model."
+          : "Traceability manifest is stale or does not match the confirmed project model."
+    };
+  } catch (error) {
+    return { valid: false, detail: "Traceability manifest is not valid JSON: " + error.message };
+  }
+}
+
 function verifyProject(file = "muleforge.yaml", options = {}) {
   const config = readConfig(file);
   const root = path.resolve(path.dirname(file));
@@ -66,7 +108,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     if (dependencyPattern) checks.push(result("Maven dependency " + connector, dependencyPattern.test(pom), "pom.xml must include the " + connector + " connector dependency."));
   }
   checks.push(result("Mule artifact", exists(root, "mule-artifact.json"), "mule-artifact.json is required."));
-  checks.push(result("Requirement traceability", exists(root, "muleforge-traceability.json") && exists(root, "docs/11-traceability.md"), "Generated projects must include machine-readable and human-readable requirement traceability."));
+  checks.push(result("Requirement traceability", exists(root, "muleforge-traceability.json") && exists(root, "docs/11-traceability.md"), "Generated projects must include machine-readable and human-readable requirement traceability."));\n  const traceability = traceabilityIntegrity(root, config);\n  checks.push(result("Traceability integrity", traceability.valid, traceability.detail));
   checks.push(result("Generated environment properties", ["dev","qa","uat","prod"].every(e => exists(root, "src/main/resources/properties/application-" + e + ".yaml")), "DEV/QA/UAT/PROD property files should be present."));
   checks.push(result("Postman collection", exists(root, "postman"), "Generated projects should include a Postman artifact directory."));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
