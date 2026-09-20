@@ -125,3 +125,26 @@ test("operation explanation returns source-backed remediation when missing", () 
   assert.equal(missing.found, false);
   assert.ok(missing.remediation.affectedArtifacts.includes("traceability"));
 });
+
+
+test("repository trigger evidence classifies scheduler and batch workloads", () => {
+  const scheduled = classifyWorkload({ model: { operations: [], connectors: [] }, imported: { semantics: { triggers: [{ type: "scheduler" }] } } });
+  assert.equal(scheduled.type, TYPES.SCHEDULED);
+  const batch = classifyWorkload({ model: { operations: [], connectors: [] }, imported: { semantics: { triggers: [{ type: "batch:job" }] } } });
+  assert.equal(batch.type, TYPES.BATCH);
+});
+
+test("engineering evidence stays source-backed and keeps runtime verification explicit", () => {
+  const imported = {
+    operations: [{ method: "GET", path: "/customers", source: "src/main/mule/customers.xml" }],
+    inventory: { raml: 1, dataWeave: 2, munit: 3 },
+    dependencyEvidence: [{ groupId: "com.example", artifactId: "connector", version: "1.0.0" }],
+    exchangeDependencies: [{ artifactId: "shared-asset", version: "2.0.0" }]
+  };
+  const plan = buildEngineeringPlan({ operations: imported.operations, deployment: { target: "cloudhub-2" } }, { imported });
+  assert.equal(plan.impact.matrix[0].reviewBeforeRegeneration, true);
+  assert.equal(plan.coverage[0].runtime, "not-verified");
+  assert.equal(plan.dependencies.maven.length, 1);
+  assert.equal(plan.dependencies.exchange.length, 1);
+  assert.equal(plan.runtimeEvidence.runtimeVerified, false);
+});
