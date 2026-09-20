@@ -68,19 +68,54 @@ function inferProjectName(text, file) {
   const title = String(text).split("\n").find(x => /^#\s+/.test(x));
   return title ? slug(title.replace(/^#+\s*/, "").replace(/api$/i, "")) : slug(path.basename(file, path.extname(file)));
 }
+function inferFieldType(name, annotation = "") {
+  const raw = String(annotation || "").toLowerCase().trim();
+  const explicit = raw.match(/(?:^|\b)(string|integer|int|long|number|decimal|float|double|boolean|bool|date|datetime|date-time|array|object)(?:\b|$)/i)?.[1]?.toLowerCase();
+  if (explicit) {
+    if (["int", "long"].includes(explicit)) return "integer";
+    if (["float", "double", "decimal"].includes(explicit)) return "number";
+    if (explicit === "bool") return "boolean";
+    if (explicit === "date-time") return "datetime";
+    return explicit;
+  }
+  const value = String(name || "").toLowerCase();
+  if (/^(is|has|can|should|enabled|active|deleted|verified|success)/.test(value) || /(flag|boolean)$/.test(value)) return "boolean";
+  if (/(amount|price|rate|percent|percentage|balance|salary|total|average|score|latitude|longitude|quantity|count|number|age)$/.test(value)) return /(count|quantity|number|age)$/.test(value) ? "integer" : "number";
+  if (/(date|dob|birthdate|startdate|enddate)$/.test(value)) return "date-only";
+  if (/(datetime|timestamp|createdat|updatedat|createdon|updatedon)$/.test(value)) return "datetime";
+  if (/(items|list|array|ids)$/.test(value)) return "array";
+  return "string";
+}
+
 function inferFields(text, endpoint) {
   const candidates = [];
+  const annotations = new Map();
+  const addCandidate = (name, annotation = "") => {
+    const clean = String(name || "").trim().replace(/[^A-Za-z0-9_]/g, "");
+    if (!clean) return;
+    candidates.push(clean);
+    if (annotation) annotations.set(clean.toLowerCase(), annotation.trim());
+  };
   for (const field of ["id","customerId","accountId","name","firstName","lastName","email","phone","mobileNumber","address","amount","status","date","createdAt","updatedAt"]) {
-    if (new RegExp("\\b" + field.replace(/[A-Z]/g, m => "[" + m.toLowerCase() + m + "]") + "\\b", "i").test(text)) candidates.push(field);
+    if (new RegExp("\\b" + field.replace(/[A-Z]/g, m => "[" + m.toLowerCase() + m + "]") + "\\b", "i").test(text)) addCandidate(field);
   }
-  const line = text.match(/(?:request|input|payload|fields?)\\s*[:\\-]\\s*([^\\n]+)/i);
-  if (line) candidates.push(...line[1].split(/,|\\band\\b/i).map(v => v.trim().split(/[:(]/)[0].replace(/[^A-Za-z0-9_]/g, "")).filter(Boolean));
+  for (const line of String(text || "").split("\n")) {
+    if (!/(?:request|input|payload|fields?|required fields?)/i.test(line)) continue;
+    const match = line.match(/(?:request|input|payload|fields?|required fields?)\s*[:\-]\s*(.+)$/i);
+    if (!match) continue;
+    for (const part of match[1].split(/,|\band\b/i)) {
+      const piece = part.trim();
+      if (!piece) continue;
+      const m = piece.match(/^([A-Za-z][A-Za-z0-9_]*)\s*(?::|\(|-)?\s*([^),]+)?\)?$/);
+      if (m) addCandidate(m[1], m[2] || "");
+    }
+  }
   const unique = [...new Set(candidates)].filter(Boolean);
   const selected = /^(GET|DELETE)$/i.test(endpoint.method) ? unique.filter(v => /id|status|date|name/i.test(v)) : unique;
   return selected.map(name => {
-    const escaped = String(name).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
-    const required = new RegExp("(?:\\\\brequired\\\\b|\\\\bmandatory\\\\b|\\\\bmust be provided\\\\b|\\\\bcannot be empty\\\\b)[^\\\\n]{0,80}\\\\b" + escaped + "\\\\b|\\\\b" + escaped + "\\\\b[^\\\\n]{0,80}(?:\\\\brequired\\\\b|\\\\bmandatory\\\\b|\\\\bmust be provided\\\\b|\\\\bcannot be empty\\\\b)", "i").test(text);
-    return required ? { name, type: "string", required: true } : name;
+    const escaped = String(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const required = new RegExp("(?:\\brequired\\b|\\bmandatory\\b|\\bmust be provided\\b|\\bcannot be empty\\b)[^\\n]{0,100}\\b" + escaped + "\\b|\\b" + escaped + "\\b[^\\n]{0,100}(?:\\brequired\\b|\\bmandatory\\b|\\bmust be provided\\b|\\bcannot be empty\\b)", "i").test(text);
+    return { name, type: inferFieldType(name, annotations.get(String(name).toLowerCase())), required };
   });
 }
 function inferValidation(text, fields) {
