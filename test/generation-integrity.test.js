@@ -474,3 +474,42 @@ test("MUnit generator creates coverage for arbitrary declared error statuses",()
   assert.match(xml,/name="get-status-401-test"/);
   assert.match(xml,/name="get-status-422-test"/);
 });
+
+test("regeneration removes stale MuleForge-owned artifacts without deleting user files", () => {
+  const { execFileSync } = require("node:child_process");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-regenerate-"));
+  try {
+    const configPath = path.join(root, "muleforge.yaml");
+    const base = `project:
+  name: demo
+  artifactId: demo
+api:
+  name: Demo API
+  basePath: /api
+operations:
+  - name: first
+    method: GET
+    path: /first
+    successStatus: 200
+testing:
+  munit: true
+deployment:
+  target: none
+`;
+    fs.writeFileSync(configPath, base, "utf8");
+    fs.writeFileSync(path.join(root, "user-not-generated.txt"), "keep me", "utf8");
+    const cli = path.resolve(__dirname, "../src/index.js");
+    execFileSync(process.execPath, [cli, "generate", configPath, "--no-desktop"], { cwd: root, stdio: "pipe" });
+    const stale = path.join(root, "src/main/resources/dwl/first-request.dwl");
+    assert.equal(fs.existsSync(stale), true);
+    fs.writeFileSync(path.join(root, "user-not-generated.txt"), "keep me edited", "utf8");
+    const changed = base.replace("/first", "/second").replace("name: first", "name: second");
+    fs.writeFileSync(configPath, changed, "utf8");
+    execFileSync(process.execPath, [cli, "generate", configPath, "--no-desktop"], { cwd: root, stdio: "pipe" });
+    assert.equal(fs.existsSync(stale), false);
+    assert.equal(fs.existsSync(path.join(root, "src/main/resources/dwl/second-request.dwl")), true);
+    assert.equal(fs.readFileSync(path.join(root, "user-not-generated.txt"), "utf8"), "keep me edited");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
