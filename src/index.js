@@ -58,6 +58,7 @@ const { importProject } = require("./import-project");
 const { classifyWorkload, buildEngineeringPlan, explainImportedProject, writeEngineeringPlan, explainOperation } = require("./workload-engine");
 const { writeEndToEndReport } = require("./end-to-end");
 const { buildSolutionBlueprint, validateSolutionBlueprint, writeSolutionBlueprint } = require("./solution-blueprint");
+const { runGenerationGate } = require("./generation-gate");
 
 const VERSION = "0.9.18";
 const program = new Command();
@@ -240,8 +241,12 @@ function generateProject(file = "muleforge.yaml", options = {}) {
     .filter(relative => relative !== ".muleforge-generated.json" && relative !== "muleforge.yaml")
     .sort();
   write(ownershipFile, JSON.stringify({ version: "1.0", files: generated }, null, 2) + "\n");
+  const generationGate = runGenerationGate(file, { workloadType: engineeringPlan.workload.type });
+  if (generationGate.status !== "verified") {
+    throw new Error("Generation verification gate failed: " + generationGate.failed.join(", ") + ". The project remains local and was not copied to Desktop.");
+  }
   const desktopRoot = options.copyDesktop === false ? null : copyProjectToDesktop(root);
-  console.log(`\n✔ Mule project generated\n✔ Requirement-derived operations: ${(config.operations || []).length}\n✔ Connectors: ${d.connectors.map(c => c.name).join(", ") || "none"}\n✔ Maven dependencies: ${d.connectorDependencies.length}\n✔ End-to-end Mule XML generated\n✔ Reusable DataWeave mappings generated\n✔ Requirement-derived MUnit scenarios generated\n✔ Postman collection generated\n✔ DEV/QA/UAT/PROD property files generated\n✔ GitHub Actions CI generated\n✔ Local project: ${root}\n${desktopRoot ? `✔ Desktop project: ${desktopRoot}` : "ℹ Desktop folder not found; local project kept only."}\n`);
+  console.log(`\n✔ Mule project generated\n✔ Requirement-derived operations: ${(config.operations || []).length}\n✔ Connectors: ${d.connectors.map(c => c.name).join(", ") || "none"}\n✔ Maven dependencies: ${d.connectorDependencies.length}\n✔ End-to-end Mule XML generated\n✔ Reusable DataWeave mappings generated\n✔ Requirement-derived MUnit scenarios generated\n✔ Postman collection generated\n✔ DEV/QA/UAT/PROD property files generated\n✔ GitHub Actions CI generated\n✔ Static generation verification gate: VERIFIED\n✔ Local project: ${root}\n${desktopRoot ? `✔ Desktop project: ${desktopRoot}` : "ℹ Desktop folder not found; local project kept only."}\n`);
 }
 
 function validate(file = "muleforge.yaml") { const verification = verifyProject(file); const contract = validateContract(file); const model = loadConfig(file); const configuration = validateConfigValues(model); const deployment = validateDeployment(model.deployment || {}); const policies = validateOperationPolicies(model.operations || []); const connectors = auditConnectors(file); const audit = auditProject(file); printReport(verification); console.log("\nContract gate:"); console.log(JSON.stringify(contract, null, 2)); console.log("\nConfiguration gate:"); console.log(JSON.stringify(configuration, null, 2)); console.log("\nDeployment gate:"); console.log(JSON.stringify(deployment, null, 2)); console.log("\nPolicy gate:"); console.log(JSON.stringify(policies, null, 2)); console.log("\nConnector integrity gate:"); console.log(JSON.stringify(connectors, null, 2)); printAudit(audit); if (!verification.ready || !contract.valid || !configuration.valid || !deployment.valid || !policies.valid || !connectors.ready || !audit.ready) process.exitCode = 1; }
