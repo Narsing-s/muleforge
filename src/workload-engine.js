@@ -104,10 +104,10 @@ function classifyWorkload(input = {}) {
   if (soap) type = TYPES.SOAP;
   else if (graphql) type = TYPES.GRAPHQL;
   else if (apiEvidence || (apiWords && !eventConnectors.length && !fileConnectors.length && !scheduled && !batch)) type = TYPES.API;
-  else if (eventConnectors.length) type = TYPES.EVENT;
-  else if (fileConnectors.length) type = TYPES.FILE;
   else if (batch) type = TYPES.BATCH;
   else if (scheduled) type = TYPES.SCHEDULED;
+  else if (eventConnectors.length) type = TYPES.EVENT;
+  else if (fileConnectors.length) type = TYPES.FILE;
   else if (operations.length || connectors.length) type = TYPES.INTEGRATION;
 
   const confirmed = Boolean(model.workload?.type && Object.values(TYPES).includes(normalize(model.workload.type)));
@@ -124,6 +124,15 @@ function classifyWorkload(input = {}) {
     apiContractRequired,
     ramlRequired: type === TYPES.API && String(model.api?.specification || "RAML").toUpperCase() === "RAML",
     evidence: ev,
+    capabilities: [...new Set([
+      apiContractRequired ? "api-contract" : null,
+      eventConnectors.length ? "messaging" : null,
+      fileConnectors.length ? "file-transfer" : null,
+      scheduled ? "scheduler" : null,
+      batch ? "batch-processing" : null,
+      soap ? "soap" : null,
+      graphql ? "graphql" : null
+    ].filter(Boolean))],
     decisions: {
       generateApiContract: apiContractRequired,
       generateRaml: type === TYPES.API && String(model.api?.specification || "RAML").toUpperCase() === "RAML",
