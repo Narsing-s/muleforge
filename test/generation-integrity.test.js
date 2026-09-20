@@ -426,3 +426,10 @@ test("verification requires MUnit coverage for confirmed behavior policies",()=>
   assert.equal(failed.checks.find(x=>x.name==="MUnit pagination coverage create").pass,false);
   fs.rmSync(root,{recursive:true,force:true});
 });
+
+
+test("MUnit generator honors declared errorStatuses for policy scenarios",()=>{
+  const {generateMunit}=require("../src/munit-generator");
+  const xml=generateMunit({operations:[{name:"lookup",method:"GET",path:"/customers/{id}",errorStatuses:[409]}]},{artifactId:"customers",hasDatabase:false});
+  assert.match(xml,/name="lookup-conflict-or-duplicate-test"/);
+});
