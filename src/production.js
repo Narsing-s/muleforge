@@ -84,7 +84,7 @@ jobs:
           test -f mule-artifact.json
           test -f src/main/resources/application.yaml
           test -d src/main/mule
-          test -d src/main/resources/api
+          ${data.workloadType === "api" ? "test -d src/main/resources/api" : "true # API contract not required for this workload"}
           test -d src/test/munit
       - name: Validate Maven settings
         env:
