@@ -11,10 +11,12 @@ function extractSemantics(xml){
   const flows=[...xml.matchAll(/<(flow|sub-flow|private|template)(?=[\s>])[^>]*\bname="([^"]+)"/gi)].map(m=>({type:m[1].toLowerCase(),name:m[2]}));
   const flowRefs=[...xml.matchAll(/<flow-ref\b[^>]*\bname="([^"]+)"/gi)].map(m=>m[1]);
   const transforms=[...xml.matchAll(/<(ee:transform|transform-message)\b/gi)].map(()=>"transform");
+  const triggers=[...xml.matchAll(/<(scheduler|scheduling-strategy|http:listener|jms:listener|sftp:listener|file:listener|batch:job|vm:listener)\b([^>]*)/gi)].map(m=>({type:m[1].toLowerCase(),attributes:attrs(m[0])}));
+  const routers=[...xml.matchAll(/<(apikit:router|http:listener|apikit:config)\b([^>]*)/gi)].map(m=>({type:m[1].toLowerCase(),attributes:attrs(m[0])}));
   const errorHandlers=[...xml.matchAll(/<(on-error-(?:continue|propagate)|on-error)\b[^>]*>([\s\S]*?)<\/on-error[^>]*>/gi)].map(m=>{const a=attrs(m[0]);return {type:m[1].toLowerCase(),errorType:a.type||a.errorType||null};});
   const configRefs=[...xml.matchAll(/\bconfig-ref="([^"]+)"/gi)].map(m=>m[1]);
   const globalConfigs=[...xml.matchAll(/<([\w-]+):([\w-]+(?:-config|-connection|config|connection))\b([^>]*)/gi)].map(m=>{const a=attrs(m[0]);return {namespace:m[1].toLowerCase(),element:m[2],name:a.name||null};});
-  return {flows,flowRefs:unique(flowRefs),transformCount:transforms.length,errorHandlers,configRefs:unique(configRefs),globalConfigs};
+  return {flows,flowRefs:unique(flowRefs),transformCount:transforms.length,errorHandlers,configRefs:unique(configRefs),globalConfigs,triggers,routers};
 }
 function importProject(root="."){
   const base=path.resolve(root),files=walk(base),xml=files.filter(f=>f.endsWith(".xml")),raml=files.filter(f=>f.endsWith(".raml")),dw=files.filter(f=>f.endsWith(".dwl")),munit=files.filter(f=>/munit/i.test(f)&&f.endsWith(".xml")),pom=files.find(f=>path.basename(f)==="pom.xml");
