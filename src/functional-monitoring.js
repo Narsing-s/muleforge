@@ -50,6 +50,23 @@ function generateFunctionalMonitoringSuite(config = {}, data = {}) {
     ""
   ].join("\n").replace(/§/g, String.fromCharCode(96));
 }
+function generateBatManifest(artifact) {
+  return [
+    "suite:",
+    "  name: \"" + artifact + " Functional Monitoring\"",
+    "files:",
+    "  - file: tests/" + artifact + ".dwl",
+    "reporters:",
+    "  - type: JSON",
+    "    outFile: reports/result.json",
+    "  - type: HTML",
+    "    outFile: reports/result.html",
+    "  - type: JUnit",
+    "    outFile: reports/result.xml",
+    ""
+  ].join("\\n");
+}
+
 function generateBatConfig() {
   return [
     "# MuleForge API Functional Monitoring configuration",
@@ -65,11 +82,13 @@ function writeFunctionalMonitoring(root, config, data) {
   const dir = path.join(root, "functional-monitoring");
   const testDir = path.join(dir, "tests");
   fs.mkdirSync(testDir, { recursive: true });
+  fs.mkdirSync(path.join(dir, "reports"), { recursive: true });
   const artifact = safe(data.artifactId);
   fs.writeFileSync(path.join(testDir, artifact + ".dwl"), generateFunctionalMonitoringSuite(config, data), "utf8");
+  fs.writeFileSync(path.join(dir, "bat.yaml"), generateBatManifest(artifact), "utf8");
   fs.mkdirSync(path.join(dir, "config"), { recursive: true });
   fs.writeFileSync(path.join(dir, "config", "dev-environment.dwl"), generateBatConfig(), "utf8");
   fs.writeFileSync(path.join(dir, "README.md"), "# API Functional Monitoring\n\nGenerated from the confirmed MuleForge API contract.\n\nThe .dwl suite provides black-box smoke tests for every confirmed API operation using the documented success status and request contract. Point it at a deployed environment before execution.\n\nMuleForge does not claim live runtime verification until these tests actually execute against the deployed API.\n", "utf8");
-  return { directory: "functional-monitoring", suite: "functional-monitoring/tests/" + artifact + ".dwl" };
+  return { directory: "functional-monitoring", manifest: "functional-monitoring/bat.yaml", suite: "functional-monitoring/tests/" + artifact + ".dwl" };
 }
-module.exports = { generateFunctionalMonitoringSuite, generateBatConfig, writeFunctionalMonitoring };
+module.exports = { generateFunctionalMonitoringSuite, generateBatManifest, generateBatConfig, writeFunctionalMonitoring };
