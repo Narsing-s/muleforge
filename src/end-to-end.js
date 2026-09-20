@@ -12,6 +12,9 @@ function expectedArtifacts(config = {}) {
     Array.isArray(config.operations) && config.operations.length ? "api" : "integration"
   );
   const api = workload === "api";
+  const soap = workload === "soap";
+  const graphql = workload === "graphql";
+  const event = workload === "event" || Array.isArray(config.events) || Array.isArray(config.triggers);
   return [
     { id: "project-config", path: "muleforge.yaml", required: true, category: "model" },
     { id: "maven-project", path: "pom.xml", required: true, category: "build" },
@@ -29,7 +32,10 @@ function expectedArtifacts(config = {}) {
     { id: "deployment-matrix", path: "docs/09-deployment/deployment-matrix.md", required: true, category: "deployment" },
     { id: "ci-workflow", path: ".github/workflows/ci-generated.yml", required: true, category: "cicd" },
     { id: "postman", path: "postman", required: api, category: "api-client" },
-    { id: "raml", path: `src/main/resources/api/${artifactId}.raml`, required: workload === "api", category: "api-contract" },
+    { id: "raml", path: `src/main/resources/api/${artifactId}.raml`, required: api, category: "api-contract" },
+    { id: "graphql-contract", path: "src/main/resources/api/schema.graphql", required: graphql, category: "api-contract" },
+    { id: "soap-contract", path: `src/main/resources/api/${artifactId}.wsdl`, required: soap && Boolean(config.wsdl || config.api?.wsdl), category: "api-contract" },
+    { id: "event-runtime", path: "src/main/mule/muleforge-events.xml", required: event && ((config.events || []).length > 0 || (config.triggers || []).length > 0), category: "implementation" },
     { id: "environment-dev", path: "src/main/resources/properties/application-dev.yaml", required: true, category: "configuration" },
     { id: "environment-qa", path: "src/main/resources/properties/application-qa.yaml", required: true, category: "configuration" },
     { id: "environment-uat", path: "src/main/resources/properties/application-uat.yaml", required: true, category: "configuration" },
@@ -57,7 +63,6 @@ function requirementCoverage(config = {}) {
     if (!Array.isArray(op.responseFields) || !op.responseFields.length) issues.push({ severity: "warning", code: "RESPONSE_SCHEMA_UNCONFIRMED", operation: op.name || method, message: "Success response fields were not confirmed." });
     if (!Array.isArray(op.errors) || !op.errors.length) issues.push({ severity: "warning", code: "ERROR_CASES_UNCONFIRMED", operation: op.name || method, message: "Business/dependency error cases were not confirmed." });
   });
-  const requirements = requirementCoverage(config);
   return {
     version: "1.1",
     issues,
@@ -80,8 +85,8 @@ function checkEndToEndArtifacts(root, config = {}) {
     architecture: config.architecture || null,
     artifacts,
     missing,
-    requirements,
-    complete: missing.length === 0 && requirements.complete
+    requirements: requirementCoverage(config),
+    complete: missing.length === 0 && requirementCoverage(config).complete
   };
 }
 
