@@ -233,6 +233,7 @@ test("verification accepts structured requirements", () => {
     fs.writeFileSync(path.join(root, "src/test/munit/demo-test.xml"), "<munit/>");
     fs.writeFileSync(path.join(root, "muleforge-traceability.json"), "{}");
     fs.mkdirSync(path.join(root, "docs"), { recursive: true });
+    fs.mkdirSync(path.join(root, "docs"), { recursive: true });
     fs.writeFileSync(path.join(root, "docs/11-traceability.md"), "# Traceability\n");
     const report = verifyProject(path.join(root, "muleforge.yaml"));
     assert.equal(report.checks.find(x => x.name === "Requirement exists").pass, true, JSON.stringify(report.failed));
