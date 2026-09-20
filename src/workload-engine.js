@@ -59,6 +59,8 @@ function classifyWorkload(input = {}) {
     model.api?.specification,
     ...(Array.isArray(model.requirements) ? model.requirements.map(x => x.text || x.description || x) : []),
     textOf(model.events || model.triggers || []),
+    textOf(imported?.triggers || imported?.semantics?.triggers || []),
+    textOf(imported?.routers || imported?.semantics?.routers || []),
     textOf(model.connectors || [])
   ].join("\n").toLowerCase();
 
@@ -254,11 +256,10 @@ function buildEngineeringPlan(model = {}, options = {}) {
       principle: "Preserve developer-owned and external assets; only regenerate MuleForge-owned artifacts.",
       classes: ["MULEFORGE_MANAGED", "SHARED", "DEVELOPER_MANAGED", "EXTERNAL"]
     },
-    impact: {
-      enabled: true,
-      sourceOfTruth: "existing semantic model and traceability",
-      note: "Changes should be evaluated against affected contract, flow, transformation, tests, CI/CD and deployment assets before regeneration."
-    },
+    impact: buildChangeImpact(model, options.imported || {}),
+    coverage: buildCoverageMatrix(model, options.imported || {}),
+    dependencies: buildDependencyEvidence(options.imported || {}),
+    runtimeEvidence: buildRuntimeEvidence(model, options.imported || {}),
     gaps: workload.developerActionRequired ? workload.assumptions : [],
     artifactPlan: {
       contract: workload.apiContractRequired ? (workload.ramlRequired ? ["RAML", "Mule implementation", "MUnit", "Postman"] : ["API contract", "Mule implementation", "MUnit"]) : ["workload-specific Mule implementation", "MUnit"],
@@ -353,6 +354,91 @@ function explainOperation(imported = {}, selector = "") {
   };
 }
 
+function buildChangeImpact(model = {}, imported = {}) {
+  const operations = Array.isArray(model.operations) ? model.operations : (imported.operations || []);
+  const trace = imported.operationEvidence || [];
+  return {
+    sourceOfTruth: "existing operation evidence, semantic flow evidence and traceability",
+    changes: operations.map(op => {
+      const key = [op.method, op.path].filter(Boolean).join(" ");
+      const evidence = trace.find(x => x.operation === key || x.operation === [op.method, op.path].filter(Boolean).join(":"));
+      const affected = [
+        "contract",
+        "mule-implementation",
+        "dataweave",
+        "munit",
+        "traceability",
+        "ci-cd",
+        "deployment"
+      ];
+      return {
+        operation: key || op.name || "unknown",
+        source: op.source || evidence?.source || null,
+        state: evidence?.state || "inferred",
+        affectedArtifacts: affected,
+        reviewBeforeRegeneration: true
+      };
+    }),
+    rule: "A change is not regenerated blindly; impacted developer-owned/shared assets must be reviewed first."
+  };
+}
+
+function buildCoverageMatrix(model = {}, imported = {}) {
+  const inventory = imported.inventory || {};
+  const assets = imported.assetInventory || {};
+  const operations = Array.isArray(model.operations) ? model.operations : (imported.operations || []);
+  const api = Boolean((model.api && (model.api.specification || model.api.type)) || inventory.raml || assets.raml?.length);
+  const rows = operations.map(op => ({
+    operation: [op.method, op.path].filter(Boolean).join(" ") || op.name || "unknown",
+    contract: api ? (inventory.raml || assets.raml?.length ? "confirmed" : "missing") : "not-applicable",
+    implementation: op.source ? "confirmed" : "unknown",
+    dataWeave: (inventory.dataWeave || assets.dataWeave?.length) ? "present" : "unknown",
+    errorHandling: imported.semantics?.errorHandlers?.length ? "present" : "unknown",
+    munit: (inventory.munit || assets.munit?.length) ? "present" : "unknown",
+    postman: api ? "expected-for-api" : "not-applicable",
+    deployment: inventory.pom ? "project-detected" : "unknown"
+  }));
+  return {
+    sourceOfTruth: "existing importer inventory and semantic evidence",
+    operations: rows,
+    totals: {
+      operations: rows.length,
+      confirmedImplementation: rows.filter(x => x.implementation === "confirmed").length,
+      confirmedTests: rows.filter(x => x.munit === "present").length
+    }
+  };
+}
+
+function buildDependencyEvidence(imported = {}) {
+  const deps = Array.isArray(imported.dependencyEvidence) ? imported.dependencyEvidence : [];
+  const exchange = Array.isArray(imported.exchangeDependencies) ? imported.exchangeDependencies : [];
+  return {
+    sourceOfTruth: "repository POM/exchange metadata when present",
+    dependencies: deps,
+    exchange: exchange,
+    status: (deps.length || exchange.length) ? "confirmed" : "unknown",
+    note: "Exchange assets are referenced by identity/version; MuleForge does not copy or mutate external assets."
+  };
+}
+
+function buildRuntimeEvidence(model = {}, imported = {}) {
+  const deployment = model.deployment || {};
+  return {
+    status: "not-verified",
+    deploymentTarget: deployment.target || imported.workload?.deploymentTarget || null,
+    artifact: {
+      manifestRequired: true,
+      sha256Required: true
+    },
+    runtime: {
+      deployed: "unknown",
+      verified: false,
+      evidence: []
+    },
+    rule: "DEPLOYED and RUNTIME-VERIFIED are distinct states; runtime verification requires authorized live evidence."
+  };
+}
+
 function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan.json") {
   const base = path.resolve(root);
   fs.writeFileSync(path.join(base, filename), JSON.stringify(plan, null, 2) + "\n", "utf8");
@@ -425,5 +511,9 @@ module.exports = {
   certaintyState,
   buildLifecycleState,
   buildDeveloperHandoff,
-  explainOperation
+  explainOperation,
+  buildChangeImpact,
+  buildCoverageMatrix,
+  buildDependencyEvidence,
+  buildRuntimeEvidence
 };

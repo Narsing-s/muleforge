@@ -501,6 +501,18 @@ MuleForge treats the complete requirement package as the source of truth for sol
 PDF extraction uses `pdftotext` when available; DOCX/PPTX/XLSX extraction uses the system `unzip` or `tar` utility. If the required extractor is unavailable, MuleForge reports that instead of pretending the document was analyzed.
 
 
+## 🧭 Developer engineering evidence
+
+Existing-repository analysis now extends the same semantic model with:
+
+- change-impact evidence across contract, Mule implementation, DataWeave, MUnit, traceability, CI/CD and deployment;
+- operation coverage showing confirmed, missing, unknown and not-applicable evidence instead of assuming every project is an API; trigger/router evidence from imported Mule XML for scheduler, batch, HTTP and other source types;
+- Maven dependency and `exchange.json` dependency evidence when present, preserving external asset identity/version without copying or mutating it;
+- an explicit deployment/runtime boundary that distinguishes **DEPLOYED** from **RUNTIME-VERIFIED**;
+- lifecycle-aware developer handoff so modernization and regeneration remain review-first and ownership-safe.
+
+Exchange dependencies can represent RAML/OAS fragments, JSON schemas and rulesets, so MuleForge records their identity/version evidence rather than silently duplicating external assets. citeturn0search0turn0search2
+
 ## 🔍 Quality and traceability
 
 Generated projects now include a machine-readable `muleforge-traceability.json` manifest and `docs/11-traceability.md`. Run `muleforge trace` to regenerate them and `muleforge validate` or `muleforge self-test` before release; `muleforge audit` to check requirement completeness, duplicate operations, generated assets and obvious hard-coded secrets.

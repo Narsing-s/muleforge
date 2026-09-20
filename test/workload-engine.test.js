@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { TYPES, classifyWorkload, buildEngineeringPlan, buildLifecycleState, explainOperation } = require("../src/workload-engine");
+const { TYPES, classifyWorkload, buildEngineeringPlan, buildLifecycleState, explainOperation, buildChangeImpact, buildCoverageMatrix, buildDependencyEvidence, buildRuntimeEvidence } = require("../src/workload-engine");
 
 test("classifies REST requirements as API and requires RAML when specified", () => {
   const result = classifyWorkload({
@@ -124,4 +124,59 @@ test("operation explanation returns source-backed remediation when missing", () 
   const missing = explainOperation(imported, "GET:/orders");
   assert.equal(missing.found, false);
   assert.ok(missing.remediation.affectedArtifacts.includes("traceability"));
+});
+
+
+test("engineering evidence includes change impact, coverage, dependencies and runtime boundary without duplicate engines", () => {
+  const imported = {
+    operations: [{ method: "POST", path: "/customers", source: "src/main/mule/customers.xml" }],
+    operationEvidence: [{ operation: "POST /customers", source: "src/main/mule/customers.xml", state: "confirmed" }],
+    inventory: { raml: 1, dataWeave: 2, munit: 1, pom: true },
+    assetInventory: { raml: ["api.raml"], dataWeave: ["post.dwl"], munit: ["customers-test.xml"] },
+    dependencyEvidence: [{ groupId: "com.example", artifactId: "example-connector", version: "1.0.0", state: "confirmed" }],
+    exchangeDependencies: [{ dependency: "com.example:shared-fragment:1.0.0", state: "confirmed" }],
+    semantics: { errorHandlers: [{ type: "on-error-propagate" }] }
+  };
+  const model = { operations: imported.operations, api: { specification: "RAML" }, deployment: { target: "cloudhub-2" } };
+  const plan = buildEngineeringPlan(model, { imported });
+  assert.equal(plan.coverage.operations[0].implementation, "confirmed");
+  assert.equal(plan.dependencies.status, "confirmed");
+  assert.equal(plan.runtimeEvidence.status, "not-verified");
+  assert.equal(plan.impact.operations[0].reviewBeforeRegeneration, true);
+  assert.equal(buildDependencyEvidence(imported).exchange.length, 1);
+  assert.equal(buildRuntimeEvidence(model, imported).runtime.verified, false);
+  assert.equal(buildChangeImpact(model, imported).operations.length, 1);
+  assert.equal(buildCoverageMatrix(model, imported).totals.confirmedTests, 1);
+});
+
+
+test("classifies the remaining supported workload families without forcing REST artifacts", () => {
+  const cases = [
+    [{ requirement: "Process a batch of 10000 records with chunking." }, TYPES.BATCH],
+    [{ requirement: "Expose a SOAP service defined by WSDL.", wsdl: "orders.wsdl" }, TYPES.SOAP],
+    [{ requirement: "Expose a GraphQL query and mutation API.", graphql: true }, TYPES.GRAPHQL],
+    [{ requirement: "Synchronize Salesforce records with a database.", connectors: ["salesforce", "database"] }, TYPES.INTEGRATION]
+  ];
+  for (const [model, expected] of cases) {
+    const result = classifyWorkload({ model });
+    assert.equal(result.type, expected);
+    assert.equal(result.apiContractRequired, [TYPES.SOAP, TYPES.GRAPHQL].includes(expected));
+    if (expected !== TYPES.GRAPHQL && expected !== TYPES.SOAP) assert.equal(result.ramlRequired, false);
+  }
+});
+
+
+test("repository trigger evidence classifies scheduler-only and batch workloads", () => {
+  const scheduled = classifyWorkload({
+    model: {},
+    imported: { semantics: { triggers: [{ type: "scheduler" }] } }
+  });
+  assert.equal(scheduled.type, TYPES.SCHEDULED);
+  assert.ok(scheduled.capabilities.includes("scheduler"));
+
+  const batch = classifyWorkload({
+    model: {},
+    imported: { semantics: { triggers: [{ type: "batch:job" }] } }
+  });
+  assert.equal(batch.type, TYPES.BATCH);
 });

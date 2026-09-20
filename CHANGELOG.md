@@ -15,6 +15,12 @@
 
 ## Unreleased
 
+- Extended the existing workload-neutral engineering model with source-backed change-impact mapping, operation coverage matrices, Maven/Exchange dependency evidence and an explicit deployed-versus-runtime-verified boundary.
+- Existing-repository dependency evidence records identities and versions from POM and exchange metadata without copying or mutating external assets.
+- Added regression coverage for impact, coverage, dependency and runtime evidence.
+- Preserved the existing generators, validators, traceability and readiness gates as the sources of truth.
+
+
 - Extended the existing engineering plan with an evidence-gated lifecycle state machine, explicit certainty states, operation-level explain/remediation, source-backed import asset/operation evidence, and developer handoff/KT guidance without adding a second analysis or traceability engine.
 
 - Extended the existing MUnit scenario planner to generate executable coverage for any declared HTTP error status not already covered by the specialized validation, conflict, or connector-error scenarios.
