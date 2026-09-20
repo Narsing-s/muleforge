@@ -27,6 +27,21 @@ test("document analysis generates end-to-end assets without backend credentials"
   assert.match(mule, /http:listener/); assert.match(mule, /POST/); assert.match(postman, /customers/); assert.match(scenarios, /happy path/); assert.equal(fs.existsSync(path.join(root, "docs/06-flows/main-flow.md")), true);
 });
 
+test("document analysis accepts a repository documentation directory without duplicating the project model", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-doc-package-"));
+  const docs = path.join(temp, "requirements");
+  fs.mkdirSync(docs, { recursive: true });
+  fs.writeFileSync(path.join(docs, "api.md"), "# Customer API\nPOST /customers accepts name and email. Duplicate customer returns 409.", "utf8");
+  fs.writeFileSync(path.join(docs, "integration.raml"), "#%RAML 1.0\n/customers:\n  post:\n    description: Create customer", "utf8");
+  runCli(temp, "analyze", docs, "customer-api");
+  const root = path.join(temp, "customer-api");
+  const model = fs.readFileSync(path.join(root, "muleforge.yaml"), "utf8");
+  assert.match(model, /POST/);
+  assert.match(model, /\\.\\/);
+  assert.equal(fs.existsSync(path.join(root, "docs/01-requirements/requirements.md")), true);
+  assert.equal(fs.existsSync(path.join(root, "postman/customer-api.collection.json")), true);
+});
+
 test("snowflake-database connector alias is accepted", () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-snowflake-"));
   const config = path.join(temp, "muleforge.yaml");
