@@ -60,8 +60,7 @@ function classifyWorkload(input = {}) {
     ...(Array.isArray(model.requirements) ? model.requirements.map(x => x.text || x.description || x) : []),
     textOf(model.events || model.triggers || []),
     textOf(model.connectors || [])
-  ].join("
-").toLowerCase();
+  ].join("\n").toLowerCase();
 
   const operations = Array.isArray(model.operations) ? model.operations : [];
   const connectors = [
@@ -366,8 +365,7 @@ function explainOperation(imported = {}, selector = "") {
 
 function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan.json") {
   const base = path.resolve(root);
-  fs.writeFileSync(path.join(base, filename), JSON.stringify(plan, null, 2) + "
-", "utf8");
+  fs.writeFileSync(path.join(base, filename), JSON.stringify(plan, null, 2) + "\n", "utf8");
   fs.mkdirSync(path.join(base, "docs"), { recursive: true });
   const workload = plan.workload || {};
   const md = [
@@ -422,8 +420,7 @@ function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan
     ...(workload.assumptions || []).map(x => "- " + x),
     workload.assumptions?.length ? "" : "- None identified by workload classification.",
     ""
-  ].join("
-");
+  ].join("\n");
   fs.writeFileSync(path.join(base, "docs", "14-engineering-plan.md"), md, "utf8");
   return { json: path.join(base, filename), documentation: path.join(base, "docs", "14-engineering-plan.md"), plan };
 }
