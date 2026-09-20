@@ -38,7 +38,7 @@ function extractOffice(buffer, filename) {
 }
 function extractDocumentBuffer(buffer, filename = "requirement.txt") {
   const ext = path.extname(filename).toLowerCase();
-  if ([".txt",".md",".markdown",".csv"].includes(ext)) return { text: cleanText(buffer.toString("utf8")), type: ext.slice(1), source: filename };
+  if ([".txt",".md",".markdown",".csv",".raml"].includes(ext)) return { text: cleanText(buffer.toString("utf8")), type: ext.slice(1), source: filename };
   if ([".html",".htm"].includes(ext)) return { text: cleanText(buffer.toString("utf8").replace(/<[^>]+>/g, " ")), type: "html", source: filename };
   if (ext === ".json") { const v = JSON.parse(buffer.toString("utf8")); return { text: cleanText(typeof v === "string" ? v : JSON.stringify(v, null, 2)), type: "json", source: filename }; }
   if ([".yaml",".yml"].includes(ext)) { const v = YAML.parse(buffer.toString("utf8")); return { text: cleanText(YAML.stringify(v)), type: "yaml", source: filename }; }
