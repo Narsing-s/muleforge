@@ -381,3 +381,27 @@ test("artifact provenance manifest is deterministic and binds the staged tree", 
   assert.match(second, /"a.txt"/);
   fs.rmSync(root, { recursive: true, force: true });
 });
+
+test("verification requires generated MUnit scenarios for confirmed operations",()=>{
+  const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),{verifyProject}=require("../src/verify");
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"muleforge-munit-"));
+  fs.mkdirSync(path.join(root,"src/main/resources/api"),{recursive:true});
+  fs.mkdirSync(path.join(root,"src/main/mule"),{recursive:true});
+  fs.mkdirSync(path.join(root,"src/test/munit"),{recursive:true});
+  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\\nproject:\\n  name: x\\n  artifactId: x\\napi:\\n  name: x\\n  basePath: /api\\noperations:\\n  - name: getCustomer\\n    method: GET\\n    path: /customers\\n    responseFields: [{name: id}]\\n");
+  fs.writeFileSync(path.join(root,"pom.xml"),"<project/>");
+  fs.writeFileSync(path.join(root,"mule-artifact.json"),"{}");
+  fs.writeFileSync(path.join(root,"src/main/resources/application.yaml"),"x: y");
+  for(const env of ["dev","qa","uat","prod"]){fs.mkdirSync(path.join(root,"src/main/resources/properties"),{recursive:true});fs.writeFileSync(path.join(root,"src/main/resources/properties","application-"+env+".yaml"),"x: y");}
+  fs.mkdirSync(path.join(root,"postman"),{recursive:true});fs.writeFileSync(path.join(root,"postman/x.collection.json"),"{}");
+  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\\ntitle: x\\nbaseUri: /api\\n/customers:\\n  get:\\n");
+  fs.writeFileSync(path.join(root,"src/main/mule/x.xml"),'<?xml version="1.0"?><mule><flow name="x-getCustomer-flow"><http:listener path="/api/customers" allowedMethods="GET"/><error-handler/></flow></mule>');
+  fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),'<mule><munit:test name="x-getCustomer-happy-path-test"/></mule>');
+  fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability");fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
+  const report=verifyProject(path.join(root,"muleforge.yaml"));
+  assert.equal(report.checks.find(x=>x.name==="MUnit happy-path coverage getCustomer").pass,true);
+  fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),"<mule/>");
+  const failed=verifyProject(path.join(root,"muleforge.yaml"));
+  assert.equal(failed.checks.find(x=>x.name==="MUnit happy-path coverage getCustomer").pass,false);
+  fs.rmSync(root,{recursive:true,force:true});
+});
