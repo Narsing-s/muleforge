@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Extended the existing verification gate to require per-operation MUnit happy-path coverage and validation scenarios where validation rules are confirmed.
+
 - Strengthened the existing verification gate with business-rule coverage checks for declared validation rules, error statuses, and response fields.
 
 - Added final Desktop-export provenance binding using the existing SHA-256 artifact manifest, with copy-time manifest verification and regression coverage.
