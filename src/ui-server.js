@@ -5,6 +5,8 @@ const { analyzeRequirementDocument, extractDocumentBuffer } = require("./documen
 const { generateUiAssets } = require("./ui-generator");
 const { prepareAndSave } = require("./local-export");
 const { version } = require("../package.json");
+const { importProject } = require("./import-project");
+const { buildEngineeringPlan, explainImportedProject, classifyWorkload } = require("./workload-engine");
 
 function json(res, status, value) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -44,6 +46,27 @@ function normalizeDocuments(input) {
   const filename = safeDocumentName(input.filename, "requirement.txt");
   return [{ name: filename, type: path.extname(filename).slice(1) || "txt", text }];
 }
+function writeRepositoryUpload(files) {
+  const root = fs.mkdtempSync(path.join(require("os").tmpdir(), "muleforge-repo-"));
+  try {
+    if (!Array.isArray(files) || !files.length) throw new Error("Select a complete Mule repository folder.");
+    for (const [i, file] of files.entries()) {
+      const name = safeDocumentName(file.name, "file-" + (i + 1));
+      const target = path.resolve(root, name);
+      if (!target.startsWith(root + path.sep)) throw new Error("Unsafe repository path.");
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      if (file.base64) fs.writeFileSync(target, Buffer.from(String(file.base64), "base64"));
+      else if (file.text != null) fs.writeFileSync(target, String(file.text), "utf8");
+      else throw new Error("Repository file " + name + " has no content.");
+    }
+    const imported = importProject(root);
+    const plan = explainImportedProject(imported);
+    return { imported, plan };
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
 function applyResolutions(model, resolutions = []) {
   if (!Array.isArray(resolutions) || !resolutions.length) return model;
   for (const resolution of resolutions) {
@@ -116,6 +139,21 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
         }
         const assets = generateUiAssets(model);
         return json(res, 200, { ok: true, ...assets, model });
+      } catch (error) {
+        return json(res, 400, { error: error.message });
+      }
+    }
+    if (req.method === "POST" && req.url === "/api/import") {
+      try {
+        const input = JSON.parse(await readBody(req));
+        const result = writeRepositoryUpload(input.files);
+        return json(res, 200, {
+          ok: true,
+          mode: "existing-repository",
+          model: result.imported,
+          plan: result.plan,
+          message: "Repository analyzed read-only. Source assets were not modified."
+        });
       } catch (error) {
         return json(res, 400, { error: error.message });
       }
