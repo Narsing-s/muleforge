@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Added final Desktop-export provenance binding using the existing SHA-256 artifact manifest, with copy-time manifest verification and regression coverage.
+
 - Added server-side save invariants requiring explicit solution approval and blocking unresolved conflicts/configuration before Desktop export.
 - Fixed UI file-change invalidation to fingerprint every uploaded requirement file and synchronized the UI health version with `package.json`.
 
