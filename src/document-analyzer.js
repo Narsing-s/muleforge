@@ -135,9 +135,9 @@ function inferFields(text, endpoint) {
     : unique;
 
   const explicitlyRequired = new Set();
-  for (const sentence of String(text || "").split(/[\\n;.]/)) {
-    const match = sentence.match(/\\b([A-Za-z][A-Za-z0-9_.\\[\\]]*(?:\\s*(?:,|and)\\s*[A-Za-z][A-Za-z0-9_.\\[\\]]*)*)\\s+(?:is|are)\\s+(?:required|mandatory|must be provided|cannot be empty)\\b/i);
-    if (match) for (const field of match[1].split(/\\s*(?:,|and)\\s*/i)) explicitlyRequired.add(field.toLowerCase());
+  for (const sentence of String(text || "").split(/[\n;.]/)) {
+    const match = sentence.match(/\b([A-Za-z][A-Za-z0-9_.\[\]]*(?:\s*(?:,|and)\s*[A-Za-z][A-Za-z0-9_.\[\]]*)*)\s+(?:is|are)\s+(?:required|mandatory|must be provided|cannot be empty)\b/i);
+    if (match) for (const field of match[1].split(/\s*(?:,|and)\s*/i)) explicitlyRequired.add(field.toLowerCase());
   }
   const leafFields = selected.map(name => {
     const annotation = annotations.get(String(name).toLowerCase()) || "";
