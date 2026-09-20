@@ -57,3 +57,17 @@ test("existing-project plans reuse the supplied model and preserve ownership bou
   assert.ok(plan.ownership.classes.includes("DEVELOPER_MANAGED"));
   assert.equal(plan.workload.type, TYPES.EVENT);
 });
+
+
+test("classifies scheduled file/database workloads without inventing an API", () => {
+  const result = classifyWorkload({
+    model: {
+      requirement: "Every night at 2 AM read files from SFTP and load them into the database.",
+      connectors: ["sftp", "database"]
+    }
+  });
+  assert.equal(result.type, TYPES.SCHEDULED);
+  assert.ok(result.capabilities.includes("scheduler"));
+  assert.ok(result.capabilities.includes("file-transfer"));
+  assert.equal(result.ramlRequired, false);
+});
