@@ -415,6 +415,52 @@ function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan
   return { json: path.join(base, filename), documentation: path.join(base, "docs", "14-engineering-plan.md"), plan };
 }
 
+function buildChangeImpact(model = {}, imported = {}) {
+  const operations = Array.isArray(model.operations) ? model.operations : (imported.operations || []);
+  return operations.map(op => ({
+    operation: [op.method, op.path].filter(Boolean).join(" ") || op.name || "unknown",
+    source: op.source || null,
+    affectedArtifacts: ["implementation","dataweave","error-handling","munit","traceability","ci-cd","deployment"],
+    reviewBeforeRegeneration: true,
+    evidence: op.source ? "source-backed" : "model-backed"
+  }));
+}
+
+function buildCoverageMatrix(model = {}, imported = {}) {
+  const operations = Array.isArray(model.operations) ? model.operations : (imported.operations || []);
+  const inv = imported.inventory || {};
+  return operations.map(op => ({
+    operation: [op.method, op.path].filter(Boolean).join(" ") || op.name || "unknown",
+    implementation: Boolean(op.source),
+    contract: Number(inv.raml || 0) > 0 ? "available" : "unknown",
+    dataWeave: Number(inv.dataWeave || 0) > 0 ? "available" : "unknown",
+    munit: Number(inv.munit || 0) > 0 ? "available" : "unknown",
+    deployment: "requires existing deployment/readiness gates",
+    runtime: "not-verified"
+  }));
+}
+
+function buildDependencyEvidence(imported = {}) {
+  return {
+    maven: imported.dependencyEvidence || [],
+    exchange: imported.exchangeDependencies || [],
+    rule: "Dependencies are evidence only; MuleForge does not copy, mutate, or silently upgrade external assets."
+  };
+}
+
+function buildRuntimeEvidence(model = {}, imported = {}) {
+  return {
+    status: "not-verified",
+    deploymentTarget: model.deployment?.target || null,
+    artifactManifestRequired: true,
+    artifactSha256Required: true,
+    deployed: "unknown",
+    runtimeVerified: false,
+    evidence: imported.deploymentEvidence || [],
+    rule: "Deployment is not runtime verification; runtime evidence requires an authorized live probe."
+  };
+}
+
 module.exports = {
   TYPES,
   classifyWorkload,
