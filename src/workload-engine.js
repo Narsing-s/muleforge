@@ -105,9 +105,9 @@ function classifyWorkload(input = {}) {
   else if (graphql) type = TYPES.GRAPHQL;
   else if (apiEvidence || (apiWords && !eventConnectors.length && !fileConnectors.length && !scheduled && !batch)) type = TYPES.API;
   else if (batch) type = TYPES.BATCH;
-  else if (scheduled) type = TYPES.SCHEDULED;
   else if (eventConnectors.length) type = TYPES.EVENT;
   else if (fileConnectors.length) type = TYPES.FILE;
+  else if (scheduled) type = TYPES.SCHEDULED;
   else if (operations.length || connectors.length) type = TYPES.INTEGRATION;
 
   const confirmed = Boolean(model.workload?.type && Object.values(TYPES).includes(normalize(model.workload.type)));
