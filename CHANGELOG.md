@@ -1,10 +1,3 @@
-## Unreleased
-
-- Extended existing repository evidence with source-backed triggers and routers for workload classification.
-- Added dependency evidence from Maven POM and Exchange metadata without mutating external assets.
-- Integrated change-impact coverage and explicit deployment-versus-runtime verification evidence into the canonical engineering plan.
-- Added regression coverage for repository triggers, routers, evidence matrices and runtime verification boundaries.
-
 # Changelog
 
 ## 0.9.18 - Workload-neutral MuleSoft engineering
@@ -21,6 +14,12 @@
 - Added trigger/transport/deployment intent to the workload plan and kept composite workloads explicit instead of flattening them into an API classification.
 
 ## Unreleased
+
+- Extended the existing workload-neutral engineering model with source-backed change-impact mapping, operation coverage matrices, Maven/Exchange dependency evidence and an explicit deployed-versus-runtime-verified boundary.
+- Existing-repository dependency evidence records identities and versions from POM and exchange metadata without copying or mutating external assets.
+- Added regression coverage for impact, coverage, dependency and runtime evidence.
+- Preserved the existing generators, validators, traceability and readiness gates as the sources of truth.
+
 
 - Extended the existing engineering plan with an evidence-gated lifecycle state machine, explicit certainty states, operation-level explain/remediation, source-backed import asset/operation evidence, and developer handoff/KT guidance without adding a second analysis or traceability engine.
 
