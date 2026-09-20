@@ -117,6 +117,8 @@ function validateSaveRequest(model, approved) {
   if (Array.isArray(model.conflicts) && model.conflicts.length) throw new Error("Resolve all requirement conflicts before saving.");
   if (Array.isArray(model.missingConfigurations) && model.missingConfigurations.length) throw new Error("Resolve all required connectivity decisions before saving.");
   if (model.operations.some(op => op && op.connectorAmbiguous)) throw new Error("Resolve ambiguous operation connector mappings before saving.");
+  const blueprintValidation = validateSolutionBlueprint(model, buildSolutionBlueprint(model));
+  if (!blueprintValidation.valid) throw new Error("Solution blueprint gate failed: " + blueprintValidation.critical.map(x => x.code + ": " + x.message).join("; "));
   return true;
 }
 
