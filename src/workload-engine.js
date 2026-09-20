@@ -509,5 +509,9 @@ module.exports = {
   certaintyState,
   buildLifecycleState,
   buildDeveloperHandoff,
-  explainOperation
+  explainOperation,
+  buildChangeImpact,
+  buildCoverageMatrix,
+  buildDependencyEvidence,
+  buildRuntimeEvidence
 };
