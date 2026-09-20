@@ -405,3 +405,24 @@ test("verification requires generated MUnit scenarios for confirmed operations",
   assert.equal(failed.checks.find(x=>x.name==="MUnit happy-path coverage getCustomer").pass,false);
   fs.rmSync(root,{recursive:true,force:true});
 });
+
+
+test("verification requires MUnit coverage for confirmed behavior policies",()=>{
+  const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),{verifyProject}=require("../src/verify");
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"muleforge-munit-policy-"));
+  fs.mkdirSync(path.join(root,"src/main/resources/api"),{recursive:true}); fs.mkdirSync(path.join(root,"src/main/mule"),{recursive:true}); fs.mkdirSync(path.join(root,"src/test/munit"),{recursive:true}); fs.mkdirSync(path.join(root,"src/main/resources/properties"),{recursive:true}); fs.mkdirSync(path.join(root,"postman"),{recursive:true}); fs.mkdirSync(path.join(root,"docs"),{recursive:true});
+  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\\nproject:\\n  name: x\\n  artifactId: x\\napi:\\n  name: x\\n  basePath: /api\\noperations:\\n  - name: create\\n    method: POST\\n    path: /customers\\n    successStatus: 201\\n    errorStatuses: [409, 503]\\n    retry: {maxAttempts: 2}\\n    transaction: true\\n    idempotency: true\\n    pagination: {pageParam: page}\\n");
+  fs.writeFileSync(path.join(root,"pom.xml"),"<project/>"); fs.writeFileSync(path.join(root,"mule-artifact.json"),"{}"); fs.writeFileSync(path.join(root,"src/main/resources/application.yaml"),"x: y");
+  for(const env of ["dev","qa","uat","prod"]) fs.writeFileSync(path.join(root,"src/main/resources/properties","application-"+env+".yaml"),"x: y");
+  fs.writeFileSync(path.join(root,"postman/x.collection.json"),"{}"); fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability"); fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
+  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\\ntitle: x\\nbaseUri: /api\\n/customers:\\n  post:\\n    responses:\\n      201:\\n");
+  fs.writeFileSync(path.join(root,"src/main/mule/x.xml"),'<?xml version="1.0"?><mule><flow name="x-create-flow"><http:listener path="/api/customers" allowedMethods="POST"/><error-handler/></flow></mule>');
+  const complete='<mule><munit:test name="x-create-happy-path-test"/><munit:test name="x-create-conflict-or-duplicate-test"/><munit:test name="x-create-connector-error-test"/><munit:test name="x-create-retry-exhaustion-test"/><munit:test name="x-create-transaction-rollback-test"/><munit:test name="x-create-idempotency-duplicate-test"/><munit:test name="x-create-pagination-test"/></mule>';
+  fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),complete);
+  const report=verifyProject(path.join(root,"muleforge.yaml"));
+  for(const name of ["MUnit happy-path coverage create","MUnit conflict coverage create","MUnit connector-error coverage create","MUnit retry coverage create","MUnit transaction coverage create","MUnit idempotency coverage create","MUnit pagination coverage create"]) assert.equal(report.checks.find(x=>x.name===name).pass,true,name);
+  fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),complete.replace("x-create-pagination-test","missing-test"));
+  const failed=verifyProject(path.join(root,"muleforge.yaml"));
+  assert.equal(failed.checks.find(x=>x.name==="MUnit pagination coverage create").pass,false);
+  fs.rmSync(root,{recursive:true,force:true});
+});
