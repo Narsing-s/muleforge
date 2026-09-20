@@ -164,3 +164,19 @@ test("classifies the remaining supported workload families without forcing REST 
     if (expected !== TYPES.GRAPHQL && expected !== TYPES.SOAP) assert.equal(result.ramlRequired, false);
   }
 });
+
+
+test("repository trigger evidence classifies scheduler-only and batch workloads", () => {
+  const scheduled = classifyWorkload({
+    model: {},
+    imported: { semantics: { triggers: [{ type: "scheduler" }] } }
+  });
+  assert.equal(scheduled.type, TYPES.SCHEDULED);
+  assert.ok(scheduled.capabilities.includes("scheduler"));
+
+  const batch = classifyWorkload({
+    model: {},
+    imported: { semantics: { triggers: [{ type: "batch:job" }] } }
+  });
+  assert.equal(batch.type, TYPES.BATCH);
+});
