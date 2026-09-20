@@ -193,3 +193,16 @@ test("generates all database operation types with dedicated flows", () => {
   assert.match(flows[2], /DELETE FROM ORDERS WHERE ORDERID = :orderId/);
   for (const flow of flows) assert.match(flow, /<error-handler>/);
 });
+
+test("preserves explicitly required fields for JSON request bodies", () => {
+  const model = analyzeRequirementDocument(
+    "POST /customers creates a customer. Request fields: customerId, name, email, mobileNumber. customerId and email are required. The input and output are JSON.",
+    "customer.md"
+  );
+  const op = model.operations[0];
+  assert.equal(op.requestFields.find(f => (f.name || f) === "customerId").required, true);
+  assert.equal(op.requestFields.find(f => (f.name || f) === "email").required, true);
+  assert.equal(op.requestFields.find(f => (f.name || f) === "name").required, false);
+  assert.equal(op.requestFields.find(f => (f.name || f) === "mobileNumber").required, false);
+  assert.equal(op.responseFields.length > 0, true);
+});
