@@ -223,7 +223,7 @@ function buildEngineeringPlan(model = {}, options = {}) {
     },
     deployment: {
       requestedTarget: workload.deploymentTarget,
-      recognized: deploymentTargets.length > 0,
+      recognized: ["cloudhub", "cloudhub-2", "cloudhub2", "runtime-fabric", "rtf", "hybrid", "standalone"].includes(workload.deploymentTarget),
       supportedTargets: ["cloudhub", "cloudhub-2", "runtime-fabric", "hybrid"],
       note: "Use the existing deployment validators and target-specific generators; credentials remain external."
     },
