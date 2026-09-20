@@ -99,6 +99,26 @@ function runtimeCheck(directory = ".") {
 }
 function loadConfig(file = "muleforge.yaml") { const full = path.resolve(file); if (!fs.existsSync(full)) throw new Error(`Configuration not found: ${file}`); return YAML.parse(fs.readFileSync(full, "utf8")) || {}; }
 function context(config) { const p = config.project || {}, a = config.api || {}, db = config.database || {}; const requested = [...(config.connectors || []), ...(db.type === "snowflake" ? ["database"] : []), ...((config.operations || []).some(o => o.idempotency) ? ["object-store"] : [])]; if (requested.some(c => String(c).toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-") === "snowflake")) requested.push("database"); const connectors = resolveConnectors(requested); const snowflake = db.type === "snowflake" || connectors.some(c => c.id === "snowflake"); return { projectName: p.name || "mule-api", artifactId: p.artifactId || p.name || "mule-api", groupId: p.groupId || "com.example", version: p.version || "1.0.0", muleRuntime: p.muleRuntime || "4.9.0", java: p.java || "17", apiName: a.name || p.name || "Mule API", apiVersion: a.version || "v1", basePath: a.basePath || "/api/v1", connectors, connectorDependencies: buildConnectorDependencies(config, config.connectorVersions || config.connectors?.versions || {}), hasSnowflake: snowflake, hasDatabase: Boolean(db.type) || snowflake || connectors.some(c => c.id === "database"), databaseType: db.type || (snowflake ? "snowflake" : ""), databaseTable: db.table || "CUSTOMER", databaseUrl: db.url || "${db.url}", databaseUser: db.user || "${db.user}", databasePassword: db.password || "${db.password}", databaseDriverClass: db.type === "mysql" ? "com.mysql.cj.jdbc.Driver" : db.type === "postgres" || db.type === "postgresql" ? "org.postgresql.Driver" : db.type === "oracle" ? "oracle.jdbc.OracleDriver" : "", hasSftp: connectors.some(c => c.id === "sftp"), apiImplementation: String(a.implementation || a.router || "listener").toLowerCase() }; }
+function jsonExampleValue(field) {
+  const f = typeof field === "string" ? { name: field, type: "string" } : (field || {});
+  const name = String(f.name || f.field || "").toLowerCase();
+  const type = String(f.type || "string").toLowerCase();
+  if (type === "integer" || type === "number") return 0;
+  if (type === "boolean") return false;
+  if (type === "array") return [];
+  if (type === "object") return {};
+  if (name.includes("email")) return "customer@example.com";
+  if (name.includes("phone") || name.includes("mobile")) return "9999999999";
+  if (name.includes("date")) return "2026-01-01";
+  return "string";
+}
+function jsonExample(fields = []) {
+  const entries = (fields || []).map(field => {
+    const name = typeof field === "string" ? field : field && (field.name || field.field);
+    return name ? [String(name), jsonExampleValue(field)] : null;
+  }).filter(Boolean);
+  return Object.fromEntries(entries);
+}
 function generateRaml(config, d) {
   let out = `#%RAML 1.0\ntitle: ${d.apiName}\nversion: ${d.apiVersion}\nbaseUri: ${d.basePath}\n`;
   const securityModes = new Set((config.operations || []).map(o => String(o.security || "").toLowerCase()).filter(Boolean));
@@ -126,10 +146,12 @@ function generateRaml(config, d) {
     if (requestProperties) {
       out += "    body:\n      application/json:\n        type: object\n        properties:\n";
       out += requestProperties + "\n";
+      out += "        example: " + JSON.stringify(jsonExample(op.requestFields), null, 2).split("\n").map((line, i) => i === 0 ? line : "        " + line).join("\n") + "\n";
     }
     out += `    responses:\n      ${code}:\n        body:\n          application/json:\n            type: object\n`;
     const responseProperties = renderProperties(op.responseFields || [], "            ");
     if (responseProperties) out += "            properties:\n" + responseProperties + "\n";
+    if (responseProperties) out += "            example: " + JSON.stringify(jsonExample(op.responseFields), null, 2).split("\n").map((line, i) => i === 0 ? line : "            " + line).join("\n") + "\n";
     for (const err of (op.errors || [])) {
       const status = Number(typeof err === "object" ? (err.status || err.code || 500) : 500);
       const description = typeof err === "object" && err.description ? String(err.description).replace(/\n/g, " ") : "Error response";
