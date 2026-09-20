@@ -57,7 +57,10 @@ function importProject(root="."){
     source: op.source || null,
     state: "confirmed"
   }));
-  const workload=classifyWorkload({model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},imported:{semantics}});
+  const workload=classifyWorkload({
+    model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},
+    imported:{semantics, triggers: semantics.triggers, routers: semantics.routers}
+  });
   const architecture=inferApiLedArchitecture({
     text: raml.map(f=>fs.readFileSync(f,"utf8")).join("\n"),
     operations: uniqueOps,
