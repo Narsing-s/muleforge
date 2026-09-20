@@ -17,7 +17,9 @@ test("functional monitoring suite covers every confirmed API operation", () => {
   assert.match(suite, /POST/);
   assert.match(suite, /GET/);
   assert.match(suite, /mustEqual 201/);
-  assert.match(suite, /mustEqual 200/);\n  assert.match(suite, /Content-Type/);\n  assert.match(suite, /config.id/);
+  assert.match(suite, /mustEqual 200/);
+  assert.match(suite, /Content-Type/);
+  assert.match(suite, /config.id/);
 });
 
 test("functional monitoring artifacts are written only for API workloads", () => {
@@ -52,7 +54,8 @@ test("generated BAT config contains only required non-secret placeholders", () =
       { method: "POST", path: "/customers", security: "client-id" }
     ]
   }));
-  assert.equal(config.baseUrl, "https://SET_ME");\n  assert.equal(config.id, "SET_ME");
+  assert.equal(config.baseUrl, "https://SET_ME");
+  assert.equal(config.id, "SET_ME");
   assert.equal(config.clientId, "SET_ME");
   assert.equal(config.accessToken, "SET_ME");
   assert.equal(config.basicAuth, undefined);
