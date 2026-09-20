@@ -142,6 +142,25 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   if ((config.testing || {}).munit !== false) {
     const munit = safeRead(root, munitPath);
     checks.push(result("MUnit scaffold", Boolean(munit), `Expected ${munitPath}.`));
+    if (munit) {
+      for (const op of operations) {
+        const safe = String(op.name || `${op.method}-${op.path}`).replace(/[^A-Za-z0-9_-]/g, "-");
+        const happy = new RegExp(`name="[^"]*${safe}-happy-path-test"`);
+        checks.push(result(
+          `MUnit happy-path coverage ${op.name}`,
+          happy.test(munit),
+          "Every confirmed operation must have a generated happy-path MUnit test."
+        ));
+        if (Array.isArray(op.validation) && op.validation.length) {
+          const validation = new RegExp(`name="[^"]*${safe}-validation-test"`);
+          checks.push(result(
+            `MUnit validation coverage ${op.name}`,
+            validation.test(munit),
+            "Every operation with confirmed validation rules must have a generated validation MUnit test."
+          ));
+        }
+      }
+    }
   }
 
   function declaredErrorStatuses(op) {
