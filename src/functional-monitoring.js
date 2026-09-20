@@ -69,22 +69,10 @@ function generateBatManifest(artifact) {
 
 function generateBatConfig() {
   return JSON.stringify({
-    baseUrl: "$(MULEFORGE_SMOKE_URL)",
-    clientId: "$(MULEFORGE_CLIENT_ID)",
-    accessToken: "$(MULEFORGE_ACCESS_TOKEN)"
+    baseUrl: "https://REPLACE_WITH_DEPLOYED_API_HOST",
+    clientId: "REPLACE_WITH_CLIENT_ID",
+    accessToken: "REPLACE_WITH_ACCESS_TOKEN"
   }, null, 2) + "\n";
-}
-
-/*
-function legacyBatConfig() {
-  return [
-    "# MuleForge API Functional Monitoring configuration",
-    "# Supply the deployed endpoint through the BAT environment/profile; never commit credentials.",
-    "baseUrl: p(\"MULEFORGE_SMOKE_URL\")",
-    "clientId: p(\"MULEFORGE_CLIENT_ID\")",
-    "accessToken: p(\"MULEFORGE_ACCESS_TOKEN\")",
-    ""
-  ].join("\n");
 }
 function writeFunctionalMonitoring(root, config, data) {
   if (data.workloadType !== "api" || !Array.isArray(config.operations) || !config.operations.length) return null;
@@ -97,7 +85,7 @@ function writeFunctionalMonitoring(root, config, data) {
   fs.writeFileSync(path.join(dir, "bat.yaml"), generateBatManifest(artifact), "utf8");
   fs.mkdirSync(path.join(dir, "config"), { recursive: true });
   fs.writeFileSync(path.join(dir, "config", "dev-environment.dwl"), generateBatConfig(), "utf8");
-  fs.writeFileSync(path.join(dir, "README.md"), "# API Functional Monitoring\n\nGenerated from the confirmed MuleForge API contract.\n\nThe .dwl suite provides black-box smoke tests for every confirmed API operation using the documented success status and request contract. Point it at a deployed environment before execution.\n\nMuleForge does not claim live runtime verification until these tests actually execute against the deployed API.\n", "utf8");
+  fs.writeFileSync(path.join(dir, "README.md"), "# API Functional Monitoring\n\nGenerated from the confirmed MuleForge API contract.\n\nThe BAT suite provides black-box smoke tests for every confirmed API operation. Replace the environment placeholders in the selected config before execution. Never commit real credentials.\n\nMuleForge does not claim live runtime verification until these tests actually execute against the deployed API.\n", "utf8");
   return { directory: "functional-monitoring", manifest: "functional-monitoring/bat.yaml", suite: "functional-monitoring/tests/" + artifact + ".dwl" };
 }
 module.exports = { generateFunctionalMonitoringSuite, generateBatManifest, generateBatConfig, writeFunctionalMonitoring };
