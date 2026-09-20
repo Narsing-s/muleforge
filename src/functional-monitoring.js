@@ -64,15 +64,19 @@ function generateBatManifest(artifact) {
     "  - type: JUnit",
     "    outFile: reports/result.xml",
     ""
-  ].join("\\n");
+  ].join("\n");
 }
 
-function generateBatConfig() {
-  return JSON.stringify({
-    baseUrl: "https://REPLACE_WITH_DEPLOYED_API_HOST",
-    clientId: "REPLACE_WITH_CLIENT_ID",
-    accessToken: "REPLACE_WITH_ACCESS_TOKEN"
-  }, null, 2) + "\n";
+function generateBatConfig(config = {}) {
+  const operations = Array.isArray(config.operations) ? config.operations : [];
+  const security = new Set(operations.map(op => String(op.security || "").toLowerCase()).filter(Boolean));
+  const values = {
+    baseUrl: "https://SET_ME"
+  };
+  if (security.has("client-id") || security.has("clientid")) values.clientId = "SET_ME";
+  if (security.has("oauth2")) values.accessToken = "SET_ME";
+  if (security.has("basic")) values.basicAuth = "SET_ME";
+  return JSON.stringify(values, null, 2) + "\n";
 }
 function writeFunctionalMonitoring(root, config, data) {
   if (data.workloadType !== "api" || !Array.isArray(config.operations) || !config.operations.length) return null;
@@ -84,8 +88,8 @@ function writeFunctionalMonitoring(root, config, data) {
   fs.writeFileSync(path.join(testDir, artifact + ".dwl"), generateFunctionalMonitoringSuite(config, data), "utf8");
   fs.writeFileSync(path.join(dir, "bat.yaml"), generateBatManifest(artifact), "utf8");
   fs.mkdirSync(path.join(dir, "config"), { recursive: true });
-  fs.writeFileSync(path.join(dir, "config", "dev-environment.dwl"), generateBatConfig(), "utf8");
-  fs.writeFileSync(path.join(dir, "README.md"), "# API Functional Monitoring\n\nGenerated from the confirmed MuleForge API contract.\n\nThe BAT suite provides black-box smoke tests for every confirmed API operation. Replace the environment placeholders in the selected config before execution. Never commit real credentials.\n\nMuleForge does not claim live runtime verification until these tests actually execute against the deployed API.\n", "utf8");
+  fs.writeFileSync(path.join(dir, "config", "dev-environment.dwl"), generateBatConfig(config), "utf8");
+  fs.writeFileSync(path.join(dir, "README.md"), "# API Functional Monitoring\n\nGenerated from the confirmed MuleForge API contract.\n\nThe BAT suite provides black-box smoke tests for every confirmed API operation. Replace the environment placeholders in the selected config before execution, or bind secrets through Anypoint Secrets Manager. Never commit real credentials.\n\nMuleForge does not claim live runtime verification until these tests actually execute against the deployed API.\n", "utf8");
   return { directory: "functional-monitoring", manifest: "functional-monitoring/bat.yaml", suite: "functional-monitoring/tests/" + artifact + ".dwl" };
 }
 module.exports = { generateFunctionalMonitoringSuite, generateBatManifest, generateBatConfig, writeFunctionalMonitoring };
