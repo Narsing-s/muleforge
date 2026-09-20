@@ -22,6 +22,23 @@ function importProject(root="."){
   for(const f of xml){const source=relative(base,f),content=fs.readFileSync(f,"utf8");operations.push(...extract(content,source));const s=extractSemantics(content);semantics.flows.push(...s.flows.map(v=>({...v,source})));semantics.flowRefs.push(...s.flowRefs.map(name=>({name,source})));semantics.transformCount+=s.transformCount;semantics.errorHandlers.push(...s.errorHandlers.map(v=>({...v,source})));semantics.configRefs.push(...s.configRefs.map(name=>({name,source})));semantics.globalConfigs.push(...s.globalConfigs.map(v=>({...v,source})));}
   const uniqueOps=[...new Map(operations.map(o=>[JSON.stringify([o.name,o.path,o.connector,o.action]),o])).values()];
   const configs=files.filter(f=>/application.*\.(yaml|yml|properties)$/.test(f)).map(f=>relative(base,f));
+  const dependencyEvidence = [];
+  for (const pomFile of files.filter(f => path.basename(f) === "pom.xml")) {
+    const pom = fs.readFileSync(pomFile, "utf8");
+    for (const m of pom.matchAll(/<dependency>\\s*[\\s\\S]*?<groupId>([^<]+)<\\/groupId>[\\s\\S]*?<artifactId>([^<]+)<\\/artifactId>(?:[\\s\\S]*?<version>([^<]+)<\\/version>)?[\\s\\S]*?<\\/dependency>/g)) {
+      dependencyEvidence.push({ groupId: m[1].trim(), artifactId: m[2].trim(), version: m[3] ? m[3].trim() : null, source: relative(base, pomFile), state: "confirmed" });
+    }
+  }
+  const exchangeDependencies = [];
+  for (const exchangeFile of files.filter(f => path.basename(f) === "exchange.json")) {
+    try {
+      const exchange = JSON.parse(fs.readFileSync(exchangeFile, "utf8"));
+      const deps = exchange.dependencies || exchange.projectDependencies || [];
+      for (const dep of Array.isArray(deps) ? deps : Object.values(deps || {})) {
+        exchangeDependencies.push({ dependency: dep, source: relative(base, exchangeFile), state: "confirmed" });
+      }
+    } catch (_) {}
+  }
   const sourceAssets=files.filter(f=>/\.(dwl|xml|raml|yaml|yml|properties)$/i.test(f)).map(f=>relative(base,f));
   const assetInventory = {
     muleXml: xml.map(f=>relative(base,f)),
@@ -44,7 +61,7 @@ function importProject(root="."){
     operations: uniqueOps,
     existingArtifacts: sourceAssets
   });
-  return {version:"1.5",architecture,workload,project:{name:path.basename(base),artifactId:path.basename(base),version:"1.0.0"},api:{name:path.basename(base),version:"v1",basePath:"/api/v1"},operations:uniqueOps,operationEvidence,assetInventory,inventory:{files:files.length,muleXml:xml.length,raml:raml.length,dataWeave:dw.length,munit:munit.length,pom:Boolean(pom),environmentConfigs:configs,semantic:{flowCount:semantics.flows.length,flowReferenceCount:semantics.flowRefs.length,transformCount:semantics.transformCount,errorHandlerCount:semantics.errorHandlers.length,configReferenceCount:semantics.configRefs.length,globalConfigCount:semantics.globalConfigs.length}},semantics,import:{reviewRequired:true,preserveSource:true},migration:{reviewRequired:true,preserveSource:true,unmappedAssets:sourceAssets},ramlSources:raml.map(f=>relative(base,f)),dataWeaveSources:dw.map(f=>relative(base,f))};
+  return {version:"1.6",architecture,workload,project:{name:path.basename(base),artifactId:path.basename(base),version:"1.0.0"},api:{name:path.basename(base),version:"v1",basePath:"/api/v1"},operations:uniqueOps,operationEvidence,assetInventory,inventory:{files:files.length,muleXml:xml.length,raml:raml.length,dataWeave:dw.length,munit:munit.length,pom:Boolean(pom),environmentConfigs:configs,semantic:{flowCount:semantics.flows.length,flowReferenceCount:semantics.flowRefs.length,transformCount:semantics.transformCount,errorHandlerCount:semantics.errorHandlers.length,configReferenceCount:semantics.configRefs.length,globalConfigCount:semantics.globalConfigs.length}},semantics,dependencyEvidence,exchangeDependencies,import:{reviewRequired:true,preserveSource:true},migration:{reviewRequired:true,preserveSource:true,unmappedAssets:sourceAssets},ramlSources:raml.map(f=>relative(base,f)),dataWeaveSources:dw.map(f=>relative(base,f))};
 }
 function writeImportedModel(root="."){const model=importProject(root),target=path.join(path.resolve(root),"muleforge-import.yaml");fs.writeFileSync(target,YAML.stringify(model),"utf8");return {target,model};}
 module.exports={importProject,writeImportedModel,extractSemantics};
