@@ -199,7 +199,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     for (const operation of traceability.operations || []) {
       for (const rule of operation.rules || []) {
         const muleAssetPresent = Boolean(rule.mule) && exists(root, rule.mule);
-        const munitTestPresent = Boolean(rule.munitTest) && new RegExp('name="[^"]*' + String(rule.munitTest).replace(/[.*+?^$\\{}()|[\\]\\\\]/g, '\\\\  function declaredErrorStatuses(op) {') + '"').test(munit);
+        const munitTestPresent = Boolean(rule.munitTest) && new RegExp('name="[^"]*' + String(rule.munitTest) + '"').test(munit);
         checks.push(result(
           "Traceability Mule asset " + rule.ruleId,
           muleAssetPresent,
