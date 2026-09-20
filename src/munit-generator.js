@@ -153,6 +153,10 @@ ${assertionForFields(op.responseFields)}
     </munit:validation>
   </munit:test>`);
     const scenarioPlan = deriveScenarioPlan({ ...op, method });
+    const explicit400 = /(?:^|[^0-9])400(?:[^0-9]|$)/.test(JSON.stringify(op.errors || [])) || (Array.isArray(op.errorStatuses) && op.errorStatuses.map(Number).includes(400));
+    if (explicit400 && !(Array.isArray(op.validation) && op.validation.length) && !scenarioPlan.some(s => s.type === "declared-status" && s.status === 400)) {
+      scenarioPlan.push({ name: "status 400", type: "declared-status", status: 400 });
+    }
     for (const scenario of scenarioPlan.filter(s => s.type === "declared-status")) {
       tests.push(`  <munit:test name="${testName(op, "status-" + scenario.status)}">
     <munit:execution>
