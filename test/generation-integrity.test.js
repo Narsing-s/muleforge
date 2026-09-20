@@ -399,7 +399,7 @@ test("verification requires generated MUnit scenarios for confirmed operations",
   fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\ntitle: x\nbaseUri: /api\n/customers:\n  get:\n");
   fs.writeFileSync(path.join(root,"src/main/mule/x.xml"),'<?xml version="1.0"?><mule><flow name="x-getCustomer-flow"><http:listener path="/api/customers" allowedMethods="GET"/><error-handler/></flow></mule>');
   fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),'<mule><munit:test name="x-getCustomer-happy-path-test"/></mule>');
-  fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability");fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
+  fs.mkdirSync(path.join(root,"docs"),{recursive:true});fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability");fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
   const report=verifyProject(path.join(root,"muleforge.yaml"));
   assert.equal(report.checks.find(x=>x.name==="MUnit happy-path coverage getCustomer").pass,true);
   fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),"<mule/>");
