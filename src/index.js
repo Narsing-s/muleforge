@@ -210,7 +210,7 @@ function generateProject(file = "muleforge.yaml", options = {}) {
     }
   }
   const beforeGeneration = new Set(snapshot(root));
-  if (d.apiImplementation === "apikit") d.connectorDependencies.push({ groupId: "org.mule.modules", artifactId: "mule-apikit-module", version: "1.11.1", classifier: "mule-plugin" });
+  if (d.workloadType === "api" && d.apiImplementation === "apikit") d.connectorDependencies.push({ groupId: "org.mule.modules", artifactId: "mule-apikit-module", version: "1.11.1", classifier: "mule-plugin" });
   write(path.join(root, "pom.xml"), render(fs.readFileSync(path.join(t, "pom.xml.hbs"), "utf8"), d));
   write(path.join(root, "mule-artifact.json"), render(fs.readFileSync(path.join(t, "mule-artifact.json.hbs"), "utf8"), d));
   write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d));
