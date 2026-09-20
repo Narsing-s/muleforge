@@ -3,6 +3,8 @@ const path = require("path");
 const os = require("os");
 const { execFileSync } = require("child_process");
 const YAML = require("yaml");
+const crypto = require("node:crypto");
+const { writeManifest } = require("./provenance");
 const { writeDocumentation } = require("./requirement-model");
 const { verifyProject } = require("./verify");
 
@@ -126,12 +128,23 @@ function prepareAndSave(model) {
     };
     fs.writeFileSync(path.join(stagedRoot, "muleforge-generation-report.json"), JSON.stringify(report, null, 2) + "\n", "utf8");
 
+    // Bind the export to the exact staged artifact tree that passed every gate.
+    // The existing provenance manifest is generated only after verification/package,
+    // then copied and compared byte-for-byte before the Desktop rename.
+    const manifestPath = writeManifest(stagedRoot);
+    const stagedManifestSha256 = crypto.createHash("sha256").update(fs.readFileSync(manifestPath)).digest("hex");
+
     // Final handoff is atomic at the project-directory level: copy to a hidden Desktop staging folder, then rename.
     const desktopStage = path.join(desktop, ".muleforge-" + projectName + "-" + process.pid + "-" + Date.now());
     try {
       copyDirectory(stagedRoot, desktopStage);
       const sourceFiles = listFiles(stagedRoot);
       const copiedFiles = listFiles(desktopStage);
+      const sourceManifestSha256 = crypto.createHash("sha256").update(fs.readFileSync(path.join(stagedRoot, "artifact-manifest.json"))).digest("hex");
+      const copiedManifestSha256 = crypto.createHash("sha256").update(fs.readFileSync(path.join(desktopStage, "artifact-manifest.json"))).digest("hex");
+      if (sourceManifestSha256 !== stagedManifestSha256 || copiedManifestSha256 !== stagedManifestSha256) {
+        throw new Error("Artifact provenance verification failed. The exported project does not match the verified staged artifact.");
+      }
       if (sourceFiles.length !== copiedFiles.length || sourceFiles.some(file => !copiedFiles.includes(file))) {
         throw new Error("Desktop copy verification failed. The final project was not published.");
       }
@@ -152,7 +165,8 @@ function prepareAndSave(model) {
         passed: verification.passed,
         total: verification.total,
         mavenTests: verification.build.pass,
-        package: packageResult.pass
+        package: packageResult.pass,
+        artifactManifestSha256: stagedManifestSha256
       }
     };
   } finally {
