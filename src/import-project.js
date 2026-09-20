@@ -23,7 +23,8 @@ function importProject(root="."){
   const uniqueOps=[...new Map(operations.map(o=>[JSON.stringify([o.name,o.path,o.connector,o.action]),o])).values()];
   const configs=files.filter(f=>/application.*\.(yaml|yml|properties)$/.test(f)).map(f=>relative(base,f));
   const sourceAssets=files.filter(f=>/\.(dwl|xml|raml|yaml|yml|properties)$/i.test(f)).map(f=>relative(base,f));
-  const workload=classifyWorkload({model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},imported:{semantics}});\n  const architecture=inferApiLedArchitecture({
+  const workload=classifyWorkload({model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},imported:{semantics}});
+  const architecture=inferApiLedArchitecture({
     text: raml.map(f=>fs.readFileSync(f,"utf8")).join("\n"),
     operations: uniqueOps,
     existingArtifacts: sourceAssets
