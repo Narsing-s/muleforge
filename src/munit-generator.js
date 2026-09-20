@@ -97,7 +97,8 @@ function deriveScenarioPlan(operation = {}) {
     scenarios.push({ name: "conflict or duplicate", type: "conflict", status: 409 });
   }
   for (const status of [...declared].sort((a, b) => a - b)) {
-    if (![400, 409, 500, 502, 503, 504].includes(status)) {
+    const hasValidationRules = Array.isArray(operation.validation) && operation.validation.length > 0;
+    if (![409, 500, 502, 503, 504].includes(status) && !(status === 400 && hasValidationRules)) {
       scenarios.push({ name: "status " + status, type: "declared-status", status });
     }
   }
