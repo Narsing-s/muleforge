@@ -466,3 +466,11 @@ test("verification enforces rule-level traceability to Mule assets and MUnit tes
   assert.equal(report.checks.find(x=>x.name==="Traceability MUnit test create-status-409").pass,false);
   fs.rmSync(root,{recursive:true,force:true});
 });
+
+
+test("MUnit generator creates coverage for arbitrary declared error statuses",()=>{
+  const {generateMunit}=require("../src/munit-generator");
+  const xml=generateMunit({operations:[{name:"get",method:"GET",path:"/customers/{id}",errorStatuses:[401,422]}]},{artifactId:"customers",hasDatabase:false});
+  assert.match(xml,/name="get-status-401-test"/);
+  assert.match(xml,/name="get-status-422-test"/);
+});
