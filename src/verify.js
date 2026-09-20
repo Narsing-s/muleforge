@@ -112,7 +112,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
           const method = String(op.method || "GET").toLowerCase();
           const route = String(op.path || "/").replace(/^\//, "").split("/").filter(Boolean).join("\\") || "";
           const suffix = ["post", "put", "patch"].includes(method) ? ":application\\json" : "";
-          return method + ":\" + route + suffix + ":api-config";
+          return method + ":" + route + suffix + ":api-config";
         })
       : operations.map(op => artifactId + "-" + String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-") + "-flow");
     checks.push(result("Unique generated operation flow names", new Set(expectedOperationFlowNames).size === expectedOperationFlowNames.length, "Operation names/routes must remain unique in the generated Mule implementation."));
