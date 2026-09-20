@@ -356,3 +356,21 @@ test("connector flow generates retry policy and HTTP timeout", () => {
   }, { artifactId: "demo", basePath: "/api" });
   assert.match(http, /responseTimeout="5000"/);
 });
+
+
+test("event runtime generates valid XML with real newlines and correlation header expression", () => {
+  const { generateEventRuntime } = require("../src/event-runtime-generator");
+  const xml = generateEventRuntime({
+    events: [{
+      type: "anypoint-mq",
+      name: "customer-events",
+      source: "customer.queue",
+      destination: "processed.queue",
+      retry: { maxAttempts: 2, millisBetweenRetries: 250 }
+    }]
+  });
+  assert.match(xml, /<flow name="muleforge-event-customer-events">/);
+  assert.match(xml, /attributes\.headers\['x-correlation-id' default uuid\(\)\]/);
+  assert.match(xml, /<until-successful maxRetries="2" millisBetweenRetries="250">/);
+  assert.doesNotMatch(xml, /\\\\n/);
+});
