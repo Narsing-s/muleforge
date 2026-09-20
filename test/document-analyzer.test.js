@@ -226,3 +226,13 @@ test("infers explicit and safe field types from requirement documents", () => {
   assert.equal(fields.amount.required, true);
   assert.equal(fields.quantity.required, false);
 });
+
+test("preserves documented enum values in requirement fields", () => {
+  const model = analyzeRequirementDocument(
+    "POST /customers creates a customer. Request fields: status: string enum: [ACTIVE, INACTIVE]. status is required.",
+    "customers.md"
+  );
+  const status = model.operations[0].requestFields.find(f => f.name === "status");
+  assert.deepEqual(status.enum, ["ACTIVE", "INACTIVE"]);
+  assert.equal(status.required, true);
+});
