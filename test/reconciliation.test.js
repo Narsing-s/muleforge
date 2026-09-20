@@ -28,7 +28,6 @@ test("reconciliation identifies missing, drifted and extra operations without co
   assert.equal(report.summary.connectorDrift, 0);
   assert.equal(report.summary.extraExistingOperations, 0);
   const source = fs.readFileSync(path.join(root, "src/main/mule/api.xml"), "utf8");
-  writeReconciliation(path.join(root, "muleforge.yaml"), root).catch(() => {});
   assert.equal(source, '<mule><flow name="customers"><http:listener method="GET" path="/customers"/></flow></mule>');
 });
 
