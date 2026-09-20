@@ -11,6 +11,7 @@ function makeProject(root, api = true) {
     "mule-artifact.json",
     "src/main/resources/application.yaml",
     "src/main/mule/demo.xml",
+    "src/test/munit/demo-test.xml",
     "muleforge-traceability.json",
     "docs/11-traceability.md",
     "docs/00-solution-design/solution-design.md",
