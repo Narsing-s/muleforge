@@ -28,6 +28,8 @@ function checkRuntimeCompatibility(model = {}, directory = ".") {
     const xml = fs.readFileSync(pom, "utf8");
     if (java && !xml.includes(java)) add("warning", "JAVA_POM_MISMATCH", `Configured Java ${java} was not found in pom.xml; review build configuration.`);
     if (mule && !xml.includes(mule)) add("warning", "MULE_POM_MISMATCH", `Configured Mule runtime ${mule} was not found in pom.xml; review runtime configuration.`);
+    const plugin = xml.match(/<artifactId>mule-maven-plugin<\/artifactId>[\s\S]*?<version>([^<]+)<\/version>/i);
+    if (plugin) findings.push({ severity: "info", code: "MULE_MAVEN_PLUGIN_DETECTED", message: `Mule Maven Plugin ${plugin[1].trim()} detected in pom.xml.` });
   }
 
   const errors = findings.filter(f => f.severity === "error");
