@@ -148,3 +148,19 @@ test("engineering evidence includes change impact, coverage, dependencies and ru
   assert.equal(buildChangeImpact(model, imported).operations.length, 1);
   assert.equal(buildCoverageMatrix(model, imported).totals.confirmedTests, 1);
 });
+
+
+test("classifies the remaining supported workload families without forcing REST artifacts", () => {
+  const cases = [
+    [{ requirement: "Process a batch of 10000 records with chunking." }, TYPES.BATCH],
+    [{ requirement: "Expose a SOAP service defined by WSDL.", wsdl: "orders.wsdl" }, TYPES.SOAP],
+    [{ requirement: "Expose a GraphQL query and mutation API.", graphql: true }, TYPES.GRAPHQL],
+    [{ requirement: "Synchronize Salesforce records with a database.", connectors: ["salesforce", "database"] }, TYPES.INTEGRATION]
+  ];
+  for (const [model, expected] of cases) {
+    const result = classifyWorkload({ model });
+    assert.equal(result.type, expected);
+    assert.equal(result.apiContractRequired, [TYPES.SOAP, TYPES.GRAPHQL].includes(expected));
+    if (expected !== TYPES.GRAPHQL && expected !== TYPES.SOAP) assert.equal(result.ramlRequired, false);
+  }
+});
