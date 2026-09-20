@@ -7,6 +7,7 @@ const { writeEndToEndReport, checkEndToEndArtifacts } = require("../src/end-to-e
 function makeProject(root, api = true) {
   const files = [
     "muleforge.yaml",
+    "muleforge-solution-blueprint.json",
     "pom.xml",
     "mule-artifact.json",
     "src/main/resources/application.yaml",

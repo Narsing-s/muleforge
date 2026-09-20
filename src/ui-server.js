@@ -7,6 +7,7 @@ const { prepareAndSave } = require("./local-export");
 const { version } = require("../package.json");
 const { importProject } = require("./import-project");
 const { buildEngineeringPlan, explainImportedProject, classifyWorkload } = require("./workload-engine");
+const { buildSolutionBlueprint, validateSolutionBlueprint } = require("./solution-blueprint");
 
 function json(res, status, value) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -116,6 +117,8 @@ function validateSaveRequest(model, approved) {
   if (Array.isArray(model.conflicts) && model.conflicts.length) throw new Error("Resolve all requirement conflicts before saving.");
   if (Array.isArray(model.missingConfigurations) && model.missingConfigurations.length) throw new Error("Resolve all required connectivity decisions before saving.");
   if (model.operations.some(op => op && op.connectorAmbiguous)) throw new Error("Resolve ambiguous operation connector mappings before saving.");
+  const blueprintValidation = validateSolutionBlueprint(model, buildSolutionBlueprint(model));
+  if (!blueprintValidation.valid) throw new Error("Solution blueprint gate failed: " + blueprintValidation.critical.map(x => x.code + ": " + x.message).join("; "));
   return true;
 }
 
@@ -142,7 +145,9 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
         }
         const assets = generateUiAssets(model);
         const plan = buildEngineeringPlan(model);
-        return json(res, 200, { ok: true, ...assets, model, plan });
+        const blueprint = buildSolutionBlueprint(model);
+        const blueprintValidation = validateSolutionBlueprint(model, blueprint);
+        return json(res, 200, { ok: true, ...assets, model, plan, blueprint, blueprintValidation });
       } catch (error) {
         return json(res, 400, { error: error.message });
       }

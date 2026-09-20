@@ -5,6 +5,7 @@ const YAML = require("yaml");
 const { buildTraceability } = require("./traceability");
 const { classifyWorkload } = require("./workload-engine");
 const { checkEndToEndArtifacts } = require("./end-to-end");
+const { buildSolutionBlueprint, validateSolutionBlueprint } = require("./solution-blueprint");
 
 function readConfig(file = "muleforge.yaml") {
   const full = path.resolve(file);
@@ -83,7 +84,10 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   const operations = Array.isArray(config.operations) ? config.operations : [];
   const workload = classifyWorkload({ model: config });
   const apiWorkload = workload.type === "api";
+  const blueprint = buildSolutionBlueprint(config);
+  const blueprintValidation = validateSolutionBlueprint(config, blueprint);
   const checks = [];
+  checks.push(result("Solution blueprint", blueprintValidation.valid, blueprintValidation.critical.length ? blueprintValidation.critical.map(x => x.code + ": " + x.message).join("; ") : "Requirement, workload, architecture and semantic integration evidence are consistent."));
 
   const hasRequirement = Boolean(
     (config.requirement && String(config.requirement).trim()) ||

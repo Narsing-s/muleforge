@@ -57,6 +57,7 @@ const { environmentDiff } = require("./environment-diff");
 const { importProject } = require("./import-project");
 const { classifyWorkload, buildEngineeringPlan, explainImportedProject, writeEngineeringPlan, explainOperation } = require("./workload-engine");
 const { writeEndToEndReport } = require("./end-to-end");
+const { buildSolutionBlueprint, validateSolutionBlueprint, writeSolutionBlueprint } = require("./solution-blueprint");
 
 const VERSION = "0.9.18";
 const program = new Command();
@@ -194,6 +195,9 @@ function copyProjectToDesktop(root) {
 function generateProject(file = "muleforge.yaml", options = {}) {
   const config = loadConfig(file), d = context(config), root = path.resolve(path.dirname(file)), t = path.resolve(__dirname, "../templates");
   const engineeringPlan = buildEngineeringPlan(config);
+  const solutionBlueprint = buildSolutionBlueprint(config);
+  const blueprintValidation = validateSolutionBlueprint(config, solutionBlueprint);
+  if (!blueprintValidation.valid) throw new Error("Solution blueprint gate failed: " + blueprintValidation.critical.map(x => x.code + ": " + x.message).join("; "));
   writeEngineeringPlan(root, engineeringPlan);
   const ownershipFile = path.join(root, ".muleforge-generated.json");
   let previousGenerated = [];
@@ -227,6 +231,7 @@ function generateProject(file = "muleforge.yaml", options = {}) {
   if ((config.testing || {}).munit !== false) write(path.join(root, "src/test/munit", `${d.artifactId}-test.xml`), generateMunit(config, d));
   writeProductionArtifacts(root, config, { ...d, workloadType: engineeringPlan.workload.type });
   writeTraceability(root, config);
+  write(path.join(root, "muleforge-solution-blueprint.json"), JSON.stringify({ ...solutionBlueprint, validation: blueprintValidation }, null, 2) + "\n");
   deploymentArtifacts(root, config, d);
   writeEndToEndReport(root, { ...config, workloadType: engineeringPlan.workload.type });
   const afterGeneration = snapshot(root);
@@ -469,6 +474,8 @@ program.command("self-test").description("Run local generation, contract, connec
     console.log("✔ Self-test passed: generation, contract, verification and audit gates are green.");
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
+program.command("solution-blueprint [config]").description("Generate and validate the requirement-driven MuleSoft solution blueprint")
+  .action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config)),r=writeSolutionBlueprint(root,model);console.log(JSON.stringify(r.blueprint,null,2));if(!r.validation.valid)process.exitCode=1;});
 program.command("plan [config]").description("Classify the MuleSoft workload and produce the end-to-end developer engineering plan").action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config)),r=writeEngineeringPlan(root,buildEngineeringPlan(model));console.log(JSON.stringify(r.plan,null,2));if(r.plan.workload.developerActionRequired)process.exitCode=1;});
 program.command("explain [directory]").description("Explain an existing Mule project from imported semantic evidence without modifying source").option("--operation <selector>","Explain one operation such as POST:/customers").action((directory=".",options)=>{const model=importProject(directory);const output=options.operation?explainOperation(model,options.operation):explainImportedProject(model);console.log(JSON.stringify(output,null,2));});
 program.parseAsync().catch(e => { console.error(`\n❌ ${e.message}`); process.exitCode = 1; });

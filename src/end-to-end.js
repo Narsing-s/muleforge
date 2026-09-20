@@ -17,6 +17,7 @@ function expectedArtifacts(config = {}) {
   const event = workload === "event" || Array.isArray(config.events) || Array.isArray(config.triggers);
   return [
     { id: "project-config", path: "muleforge.yaml", required: true, category: "model" },
+    { id: "solution-blueprint", path: "muleforge-solution-blueprint.json", required: true, category: "model" },
     { id: "maven-project", path: "pom.xml", required: true, category: "build" },
     { id: "mule-artifact", path: "mule-artifact.json", required: true, category: "runtime" },
     { id: "application-config", path: "src/main/resources/application.yaml", required: true, category: "configuration" },
