@@ -121,7 +121,7 @@ function assertionForFields(fields = [], source = "payload", indent = "      ") 
       checks.push(assertionForFields(item.fields, expression, indent));
     }
     if (String(item.type || "").toLowerCase() === "array" && item.items && typeof item.items === "object" && Array.isArray(item.items.fields)) {
-      checks.push(`${indent}<munit-tools:assert-that expression="#[sizeOf(${expression} default [])]" is="#[MunitTools::greaterThan(0)]"/>`);
+      checks.push(`${indent}<munit-tools:assert-that expression="#[sizeOf(${expression} default []) &gt; 0]" is="#[MunitTools::equalTo(true)]"/>`);
       checks.push(assertionForFields(item.items.fields, `${expression}[0]`, indent));
     }
   }

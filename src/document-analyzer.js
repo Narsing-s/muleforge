@@ -143,7 +143,7 @@ function inferFields(text, endpoint) {
       const normalizedField = escaped.toLowerCase();
       return new RegExp("(^|\\s)" + normalizedField + "(\\s|$)").test(normalized);
     });
-    const required = annotationRequired || sentenceRequired;
+    const required = sentenceRequired || (annotationRequired && /^(?:required|mandatory|cannot be empty|must be provided)$/i.test(String(annotations.get(String(name).toLowerCase()) || "").trim()));
     const annotation = annotations.get(String(name).toLowerCase()) || "";
     const enumMatch = annotation.match(/(?:enum|values?)\s*[:=]?\s*\[?([^\]]+)\]?/i);
     const enumValues = enumMatch
