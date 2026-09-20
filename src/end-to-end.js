@@ -37,6 +37,36 @@ function expectedArtifacts(config = {}) {
   ];
 }
 
+function requirementCoverage(config = {}) {
+  const issues = [];
+  const requirement = String(config.requirement || "").trim();
+  const operations = Array.isArray(config.operations) ? config.operations : [];
+  const workload = String(config.workloadType || "").toLowerCase();
+  const conflicts = Array.isArray(config.conflicts) ? config.conflicts : [];
+  if (!requirement) issues.push({ severity: "critical", code: "REQUIREMENT_MISSING", message: "No requirement text was preserved in the generated model." });
+  if (conflicts.length) issues.push({ severity: "critical", code: "REQUIREMENT_CONFLICT", message: `${conflicts.length} unresolved requirement conflict(s) remain.` });
+  if (["api","soap","graphql"].includes(workload) && !operations.length) {
+    issues.push({ severity: "critical", code: "OPERATIONS_MISSING", message: "An API workload was selected but no operations were confirmed." });
+  }
+  operations.forEach(op => {
+    const method = String(op.method || "").toUpperCase();
+    const bodyMethod = ["POST","PUT","PATCH"].includes(method);
+    if (!op.path) issues.push({ severity: "critical", code: "PATH_MISSING", operation: op.name || method, message: "An operation has no resource path." });
+    if (!method) issues.push({ severity: "critical", code: "METHOD_MISSING", operation: op.name || "unnamed", message: "An operation has no HTTP method." });
+    if (bodyMethod && !Array.isArray(op.requestFields)) issues.push({ severity: "warning", code: "REQUEST_SCHEMA_UNCONFIRMED", operation: op.name || method, message: "Request fields were not confirmed; generated request schema may be incomplete." });
+    if (!Array.isArray(op.responseFields) || !op.responseFields.length) issues.push({ severity: "warning", code: "RESPONSE_SCHEMA_UNCONFIRMED", operation: op.name || method, message: "Success response fields were not confirmed." });
+    if (!Array.isArray(op.errors) || !op.errors.length) issues.push({ severity: "warning", code: "ERROR_CASES_UNCONFIRMED", operation: op.name || method, message: "Business/dependency error cases were not confirmed." });
+  });
+  const requirements = requirementCoverage(config);
+  return {
+    version: "1.1",
+    issues,
+    critical: issues.filter(x => x.severity === "critical"),
+    warnings: issues.filter(x => x.severity === "warning"),
+    complete: !issues.some(x => x.severity === "critical")
+  };
+}
+
 function checkEndToEndArtifacts(root, config = {}) {
   const artifacts = expectedArtifacts(config).map(item => ({
     ...item,
@@ -50,7 +80,8 @@ function checkEndToEndArtifacts(root, config = {}) {
     architecture: config.architecture || null,
     artifacts,
     missing,
-    complete: missing.length === 0
+    requirements,
+    complete: missing.length === 0 && requirements.complete
   };
 }
 
@@ -68,7 +99,10 @@ function writeEndToEndReport(root, config = {}) {
     "",
     "This report is generated from the confirmed MuleForge model. It is a completeness manifest, not a claim that organization-specific business semantics or live credentials have been verified.",
     "",
-    `**Complete artifact set:** ${report.complete ? "YES" : "NO"}`,
+    `**Complete generation contract:** ${report.complete ? "YES" : "NO"}`,
+    "",
+    `**Requirement coverage:** ${report.requirements.complete ? "CONFIRMED" : "BLOCKED BY CRITICAL GAPS"}`,
+    "",
     "",
     "## Architecture decision",
     "",
@@ -84,6 +118,11 @@ function writeEndToEndReport(root, config = {}) {
     for (const item of items) lines.push(`- [${item.present ? "x" : " "}] \`${item.path}\`${item.required ? "" : " (optional)"}`);
     lines.push("");
   }
+  if (report.requirements.issues.length) {
+    lines.push("## Requirement coverage and unresolved assumptions", "");
+    for (const issue of report.requirements.issues) lines.push(`- **${issue.severity.toUpperCase()}** \\`${issue.code}\\`: ${issue.message}${issue.operation ? ` (operation: ${issue.operation})` : ""}`);
+    lines.push("");
+  }
   if (report.missing.length) {
     lines.push("## Missing required artifacts", "");
     for (const item of report.missing) lines.push(`- ${item.path}`);
@@ -93,4 +132,4 @@ function writeEndToEndReport(root, config = {}) {
   return report;
 }
 
-module.exports = { expectedArtifacts, checkEndToEndArtifacts, writeEndToEndReport };
+module.exports = { expectedArtifacts, requirementCoverage, checkEndToEndArtifacts, writeEndToEndReport };
