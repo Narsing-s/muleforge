@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { writeFunctionalMonitoring } = require("./functional-monitoring");
 
 function safe(value) { return String(value || "").replace(/[^A-Za-z0-9_.-]/g, "-"); }
 function fieldObject(field) { return typeof field === "string" ? { name: field, type: "string" } : (field || {}); }
@@ -117,6 +118,7 @@ function writeProductionArtifacts(root, config, data) {
   const postmanDir = path.join(root, "postman"), envDir = path.join(root, "src/main/resources/properties"), workflowDir = path.join(root, ".github/workflows");
   for (const dir of [postmanDir, envDir, workflowDir]) fs.mkdirSync(dir, { recursive: true });
   if (data.workloadType === "api") fs.writeFileSync(path.join(postmanDir, `${safe(data.artifactId)}.collection.json`), generatePostman(config, data), "utf8");
+  writeFunctionalMonitoring(root, config, data);
   for (const env of ["dev", "qa", "uat", "prod"]) fs.writeFileSync(path.join(envDir, `application-${env}.yaml`), generateEnvironment(env, data), "utf8");
   fs.writeFileSync(path.join(workflowDir, "ci-generated.yml"), generateGithubActions(data), "utf8");
   fs.writeFileSync(path.join(root, ".dockerignore"), "target\nnode_modules\n.mule\n.settings\n.project\n.classpath\n*.log\n", "utf8");
