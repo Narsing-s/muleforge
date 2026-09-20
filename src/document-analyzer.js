@@ -397,7 +397,6 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
       .map(line => line.trim())
       .filter(Boolean)
       .find(line => line.toLowerCase() !== (String(endpoint.method) + " " + String(endpoint.path)).toLowerCase() && !/^(?:connector|request|input|payload|fields?)\s*:/i.test(line) && !/^(?:use|using|publish|send|receive|connect|authenticate)\b/i.test(line)) || undefined;
-    const connector = operationConnector(endpoint);") + "$", "i").test(line)) || undefined;
     const connector = operationConnector(endpoint);
     const local = connector ? operationConnectivity(endpoint, connector) : null;
     const httpEvidence = httpEvidenceForOperation(endpoint);
