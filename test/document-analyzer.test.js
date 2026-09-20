@@ -258,3 +258,21 @@ test("builds nested objects and arrays from dotted requirement fields", () => {
   assert.equal(items.items.fields.find(f => f.name === "sku").required, true);
   assert.equal(items.items.fields.find(f => f.name === "quantity").type, "integer");
 });
+
+
+test("preserves documented field validation constraints", () => {
+  const model = analyzeRequirementDocument(
+    [
+      "POST /customers creates a customer.",
+      "Request fields: email: string format: email minLength: 5 maxLength: 120, amount: number min: 0 max: 100000, customerCode: string pattern: [A-Z0-9]{6}."
+    ].join("\n"),
+    "customer-validation.md"
+  );
+  const fields = Object.fromEntries(model.operations[0].requestFields.map(f => [f.name, f]));
+  assert.equal(fields.email.format, "email");
+  assert.equal(fields.email.minLength, 5);
+  assert.equal(fields.email.maxLength, 120);
+  assert.equal(fields.amount.minimum, 0);
+  assert.equal(fields.amount.maximum, 100000);
+  assert.equal(fields.customerCode.pattern, "[A-Z0-9]{6}");
+});
