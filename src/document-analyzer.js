@@ -115,7 +115,14 @@ function inferFields(text, endpoint) {
   return selected.map(name => {
     const escaped = String(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const required = new RegExp("(?:\\brequired\\b|\\bmandatory\\b|\\bmust be provided\\b|\\bcannot be empty\\b)[^\\n]{0,100}\\b" + escaped + "\\b|\\b" + escaped + "\\b[^\\n]{0,100}(?:\\brequired\\b|\\bmandatory\\b|\\bmust be provided\\b|\\bcannot be empty\\b)", "i").test(text);
-    return { name, type: inferFieldType(name, annotations.get(String(name).toLowerCase())), required };
+    const annotation = annotations.get(String(name).toLowerCase()) || "";
+    const enumMatch = annotation.match(/(?:enum|values?)\s*[:=]?\s*\[?([^\]]+)\]?/i);
+    const enumValues = enumMatch
+      ? enumMatch[1].split(/,|\|/).map(v => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean)
+      : null;
+    const field = { name, type: inferFieldType(name, annotation), required };
+    if (enumValues?.length) field.enum = enumValues;
+    return field;
   });
 }
 function inferValidation(text, fields) {
