@@ -20,8 +20,8 @@ function extractSemantics(xml){
 }
 function importProject(root="."){
   const base=path.resolve(root),files=walk(base),xml=files.filter(f=>f.endsWith(".xml")),raml=files.filter(f=>f.endsWith(".raml")),dw=files.filter(f=>f.endsWith(".dwl")),munit=files.filter(f=>/munit/i.test(f)&&f.endsWith(".xml")),pom=files.find(f=>path.basename(f)==="pom.xml");
-  const operations=[],semantics={flows:[],flowRefs:[],transformCount:0,errorHandlers:[],configRefs:[],globalConfigs:[]};
-  for(const f of xml){const source=relative(base,f),content=fs.readFileSync(f,"utf8");operations.push(...extract(content,source));const s=extractSemantics(content);semantics.flows.push(...s.flows.map(v=>({...v,source})));semantics.flowRefs.push(...s.flowRefs.map(name=>({name,source})));semantics.transformCount+=s.transformCount;semantics.errorHandlers.push(...s.errorHandlers.map(v=>({...v,source})));semantics.configRefs.push(...s.configRefs.map(name=>({name,source})));semantics.globalConfigs.push(...s.globalConfigs.map(v=>({...v,source})));}
+  const operations=[],semantics={flows:[],flowRefs:[],transformCount:0,errorHandlers:[],configRefs:[],globalConfigs:[],triggers:[],routers:[]};
+  for(const f of xml){const source=relative(base,f),content=fs.readFileSync(f,"utf8");operations.push(...extract(content,source));const s=extractSemantics(content);semantics.flows.push(...s.flows.map(v=>({...v,source})));semantics.flowRefs.push(...s.flowRefs.map(name=>({name,source})));semantics.transformCount+=s.transformCount;semantics.errorHandlers.push(...s.errorHandlers.map(v=>({...v,source})));semantics.configRefs.push(...s.configRefs.map(name=>({name,source})));semantics.globalConfigs.push(...s.globalConfigs.map(v=>({...v,source})));semantics.triggers.push(...s.triggers.map(v=>({...v,source})));semantics.routers.push(...s.routers.map(v=>({...v,source})));}
   const uniqueOps=[...new Map(operations.map(o=>[JSON.stringify([o.name,o.path,o.connector,o.action]),o])).values()];
   const configs=files.filter(f=>/application.*\.(yaml|yml|properties)$/.test(f)).map(f=>relative(base,f));
   const dependencyEvidence = [];
@@ -50,13 +50,11 @@ function importProject(root="."){
     configuration: configs,
     source: sourceAssets
   };
-  const operationEvidence = uniqueOps.map(op => ({
-    operation: [op.method, op.path].filter(Boolean).join(" "),
-    connector: op.connector || null,
-    action: op.action || null,
-    source: op.source || null,
-    state: "confirmed"
-  }));
+  const operationEvidence = uniqueOps.map(op => { const flow = semantics.flows.find(f => f.source === op.source && f.name === op.name); return { operation: [op.method, op.path].filter(Boolean).join(" "), connector: op.connector || null, action: op.action || null, source: op.source || null, flow: flow ? { name: flow.name, source: flow.source, type: flow.type } : null, state: "confirmed" }; });
+  const dependencyEvidence=[];
+  for(const pomFile of files.filter(x=>path.basename(x)==="pom.xml")){const pomText=fs.readFileSync(pomFile,"utf8");for(const m of pomText.matchAll(/<dependency\\b[^>]*>([\\s\\S]*?)<\\/dependency>/gi)){const block=m[1];const value=tag=>{const hit=block.match(new RegExp("<"+tag+">\\\\s*([^<]+)\\\\s*</"+tag+">","i"));return hit?hit[1].trim():null;};const groupId=value("groupId"),artifactId=value("artifactId");if(groupId&&artifactId)dependencyEvidence.push({groupId,artifactId,version:value("version"),scope:value("scope"),classifier:value("classifier"),source:relative(base,pomFile),kind:"maven"});}}
+  const exchangeDependencies=[];
+  for(const f of files.filter(x=>path.basename(x)==="exchange.json")){try{const value=JSON.parse(fs.readFileSync(f,"utf8"));const assets=Array.isArray(value.assets)?value.assets:Array.isArray(value.dependencies)?value.dependencies:Object.values(value.dependencies||{});for(const a of assets){if(a&&(a.groupId||a.artifactId||a.assetId||a.name))exchangeDependencies.push({groupId:a.groupId||null,artifactId:a.artifactId||a.assetId||a.name,version:a.version||null,source:relative(base,f),kind:"exchange"});}}catch{}}
   const workload=classifyWorkload({
     model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},
     imported:{semantics, triggers: semantics.triggers, routers: semantics.routers}
@@ -66,7 +64,7 @@ function importProject(root="."){
     operations: uniqueOps,
     existingArtifacts: sourceAssets
   });
-  return {version:"1.6",architecture,workload,project:{name:path.basename(base),artifactId:path.basename(base),version:"1.0.0"},api:{name:path.basename(base),version:"v1",basePath:"/api/v1"},operations:uniqueOps,operationEvidence,assetInventory,inventory:{files:files.length,muleXml:xml.length,raml:raml.length,dataWeave:dw.length,munit:munit.length,pom:Boolean(pom),environmentConfigs:configs,semantic:{flowCount:semantics.flows.length,flowReferenceCount:semantics.flowRefs.length,transformCount:semantics.transformCount,errorHandlerCount:semantics.errorHandlers.length,configReferenceCount:semantics.configRefs.length,globalConfigCount:semantics.globalConfigs.length}},semantics,dependencyEvidence,exchangeDependencies,import:{reviewRequired:true,preserveSource:true},migration:{reviewRequired:true,preserveSource:true,unmappedAssets:sourceAssets},ramlSources:raml.map(f=>relative(base,f)),dataWeaveSources:dw.map(f=>relative(base,f))};
+  return {version:"1.6",architecture,workload,project:{name:path.basename(base),artifactId:path.basename(base),version:"1.0.0"},api:{name:path.basename(base),version:"v1",basePath:"/api/v1"},operations:uniqueOps,operationEvidence,assetInventory,inventory:{files:files.length,muleXml:xml.length,raml:raml.length,dataWeave:dw.length,munit:munit.length,pom:Boolean(pom),environmentConfigs:configs,semantic:{flowCount:semantics.flows.length,flowReferenceCount:semantics.flowRefs.length,transformCount:semantics.transformCount,errorHandlerCount:semantics.errorHandlers.length,configReferenceCount:semantics.configRefs.length,globalConfigCount:semantics.globalConfigs.length,triggerCount:semantics.triggers.length,routerCount:semantics.routers.length}},semantics,dependencyEvidence,exchangeDependencies,import:{reviewRequired:true,preserveSource:true},migration:{reviewRequired:true,preserveSource:true,unmappedAssets:sourceAssets},ramlSources:raml.map(f=>relative(base,f)),dataWeaveSources:dw.map(f=>relative(base,f))};
 }
 function writeImportedModel(root="."){const model=importProject(root),target=path.join(path.resolve(root),"muleforge-import.yaml");fs.writeFileSync(target,YAML.stringify(model),"utf8");return {target,model};}
 module.exports={importProject,writeImportedModel,extractSemantics};
