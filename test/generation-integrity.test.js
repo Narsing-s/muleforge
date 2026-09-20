@@ -513,3 +513,6 @@ deployment:
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+
+test("existing-project importer records trigger and router evidence",()=>{const {extractSemantics}=require("../src/import-project");const xml='<mule><flow name="scheduled"><scheduler/><choice/><apikit:router config-ref="api"/></flow></mule>';const s=extractSemantics(xml);assert.equal(s.triggers[0].type,"scheduler");assert.equal(s.routers.some(x=>x.type==="choice"),true);assert.equal(s.routers.some(x=>x.type==="apikit:router"),true);});
