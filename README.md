@@ -287,6 +287,22 @@ customer-api/
 
 The generated `docs/` folder describes the specific application. The MuleForge repository `docs/` folder describes how to use and develop MuleForge itself.
 
+## 📦 Document package or repository intake
+
+MuleForge can start from either a single requirement document or a directory containing the project documentation package. The existing analyzer is reused as the single source of truth; MuleForge does not create a second requirements model.
+
+Examples:
+
+    muleforge analyze requirements/customer-requirement.pdf customer-api
+    muleforge analyze ./requirements customer-api
+
+Directory intake supports common requirement and integration artifacts including PDF, DOCX, PPTX, XLSX, Markdown, text, CSV, JSON, YAML, HTML, RAML, XML, DataWeave, SQL and properties files. Generated/build directories are ignored, and muleforge.yaml remains the canonical project model rather than being re-imported as duplicate input.
+
+The resulting model drives the same downstream lifecycle:
+
+    documentation → requirements/evidence → API design → Mule implementation → DataWeave → MUnit → Postman → verification → CI/CD → deployment artifacts → promotion/rollback metadata
+
+MuleSoft documents the same design-before-implementation lifecycle: define the API contract, implement and test the integration, then deploy and verify it. citeturn0search0turn0search2turn0search5
 ## 🧩 Current capabilities
 
 - Interactive requirement workflow
