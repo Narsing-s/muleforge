@@ -66,5 +66,112 @@ function buildRequirementModel(requirement, answers = {}) {
 }
 function missingQuestions(model) { const questions = []; if (!model.operations.length) questions.push({ key: "operations", question: "Which HTTP operations and paths are required? Example: POST /customers, GET /customers/{customerId}" }); if (model.operations.some(op => isBodyOperation(op.method) && !op.requestFields.length)) questions.push({ key: "requestFields", question: "What request fields are required for each operation?" }); if (model.operations.some(op => !op.responseFields.length)) questions.push({ key: "responseFields", question: "What should the successful response contain?" }); if (model.operations.some(op => !op.validation.length)) questions.push({ key: "validation", question: "What validation rules should be enforced?" }); if (model.operations.some(op => !op.errors.length)) questions.push({ key: "errors", question: "Which business and error cases should be handled?" }); if (model.connectors.length === 1) questions.push({ key: "backend", question: "Which backend systems or connectors are required?" }); return questions; }
 function scenarioText(model) { const rows = []; for (const op of model.operations) { rows.push(`### ${op.method} ${op.path} — happy path\n\n- Given a valid request\n- When the operation is invoked\n- Then return HTTP ${op.successStatus}`); for (const validation of op.validation || []) rows.push(`### ${op.method} ${op.path} — validation: ${validation}\n\n- Given the request violates the rule\n- When the operation is invoked\n- Then return HTTP 400`); for (const error of op.errors || []) rows.push(`### ${op.method} ${op.path} — ${error}\n\n- Given the described business or dependency condition\n- When the operation is invoked\n- Then return the documented error status and response`); } return rows.join("\n\n") || "No scenarios could be derived."; }
-function writeDocumentation(root, model) { const docs = path.join(root, "docs"); ["00-solution-design", "01-requirements", "02-architecture", "03-api", "04-database", "05-dataweave", "06-flows", "07-configuration", "08-testing", "09-deployment", "10-troubleshooting"].forEach(dir => fs.mkdirSync(path.join(docs, dir), { recursive: true })); const endpointText = model.operations.length ? model.operations.map(op => `- **${op.method} ${op.path}** — ${op.name}`).join("\n") : "- No operations confirmed."; fs.writeFileSync(path.join(docs, "README.md"), `# ${model.project.name} Documentation\n\nGenerated from the confirmed MuleForge requirement.\n\n- [Solution Design](00-solution-design/solution-design.md)\n- [Requirements](01-requirements/requirements.md)\n- [Architecture](02-architecture/architecture.md)\n- [API](03-api/api-overview.md)\n- [Flows](06-flows/main-flow.md)\n- [Testing](08-testing/testing.md)\n- [Test Scenarios](08-testing/test-scenarios.md)\n- [Deployment](09-deployment/deployment.md)\n`); fs.writeFileSync(path.join(docs, "00-solution-design/solution-design.md"), `# Solution Design\n\n## Confirmed requirement\n\n${model.requirement}\n\n## API operations\n${endpointText}\n\n## Connectors inferred from the requirement\n${model.connectors.map(c => `- ${c}`).join("\n") || "- None confirmed."}\n\n> MuleForge does not ask for backend credentials or environment connection details during requirement analysis.\n`); fs.writeFileSync(path.join(docs, "01-requirements/requirements.md"), `# Requirements\n\n${model.requirement}\n\n## Decisions\n${model.decisions.map(d => `- ${d}`).join("\n") || "- None recorded."}\n`); fs.writeFileSync(path.join(docs, "02-architecture/architecture.md"), `# Architecture\n\nClient → HTTP Listener → Validation → Business Flow → Connector/Backend (if required) → DataWeave → Response\n`); fs.writeFileSync(path.join(docs, "03-api/api-overview.md"), `# API\n\nBase path: \`${model.api.basePath}\`\n\n${endpointText}\n`); fs.writeFileSync(path.join(docs, "04-database/database-design.md"), `# Database Design\n\nBackend connection details are intentionally not required for requirement-driven generation. If a database is mentioned, MuleForge generates connector/configuration placeholders only.\n`); fs.writeFileSync(path.join(docs, "05-dataweave/transformations.md"), `# DataWeave\n\nRequest and response mappings are generated from the confirmed requirement model.\n`); fs.writeFileSync(path.join(docs, "06-flows/main-flow.md"), `# End-to-End Flow Documentation\n\n${model.operations.map(op => `## ${op.name}\n\n**${op.method} ${op.path}**\n\n1. Receive request through HTTP Listener\n2. Validate the request according to the requirement\n3. Execute the confirmed business logic\n4. Call only connectors inferred from the requirement\n5. Transform the response with DataWeave\n6. Return HTTP ${op.successStatus} on success\n7. Route documented business, validation, dependency and unexpected errors to the generated error handler\n`).join("\n") || "No flow is generated until an operation is confirmed."}`); fs.writeFileSync(path.join(docs, "07-configuration/configuration.md"), `# Configuration\n\nRuntime: ${model.project.muleRuntime}\nJava: ${model.project.java}\n\nSecrets and environment-specific values are represented by properties and must not be committed.\n`); fs.writeFileSync(path.join(docs, "08-testing/testing.md"), `# Testing\n\nMUnit enabled: ${model.testing.munit ? "yes" : "no"}.\n\nThe generated suite covers happy paths, validation rules, business errors and dependency failures inferred from the requirement.\n`); fs.writeFileSync(path.join(docs, "08-testing/test-scenarios.md"), `# Test Scenarios\n\n${scenarioText(model)}\n`); fs.writeFileSync(path.join(docs, "09-deployment/deployment.md"), `# Deployment\n\nTarget: ${model.deployment.target}\n\nDeployment credentials and environment connection details are intentionally not requested by the analyzer.\n`); fs.writeFileSync(path.join(docs, "10-troubleshooting/troubleshooting.md"), `# Troubleshooting\n\nRun \`muleforge validate\`, then \`muleforge verify --build\`. Review the generated RAML, Mule XML, MUnit scenarios and Postman collection.\n`); }
+function writeDocumentation(root, model) {
+  const docs = path.join(root, "docs");
+  const operations = Array.isArray(model.operations) ? model.operations : [];
+  const connectors = Array.isArray(model.connectors) ? model.connectors : [];
+  const decisions = Array.isArray(model.decisions) ? model.decisions : [];
+  const project = model.project || {};
+  const api = model.api || {};
+  const testing = model.testing || {};
+  const deployment = model.deployment || {};
+  const artifactName = project.name || project.artifactId || "mule-api";
+  const runtime = project.muleRuntime || "4.9.0";
+  const java = project.java || "17";
+  const endpointText = operations.length ? operations.map(op => `- **${op.method || "UNKNOWN"} ${op.path || "/"}** — ${op.name || "unnamed operation"}`).join("\n") : "- No operations confirmed.";
+  ["00-solution-design", "01-requirements", "02-architecture", "03-api", "04-database", "05-dataweave", "06-flows", "07-configuration", "08-testing", "09-deployment", "10-troubleshooting"].forEach(dir => fs.mkdirSync(path.join(docs, dir), { recursive: true }));
+  fs.writeFileSync(path.join(docs, "README.md"), `# ${artifactName} Documentation
+
+Generated from the confirmed MuleForge requirement.
+
+- [Solution Design](00-solution-design/solution-design.md)
+- [Requirements](01-requirements/requirements.md)
+- [Architecture](02-architecture/architecture.md)
+- [API](03-api/api-overview.md)
+- [Flows](06-flows/main-flow.md)
+- [Testing](08-testing/testing.md)
+- [Test Scenarios](08-testing/test-scenarios.md)
+- [Deployment](09-deployment/deployment.md)
+`);
+  fs.writeFileSync(path.join(docs, "00-solution-design/solution-design.md"), `# Solution Design
+
+## Confirmed requirement
+
+${model.requirement || "No requirement text was supplied."}
+
+## API operations
+${endpointText}
+
+## Connectors inferred from the requirement
+${connectors.map(c => `- ${c}`).join("\n") || "- None confirmed."}
+
+> MuleForge does not ask for backend credentials or environment connection details during requirement analysis.
+`);
+  fs.writeFileSync(path.join(docs, "01-requirements/requirements.md"), `# Requirements
+
+${model.requirement || "No requirement text was supplied."}
+
+## Decisions
+${decisions.map(d => `- ${d}`).join("\n") || "- None recorded."}
+`);
+  fs.writeFileSync(path.join(docs, "02-architecture/architecture.md"), `# Architecture
+
+Client → HTTP Listener → Validation → Business Flow → Connector/Backend (if required) → DataWeave → Response
+`);
+  fs.writeFileSync(path.join(docs, "03-api/api-overview.md"), `# API
+
+Base path: \`${api.basePath || "/"}\`
+
+${endpointText}
+`);
+  fs.writeFileSync(path.join(docs, "04-database/database-design.md"), `# Database Design
+
+Backend connection details are intentionally not required for requirement-driven generation. If a database is mentioned, MuleForge generates connector/configuration placeholders only.
+`);
+  fs.writeFileSync(path.join(docs, "05-dataweave/transformations.md"), `# DataWeave
+
+Request and response mappings are generated from the confirmed requirement model.
+`);
+  fs.writeFileSync(path.join(docs, "06-flows/main-flow.md"), `# End-to-End Flow Documentation
+
+${operations.map(op => `## ${op.name || "Unnamed operation"}
+
+**${op.method || "UNKNOWN"} ${op.path || "/"}**
+
+1. Receive request through HTTP Listener
+2. Validate the request according to the requirement
+3. Execute the confirmed business logic
+4. Call only connectors inferred from the requirement
+5. Transform the response with DataWeave
+6. Return HTTP ${op.successStatus || 200} on success
+7. Route documented business, validation, dependency and unexpected errors to the generated error handler
+`).join("\n") || "No flow is generated until an operation is confirmed."}`);
+  fs.writeFileSync(path.join(docs, "07-configuration/configuration.md"), `# Configuration
+
+Runtime: ${runtime}
+Java: ${java}
+
+Secrets and environment-specific values are represented by properties and must not be committed.
+`);
+  fs.writeFileSync(path.join(docs, "08-testing/testing.md"), `# Testing
+
+MUnit enabled: ${testing.munit === false ? "no" : "yes"}.
+
+The generated suite covers happy paths, validation rules, business errors and dependency failures inferred from the requirement.
+`);
+  fs.writeFileSync(path.join(docs, "08-testing/test-scenarios.md"), `# Test Scenarios
+
+${scenarioText({ ...model, operations })}
+`);
+  fs.writeFileSync(path.join(docs, "09-deployment/deployment.md"), `# Deployment
+
+Target: ${deployment.target || "none"}
+
+Deployment credentials and environment connection details are intentionally not requested by the analyzer.
+`);
+  fs.writeFileSync(path.join(docs, "10-troubleshooting/troubleshooting.md"), `# Troubleshooting
+
+Run \`muleforge validate\`, then \`muleforge verify --build\`. Review the generated RAML, Mule XML, MUnit scenarios and Postman collection.
+`);
+}
 module.exports = { buildRequirementModel, missingQuestions, writeDocumentation, isBodyOperation };
