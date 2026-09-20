@@ -22,12 +22,17 @@ function requestBody(op) {
 }
 function batTest(op, data) {
   const method = String(op.method || "GET").toUpperCase();
-  const url = "$(config.baseUrl)" + (data.basePath || "/api/v1") + (op.path || "/");
-  const headers = ["Content-Type: 'application/json'"];
-  if (op.security === "client-id") headers.push("client_id: $(config.clientId)");
-  if (op.security === "oauth2") headers.push("Authorization: 'Bearer ' ++ $(config.accessToken)");
   const body = requestBody(op);
-  const withBlock = body ? "{ headers: { " + headers.join(", ") + " }, body: " + body + " }" : "{ headers: { " + headers.join(", ") + " } }";
+  const rawPath = op.path || "/";
+  const renderedPath = String(rawPath).replace(/\\{([^}]+)\\}/g, (_, name) => "$(config." + name + ")");
+  const url = "$(config.baseUrl)" + (data.basePath || "/api/v1") + renderedPath;
+  const headers = [];
+  if (body) headers.push('"Content-Type": \'application/json\'');
+  if (op.security === "client-id" || op.security === "clientId") headers.push("client_id: $(config.clientId)");
+  if (op.security === "oauth2") headers.push("Authorization: 'Bearer ' ++ $(config.accessToken)");
+  if (op.security === "basic") headers.push("Authorization: 'Basic ' ++ $(config.basicAuth)");
+  const headerBlock = headers.length ? "{ " + headers.join(", ") + " }" : "{}";
+  const withBlock = "{ headers: " + headerBlock + (body ? ", body: " + body : "") + " }";
   const status = Number(op.successStatus || (method === "POST" ? 201 : 200));
   const name = String(op.name || method + " " + op.path).replace(/"/g, "\\\"");
   return [
@@ -70,9 +75,9 @@ function generateBatManifest(artifact) {
 function generateBatConfig(config = {}) {
   const operations = Array.isArray(config.operations) ? config.operations : [];
   const security = new Set(operations.map(op => String(op.security || "").toLowerCase()).filter(Boolean));
-  const values = {
-    baseUrl: "https://SET_ME"
-  };
+  const pathParameters = [...new Set(operations.flatMap(op => [...String(op.path || "").matchAll(/\\{([^}]+)\\}/g)].map(match => match[1])))];
+  const values = { baseUrl: "https://SET_ME" };
+  pathParameters.forEach(name => { values[name] = "SET_ME"; });
   if (security.has("client-id") || security.has("clientid")) values.clientId = "SET_ME";
   if (security.has("oauth2")) values.accessToken = "SET_ME";
   if (security.has("basic")) values.basicAuth = "SET_ME";
