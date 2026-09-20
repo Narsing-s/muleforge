@@ -26,3 +26,18 @@ test("save validation rejects unresolved conflicts and configuration", () => {
 test("save validation accepts a confirmed approved model", () => {
   assert.equal(validateSaveRequest(model(), true), true);
 });
+
+
+test("save validation accepts a confirmed non-API event workload", () => {
+  const eventModel = model({
+    requirement: "Consume order events from Anypoint MQ and update Salesforce.",
+    operations: [],
+    connectors: ["anypoint-mq", "salesforce"]
+  });
+  assert.equal(validateSaveRequest(eventModel, true), true);
+});
+
+test("save validation rejects an unknown workload instead of inventing an API", () => {
+  const unknown = model({ requirement: "Move enterprise data somewhere.", operations: [], connectors: [] });
+  assert.throws(() => validateSaveRequest(unknown, true), /workload type/i);
+});

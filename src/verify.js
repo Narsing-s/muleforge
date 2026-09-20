@@ -3,6 +3,7 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 const YAML = require("yaml");
 const { buildTraceability } = require("./traceability");
+const { classifyWorkload } = require("./workload-engine");
 
 function readConfig(file = "muleforge.yaml") {
   const full = path.resolve(file);
@@ -79,6 +80,8 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   const mule = safeRead(root, mulePath);
   const application = safeRead(root, "src/main/resources/application.yaml");
   const operations = Array.isArray(config.operations) ? config.operations : [];
+  const workload = classifyWorkload({ model: config });
+  const apiWorkload = workload.type === "api";
   const checks = [];
 
   const hasRequirement = Boolean(
@@ -87,8 +90,8 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   );
   checks.push(result("Requirement exists", hasRequirement, "muleforge.yaml must contain a confirmed requirement."));
   checks.push(result("Project metadata", Boolean(project.name), "project.name is required."));
-  checks.push(result("API metadata", Boolean(api.name && api.basePath), "api.name and api.basePath are required."));
-  checks.push(result("Operations defined", operations.length > 0, "At least one confirmed API operation is required."));
+  checks.push(result("API metadata", !apiWorkload || Boolean(api.name && api.basePath), apiWorkload ? "api.name and api.basePath are required for API workloads." : "API metadata is not required for non-API workloads."));
+  checks.push(result("Operations defined", apiWorkload ? operations.length > 0 : (operations.length > 0 || (config.connectors || []).length > 0 || (config.events || config.triggers || []).length > 0), apiWorkload ? "At least one confirmed API operation is required." : "A non-API workload must have an operation, connector or trigger definition."));
   checks.push(result("No unresolved document conflicts", !Array.isArray(config.conflicts) || config.conflicts.length === 0, "Conflicting source documents must be resolved before generation is considered ready."));
   checks.push(result("Required connectivity configuration", !Array.isArray(config.missingConfigurations) || config.missingConfigurations.length === 0, "Required non-secret connectivity values must be explicitly resolved; credentials may remain environment placeholders."));
   checks.push(result("Operation connector mapping", operations.every(op => (op.connector || !(Array.isArray(config.connectors) && config.connectors.length)) && !op.connectorAmbiguous), "Every analyzed operation must have one unambiguous connector mapping; legacy/reference configs without explicit connector metadata use HTTP as the default source."));
@@ -112,9 +115,9 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   const traceability = traceabilityIntegrity(root, config);
   checks.push(result("Traceability integrity", traceability.valid, traceability.detail));
   checks.push(result("Generated environment properties", ["dev","qa","uat","prod"].every(e => exists(root, "src/main/resources/properties/application-" + e + ".yaml")), "DEV/QA/UAT/PROD property files should be present."));
-  checks.push(result("Postman collection", exists(root, "postman"), "Generated projects should include a Postman artifact directory."));
+  checks.push(result("Postman collection", !apiWorkload || exists(root, "postman"), apiWorkload ? "API projects should include a Postman artifact directory." : "Postman is not required for non-API workloads."));
   checks.push(result("Application configuration", Boolean(application), "application.yaml is required."));
-  checks.push(result("RAML exists", Boolean(raml), `Expected ${ramlPath}.`));
+  checks.push(result("RAML exists", !workload.ramlRequired || Boolean(raml), workload.ramlRequired ? `Expected ${ramlPath}.` : "RAML is not required for this workload."));
   checks.push(result("Mule implementation exists", Boolean(mule), `Expected ${mulePath}.`));
 
   if (raml) {

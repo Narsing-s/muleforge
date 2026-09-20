@@ -1,3 +1,18 @@
+# Changelog
+
+## 0.9.18 - Workload-neutral MuleSoft engineering
+
+- Added a single workload-neutral engineering layer that classifies API, event, scheduled, file, batch, SOAP, GraphQL, integration and unknown workloads from existing evidence.
+- Added `muleforge plan` to expose the end-to-end developer engineering plan without creating a duplicate project model.
+- Added `muleforge explain` for existing Mule repositories using the existing importer and semantic evidence.
+- Existing repository imports now include workload classification.
+- API-only artifacts such as RAML and Postman are no longer forced onto non-API workloads.
+- Generated CI validation now makes the API-contract directory requirement workload-aware.
+- Added explicit developer-action/unknown states instead of inventing workload decisions.
+- Added tests covering REST, messaging, file, unknown and existing-repository paths.
+- Added read-only UI repository mode for complete Mule project folders, including temporary-copy import and developer flow summary.
+- Added trigger/transport/deployment intent to the workload plan and kept composite workloads explicit instead of flattening them into an API classification.
+
 ## Unreleased
 
 - Extended the existing MUnit scenario planner to generate executable coverage for any declared HTTP error status not already covered by the specialized validation, conflict, or connector-error scenarios.

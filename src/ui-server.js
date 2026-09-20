@@ -5,6 +5,8 @@ const { analyzeRequirementDocument, extractDocumentBuffer } = require("./documen
 const { generateUiAssets } = require("./ui-generator");
 const { prepareAndSave } = require("./local-export");
 const { version } = require("../package.json");
+const { importProject } = require("./import-project");
+const { buildEngineeringPlan, explainImportedProject, classifyWorkload } = require("./workload-engine");
 
 function json(res, status, value) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -44,6 +46,27 @@ function normalizeDocuments(input) {
   const filename = safeDocumentName(input.filename, "requirement.txt");
   return [{ name: filename, type: path.extname(filename).slice(1) || "txt", text }];
 }
+function writeRepositoryUpload(files) {
+  const root = fs.mkdtempSync(path.join(require("os").tmpdir(), "muleforge-repo-"));
+  try {
+    if (!Array.isArray(files) || !files.length) throw new Error("Select a complete Mule repository folder.");
+    for (const [i, file] of files.entries()) {
+      const name = safeDocumentName(file.name, "file-" + (i + 1));
+      const target = path.resolve(root, name);
+      if (!target.startsWith(root + path.sep)) throw new Error("Unsafe repository path.");
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      if (file.base64) fs.writeFileSync(target, Buffer.from(String(file.base64), "base64"));
+      else if (file.text != null) fs.writeFileSync(target, String(file.text), "utf8");
+      else throw new Error("Repository file " + name + " has no content.");
+    }
+    const imported = importProject(root);
+    const plan = explainImportedProject(imported);
+    return { imported, plan };
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
 function applyResolutions(model, resolutions = []) {
   if (!Array.isArray(resolutions) || !resolutions.length) return model;
   for (const resolution of resolutions) {
@@ -86,7 +109,10 @@ function validateSaveRequest(model, approved) {
   if (!model || typeof model !== "object") throw new Error("Analyze the requirement before saving.");
   if (!String(model.requirement || "").trim()) throw new Error("A confirmed requirement is required before saving.");
   if (!model.project || !String(model.project.name || "").trim()) throw new Error("A project name is required before saving.");
-  if (!Array.isArray(model.operations) || model.operations.length === 0) throw new Error("At least one confirmed operation is required before saving.");
+  const workload = classifyWorkload({ model });
+  if (workload.type === "unknown") throw new Error("MuleForge could not determine the workload type. Confirm the integration design before saving.");
+  if (workload.apiContractRequired && (!Array.isArray(model.operations) || model.operations.length === 0)) throw new Error("At least one confirmed API operation is required before saving.");
+  if (!workload.apiContractRequired && (!Array.isArray(model.operations) || model.operations.length === 0) && !((model.events || model.triggers || model.connectors || []).length)) throw new Error("A non-API workload needs a confirmed trigger, event, connector, or operation before saving.");
   if (Array.isArray(model.conflicts) && model.conflicts.length) throw new Error("Resolve all requirement conflicts before saving.");
   if (Array.isArray(model.missingConfigurations) && model.missingConfigurations.length) throw new Error("Resolve all required connectivity decisions before saving.");
   if (model.operations.some(op => op && op.connectorAmbiguous)) throw new Error("Resolve ambiguous operation connector mappings before saving.");
@@ -115,7 +141,23 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
           if (project) { model.project.name = project; model.project.artifactId = project; model.api.name = project; }
         }
         const assets = generateUiAssets(model);
-        return json(res, 200, { ok: true, ...assets, model });
+        const plan = buildEngineeringPlan(model);
+        return json(res, 200, { ok: true, ...assets, model, plan });
+      } catch (error) {
+        return json(res, 400, { error: error.message });
+      }
+    }
+    if (req.method === "POST" && req.url === "/api/import") {
+      try {
+        const input = JSON.parse(await readBody(req));
+        const result = writeRepositoryUpload(input.files);
+        return json(res, 200, {
+          ok: true,
+          mode: "existing-repository",
+          model: result.imported,
+          plan: result.plan,
+          message: "Repository analyzed read-only. Source assets were not modified."
+        });
       } catch (error) {
         return json(res, 400, { error: error.message });
       }

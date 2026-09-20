@@ -84,7 +84,7 @@ jobs:
           test -f mule-artifact.json
           test -f src/main/resources/application.yaml
           test -d src/main/mule
-          test -d src/main/resources/api
+          ${data.workloadType === "api" ? "test -d src/main/resources/api" : "true # API contract not required for this workload"}
           test -d src/test/munit
       - name: Validate Maven settings
         env:
@@ -116,7 +116,7 @@ jobs:
 function writeProductionArtifacts(root, config, data) {
   const postmanDir = path.join(root, "postman"), envDir = path.join(root, "src/main/resources/properties"), workflowDir = path.join(root, ".github/workflows");
   for (const dir of [postmanDir, envDir, workflowDir]) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(postmanDir, `${safe(data.artifactId)}.collection.json`), generatePostman(config, data), "utf8");
+  if (data.workloadType === "api") fs.writeFileSync(path.join(postmanDir, `${safe(data.artifactId)}.collection.json`), generatePostman(config, data), "utf8");
   for (const env of ["dev", "qa", "uat", "prod"]) fs.writeFileSync(path.join(envDir, `application-${env}.yaml`), generateEnvironment(env, data), "utf8");
   fs.writeFileSync(path.join(workflowDir, "ci-generated.yml"), generateGithubActions(data), "utf8");
   fs.writeFileSync(path.join(root, ".dockerignore"), "target\nnode_modules\n.mule\n.settings\n.project\n.classpath\n*.log\n", "utf8");
