@@ -37,7 +37,7 @@ test("document analysis accepts a repository documentation directory without dup
   const root = path.join(temp, "customer-api");
   const model = fs.readFileSync(path.join(root, "muleforge.yaml"), "utf8");
   assert.match(model, /POST/);
-  assert.match(model, /\\.\\/);
+  assert.match(model, /api\\.md/);
   assert.equal(fs.existsSync(path.join(root, "docs/01-requirements/requirements.md")), true);
   assert.equal(fs.existsSync(path.join(root, "postman/customer-api.collection.json")), true);
 });
