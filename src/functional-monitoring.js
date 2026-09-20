@@ -68,6 +68,15 @@ function generateBatManifest(artifact) {
 }
 
 function generateBatConfig() {
+  return JSON.stringify({
+    baseUrl: "$(MULEFORGE_SMOKE_URL)",
+    clientId: "$(MULEFORGE_CLIENT_ID)",
+    accessToken: "$(MULEFORGE_ACCESS_TOKEN)"
+  }, null, 2) + "\n";
+}
+
+/*
+function legacyBatConfig() {
   return [
     "# MuleForge API Functional Monitoring configuration",
     "# Supply the deployed endpoint through the BAT environment/profile; never commit credentials.",
