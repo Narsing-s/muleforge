@@ -137,7 +137,7 @@ function inferFields(text, endpoint) {
   const leafFields = selected.map(name => {
     const escaped = String(name).replace(/[.*+?^$()|[\]\\]/g, "\\$&");
     const annotationRequired = /(?:\brequired\b|\bmandatory\b|\bcannot be empty\b|\bmust be provided\b)/i.test(annotations.get(String(name).toLowerCase()) || "");
-    const sentenceRequired = String(text || "").split(/[.\n;]/).some(sentence => {
+    const sentenceRequired = String(text || "").split(/[\n;]/).some(sentence => {
       if (!/\b(required|mandatory|must be provided|cannot be empty)\b/i.test(sentence)) return false;
       const normalized = sentence.replace(/[^A-Za-z0-9_.\[\]]+/g, " ").toLowerCase();
       const normalizedField = escaped.toLowerCase();
