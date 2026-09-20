@@ -60,7 +60,8 @@ function classifyWorkload(input = {}) {
     ...(Array.isArray(model.requirements) ? model.requirements.map(x => x.text || x.description || x) : []),
     textOf(model.events || model.triggers || []),
     textOf(model.connectors || [])
-  ].join("\n").toLowerCase();
+  ].join("
+").toLowerCase();
 
   const operations = Array.isArray(model.operations) ? model.operations : [];
   const connectors = [
@@ -74,12 +75,18 @@ function classifyWorkload(input = {}) {
   const apiEvidence = operations.some(op => op.path && op.method) || /^(apikit|api-kit)$/i.test(String(model.api?.implementation || model.api?.router || ""))
     ? evidence("model.operations", "http-operation", "HTTP method/path operations are explicitly declared.")
     : null;
-  if (apiEvidence) ev.push(apiEvidence);\n  if (hasHttpRouter) ev.push(evidence("repository.router", "apikit-router", "APIKit router evidence detected in the imported Mule source."));
+  if (apiEvidence) ev.push(apiEvidence);
 
   const apiWords = /\b(rest|http|https|api|raml|openapi|endpoint|resource|apikit)\b/.test(text);
   if (apiWords) ev.push(evidence("requirement/model", "api-language", "Requirement or model contains API/HTTP contract terminology."));
 
-  const importedTriggers = imported?.semantics?.triggers || imported?.triggers || [];\n  const importedRouters = imported?.semantics?.routers || imported?.routers || [];\n  const hasSchedulerTrigger = importedTriggers.some(x => /scheduler|timer/i.test(String(x.type || "")));\n  const hasBatchTrigger = importedTriggers.some(x => /batch/i.test(String(x.type || "")));\n  const hasHttpRouter = importedRouters.some(x => /apikit:router/i.test(String(x.type || "")));\n  const eventConnectors = connectors.filter(c => CONNECTOR_HINTS[c] === TYPES.EVENT);
+  const importedTriggers = imported?.semantics?.triggers || imported?.triggers || [];
+  const importedRouters = imported?.semantics?.routers || imported?.routers || [];
+  const hasSchedulerTrigger = importedTriggers.some(x => /scheduler|timer/i.test(String(x.type || "")));
+  const hasBatchTrigger = importedTriggers.some(x => /batch/i.test(String(x.type || "")));
+  const hasHttpRouter = importedRouters.some(x => /apikit:router/i.test(String(x.type || "")));
+  const eventConnectors = connectors.filter(c => CONNECTOR_HINTS[c] === TYPES.EVENT);
+  if (hasHttpRouter) ev.push(evidence("repository.router", "apikit-router", "APIKit router evidence detected in the imported Mule source."));
   if (eventConnectors.length) ev.push(evidence("connectors", "messaging", "Messaging connector detected: " + [...new Set(eventConnectors)].join(", ")));
 
   const fileConnectors = connectors.filter(c => CONNECTOR_HINTS[c] === TYPES.FILE);
@@ -256,10 +263,14 @@ function buildEngineeringPlan(model = {}, options = {}) {
     },
     impact: {
       enabled: true,
+      matrix: buildChangeImpact(model, options.imported || {}),
       sourceOfTruth: "existing semantic model and traceability",
       note: "Changes should be evaluated against affected contract, flow, transformation, tests, CI/CD and deployment assets before regeneration."
     },
-    coverage: buildCoverageMatrix(model, options.imported || {}),\n    dependencies: buildDependencyEvidence(options.imported || {}),\n    runtimeEvidence: buildRuntimeEvidence(model, options.imported || {}),\n    gaps: workload.developerActionRequired ? workload.assumptions : [],
+    coverage: buildCoverageMatrix(model, options.imported || {}),
+    dependencies: buildDependencyEvidence(options.imported || {}),
+    runtimeEvidence: buildRuntimeEvidence(model, options.imported || {}),
+    gaps: workload.developerActionRequired ? workload.assumptions : [],
     artifactPlan: {
       contract: workload.apiContractRequired ? (workload.ramlRequired ? ["RAML", "Mule implementation", "MUnit", "Postman"] : ["API contract", "Mule implementation", "MUnit"]) : ["workload-specific Mule implementation", "MUnit"],
       integration: ["DataWeave", "connector configuration", "error/retry handling"],
@@ -355,7 +366,8 @@ function explainOperation(imported = {}, selector = "") {
 
 function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan.json") {
   const base = path.resolve(root);
-  fs.writeFileSync(path.join(base, filename), JSON.stringify(plan, null, 2) + "\n", "utf8");
+  fs.writeFileSync(path.join(base, filename), JSON.stringify(plan, null, 2) + "
+", "utf8");
   fs.mkdirSync(path.join(base, "docs"), { recursive: true });
   const workload = plan.workload || {};
   const md = [
@@ -410,7 +422,8 @@ function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan
     ...(workload.assumptions || []).map(x => "- " + x),
     workload.assumptions?.length ? "" : "- None identified by workload classification.",
     ""
-  ].join("\n");
+  ].join("
+");
   fs.writeFileSync(path.join(base, "docs", "14-engineering-plan.md"), md, "utf8");
   return { json: path.join(base, filename), documentation: path.join(base, "docs", "14-engineering-plan.md"), plan };
 }
