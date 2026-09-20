@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const YAML = require("yaml");
+const { buildTraceability } = require("./traceability");
 
 function readConfig(file = "muleforge.yaml") {
   const full = path.resolve(file);
@@ -188,6 +189,29 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
           const pagination = new RegExp('name="[^"]*' + safe + '-pagination-test"');
           checks.push(result("MUnit pagination coverage " + op.name, pagination.test(munit), "A confirmed pagination policy must have a generated pagination MUnit test."));
         }
+      }
+    }
+  }
+
+  if ((config.testing || {}).munit !== false && exists(root, munitPath)) {
+    const traceability = buildTraceability(config, root);
+    const munit = safeRead(root, munitPath);
+    for (const operation of traceability.operations || []) {
+      for (const rule of operation.rules || []) {
+        const muleAssetPresent = Boolean(rule.mule) && exists(root, rule.mule);
+        const munitTestPresent = Boolean(rule.munitTest) && new RegExp('name="[^"]*' + String(rule.munitTest).replace(/[.*+?^$\\{}()|[\\]\\\\]/g, '\\\\  function declaredErrorStatuses(op) {') + '"').test(munit);
+        checks.push(result(
+          "Traceability Mule asset " + rule.ruleId,
+          muleAssetPresent,
+          "Every confirmed behavior rule must point to an existing generated Mule implementation asset."
+        ));
+        checks.push(result(
+          "Traceability MUnit test " + rule.ruleId,
+          munitTestPresent,
+          rule.munitTest
+            ? "Every executable behavior rule must point to an existing generated MUnit test."
+            : "Every confirmed behavior rule must have an executable MUnit mapping."
+        ));
       }
     }
   }
