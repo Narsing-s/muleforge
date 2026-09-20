@@ -51,7 +51,7 @@ test("generated BAT config contains only required non-secret placeholders", () =
   const config = JSON.parse(generateBatConfig({
     operations: [
       { method: "GET", path: "/customers", security: "oauth2" },
-      { method: "POST", path: "/customers", security: "client-id" }
+      { method: "POST", path: "/customers/{id}", security: "client-id" }
     ]
   }));
   assert.equal(config.baseUrl, "https://SET_ME");
