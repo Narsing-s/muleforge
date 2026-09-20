@@ -5,12 +5,27 @@ function exists(root, relative) {
   return fs.existsSync(path.join(root, relative));
 }
 
+function inferWorkload(config = {}) {
+  const explicit = String(config.workloadType || "").trim().toLowerCase();
+  if (explicit) return explicit;
+  if (Array.isArray(config.events) || Array.isArray(config.triggers)) return "event";
+  if (Array.isArray(config.operations) && config.operations.length) return "api";
+  return "integration";
+}
+
+function hasRequirement(config = {}) {
+  return Boolean(
+    String(config.requirement || "").trim() ||
+    (Array.isArray(config.requirements) && config.requirements.some(req =>
+      req && String(req.text || req.requirement || "").trim()
+    ))
+  );
+}
+
 function expectedArtifacts(config = {}) {
   const project = config.project || {};
   const artifactId = project.artifactId || project.name || "mule-api";
-  const workload = String(config.workloadType || "").toLowerCase() || (
-    Array.isArray(config.operations) && config.operations.length ? "api" : "integration"
-  );
+  const workload = inferWorkload(config);
   const api = workload === "api";
   const soap = workload === "soap";
   const graphql = workload === "graphql";
@@ -47,14 +62,14 @@ function expectedArtifacts(config = {}) {
 
 function requirementCoverage(config = {}) {
   const issues = [];
-  const requirement = String(config.requirement || "").trim();
+  const requirementPresent = hasRequirement(config);
   const operations = Array.isArray(config.operations) ? config.operations : [];
-  const workload = String(config.workloadType || "").toLowerCase();
+  const workload = inferWorkload(config);
   const conflicts = Array.isArray(config.conflicts) ? config.conflicts : [];
-  if (!requirement) issues.push({ severity: "critical", code: "REQUIREMENT_MISSING", message: "No requirement text was preserved in the generated model." });
+  if (!requirementPresent) issues.push({ severity: "critical", code: "REQUIREMENT_MISSING", message: "No requirement text or parsed requirement items were preserved in the generated model." });
   if (conflicts.length) issues.push({ severity: "critical", code: "REQUIREMENT_CONFLICT", message: `${conflicts.length} unresolved requirement conflict(s) remain.` });
   if (["api","soap","graphql"].includes(workload) && !operations.length) {
-    issues.push({ severity: "critical", code: "OPERATIONS_MISSING", message: "An API workload was selected but no operations were confirmed." });
+    issues.push({ severity: "critical", code: "OPERATIONS_MISSING", message: "An API workload was selected or inferred but no operations were confirmed." });
   }
   operations.forEach(op => {
     const method = String(op.method || "").toUpperCase();
@@ -66,7 +81,7 @@ function requirementCoverage(config = {}) {
     if (!Array.isArray(op.errors) || !op.errors.length) issues.push({ severity: "warning", code: "ERROR_CASES_UNCONFIRMED", operation: op.name || method, message: "Business/dependency error cases were not confirmed." });
   });
   return {
-    version: "1.1",
+    version: "1.2",
     issues,
     critical: issues.filter(x => x.severity === "critical"),
     warnings: issues.filter(x => x.severity === "warning"),
@@ -80,6 +95,7 @@ function checkEndToEndArtifacts(root, config = {}) {
     present: exists(root, item.path)
   }));
   const missing = artifacts.filter(item => item.required && !item.present);
+  const requirements = requirementCoverage(config);
   return {
     version: "1.0",
     generatedAt: new Date().toISOString(),
@@ -87,8 +103,8 @@ function checkEndToEndArtifacts(root, config = {}) {
     architecture: config.architecture || null,
     artifacts,
     missing,
-    requirements: requirementCoverage(config),
-    complete: missing.length === 0 && requirementCoverage(config).complete
+    requirements,
+    complete: missing.length === 0 && requirements.complete
   };
 }
 
