@@ -181,6 +181,16 @@ function generateMuleXml(config, d) { const databaseConfig = d.hasDatabase ? `\n
     ids.has("kafka") ? `\n  <kafka:producer-config name="Kafka_Config" bootstrapServers="\${kafka.bootstrapServers}" />\n` : "",
     ids.has("salesforce") ? `\n  <sfdc:sfdc-config name="Salesforce_Config" username="\${salesforce.username}" password="\${salesforce.password}" securityToken="\${salesforce.securityToken}" />\n` : ""
   ].join(""); const header = `<?xml version="1.0" encoding="UTF-8"?>\n<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ${namespaces(d)} xsi:schemaLocation="${schemas(d)}">\n  <http:listener-config name="HTTP_Listener_config"><http:listener-connection host="0.0.0.0" port="\${http.port}" /></http:listener-config>${databaseConfig}`; const flows = d.apiImplementation === "apikit" ? [generateApiKitConfig(d), generateApiKitFlow(d)] : (config.operations || []).map(op => connectorFlow(op, d)).filter(Boolean); const health = config.observability?.health || config.health?.enabled ? generateHealthFlows({ dependencies: config.observability?.dependencies || config.health?.dependencies || [], dependencyChecks: config.observability?.dependencyChecks || config.health?.dependencyChecks || [] }) : ""; return `${header}${extraConfigs}${flows.length ? flows.join("\n") : generateBusinessFlows(config, d)}${health}</mule>\n`; }
+function removeStaleGeneratedFiles(root, previousGenerated, currentGenerated) {
+  const keep = new Set(currentGenerated || []);
+  for (const relative of previousGenerated || []) {
+    if (!relative || relative === "muleforge.yaml" || relative === ".muleforge-generated.json" || keep.has(relative)) continue;
+    const target = path.resolve(root, relative);
+    if (target === root || !target.startsWith(root + path.sep) || !fs.existsSync(target)) continue;
+    if (fs.statSync(target).isFile()) fs.rmSync(target, { force: true });
+  }
+}
+
 function copyProjectToDesktop(root) {
   const desktopCandidates = process.platform === "win32"
     ? [path.join(os.homedir(), "Desktop"), path.join(os.homedir(), "OneDrive", "Desktop")]
@@ -206,18 +216,14 @@ function generateProject(file = "muleforge.yaml", options = {}) {
     try {
       const ownership = JSON.parse(fs.readFileSync(ownershipFile, "utf8"));
       previousGenerated = Array.isArray(ownership.files) ? ownership.files : [];
-      for (const relative of previousGenerated) {
-        if (!relative || relative === "muleforge.yaml" || relative === ".muleforge-generated.json") continue;
-        const target = path.resolve(root, relative);
-        if (target === root || !target.startsWith(root + path.sep) || !fs.existsSync(target)) continue;
-        if (fs.statSync(target).isFile()) fs.rmSync(target, { force: true });
-      }
+      // Do not delete the previous verified generation before the new generation passes
+      // all gates. Stale owned files are removed only after the new generation is verified.
     } catch (error) {
       throw new Error("Existing MuleForge generated-file manifest is invalid. Refusing regeneration to avoid deleting the wrong files.");
     }
   }
   const beforeGeneration = new Set(snapshot(root));
-  if (d.workloadType === "api" && d.apiImplementation === "apikit") d.connectorDependencies.push({ groupId: "org.mule.modules", artifactId: "mule-apikit-module", version: "1.11.1", classifier: "mule-plugin" });
+  if (d.workloadType === "api" && d.apiImplementation === "apikit") d.connectorDependencies.push({ groupId: "org.mule.modules", artifactId: "mule-apikit-module", version: config.apiKitVersion || "1.12.6", classifier: "mule-plugin" });
   write(path.join(root, "pom.xml"), render(fs.readFileSync(path.join(t, "pom.xml.hbs"), "utf8"), d));
   write(path.join(root, "mule-artifact.json"), render(fs.readFileSync(path.join(t, "mule-artifact.json.hbs"), "utf8"), d));
   write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d));
@@ -243,8 +249,9 @@ function generateProject(file = "muleforge.yaml", options = {}) {
   write(ownershipFile, JSON.stringify({ version: "1.0", files: generated }, null, 2) + "\n");
   const generationGate = runGenerationGate(file, { workloadType: engineeringPlan.workload.type });
   if (generationGate.status !== "verified") {
-    throw new Error("Generation verification gate failed: " + generationGate.failed.join(", ") + ". The project remains local and was not copied to Desktop.");
+    throw new Error("Generation verification gate failed: " + generationGate.failed.join(", ") + ". The previous generated project was preserved and the new generation remains local only.");
   }
+  removeStaleGeneratedFiles(root, previousGenerated, generated);
   const desktopRoot = options.copyDesktop === false ? null : copyProjectToDesktop(root);
   console.log(`\n✔ Mule project generated\n✔ Requirement-derived operations: ${(config.operations || []).length}\n✔ Connectors: ${d.connectors.map(c => c.name).join(", ") || "none"}\n✔ Maven dependencies: ${d.connectorDependencies.length}\n✔ End-to-end Mule XML generated\n✔ Reusable DataWeave mappings generated\n✔ Requirement-derived MUnit scenarios generated\n✔ Postman collection generated\n✔ DEV/QA/UAT/PROD property files generated\n✔ GitHub Actions CI generated\n✔ Static generation verification gate: VERIFIED\n✔ Local project: ${root}\n${desktopRoot ? `✔ Desktop project: ${desktopRoot}` : "ℹ Desktop folder not found; local project kept only."}\n`);
 }
