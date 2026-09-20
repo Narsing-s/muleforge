@@ -5,7 +5,7 @@ function typeSchema(field) {
   if(type==="array"){const items=typeof f.items==="string"?{type:f.items}:typeSchema(f.items||{type:"string"});return {type:"array",items};}
   if(type==="object"){const properties={};for(const child of f.fields||[]){const childField=normalizeField(child);if(childField)properties[childField.name]=typeSchema(childField);}const schema={type:"object",properties};const required=(f.fields||[]).map(normalizeField).filter(Boolean).filter(x=>x.required).map(x=>x.name);if(required.length)schema.required=required;return schema;}
   const mapped={integer:"integer",number:"number",boolean:"boolean",string:"string","date-only":"string",datetime:"string"}[type]||"string";
-  const schema={type:mapped};if(type==="date-only")schema.format="date";if(type==="datetime")schema.format="date-time";if(Array.isArray(f.enum)&&f.enum.length)schema.enum=f.enum;if(f.description)schema.description=String(f.description);return schema;
+  const schema={type:mapped};if(type==="date-only")schema.format="date";if(type==="datetime")schema.format="date-time";if(f.format)schema.format=f.format;if(f.pattern)schema.pattern=f.pattern;if(f.minimum!==undefined)schema.minimum=f.minimum;if(f.maximum!==undefined)schema.maximum=f.maximum;if(f.minLength!==undefined)schema.minLength=f.minLength;if(f.maxLength!==undefined)schema.maxLength=f.maxLength;if(Array.isArray(f.enum)&&f.enum.length)schema.enum=f.enum;if(f.description)schema.description=String(f.description);return schema;
 }
 function fieldsSchema(fields = []) {
   const properties = {}, required = [];
