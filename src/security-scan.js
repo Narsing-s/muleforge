@@ -60,7 +60,8 @@ function scanDependencies(root="."){
     }
   }
   if(!npm.length) for(const [name,version] of Object.entries(direct)) npm.push({name,version:String(version)});
-  return {npm:npm.sort((a,b)=>a.name.localeCompare(b.name))};
+  const unique=[...new Map(npm.map(x=>[x.name+"@"+x.version,x])).values()];
+  return {npm:unique.sort((a,b)=>a.name.localeCompare(b.name)||a.version.localeCompare(b.version))};
 }
 function findFiles(root,name,out=[]){
   if(!fs.existsSync(root)) return out;
