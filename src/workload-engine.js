@@ -81,18 +81,24 @@ function classifyWorkload(input = {}) {
   const apiWords = /\b(rest|http|https|api|raml|openapi|endpoint|resource|apikit)\b/.test(text);
   if (apiWords) ev.push(evidence("requirement/model", "api-language", "Requirement or model contains API/HTTP contract terminology."));
 
+  const importedTriggers = imported?.semantics?.triggers || imported?.triggers || [];
+  const importedRouters = imported?.semantics?.routers || imported?.routers || [];
+  const hasSchedulerTrigger = importedTriggers.some(x => /scheduler|timer/i.test(String(x.type || "")));
+  const hasBatchTrigger = importedTriggers.some(x => /batch/i.test(String(x.type || "")));
+  const hasHttpRouter = importedRouters.some(x => /apikit:router/i.test(String(x.type || "")));
   const eventConnectors = connectors.filter(c => CONNECTOR_HINTS[c] === TYPES.EVENT);
+  if (hasHttpRouter) ev.push(evidence("repository.router", "apikit-router", "APIKit router evidence detected in the imported Mule source."));
   if (eventConnectors.length) ev.push(evidence("connectors", "messaging", "Messaging connector detected: " + [...new Set(eventConnectors)].join(", ")));
 
   const fileConnectors = connectors.filter(c => CONNECTOR_HINTS[c] === TYPES.FILE);
   if (fileConnectors.length) ev.push(evidence("connectors", "file-transfer", "File/SFTP connector detected: " + [...new Set(fileConnectors)].join(", ")));
 
   const scheduled = /\b(schedule|scheduled|cron|every\s+(day|hour|night|week)|daily|hourly|timer|poll)\b/.test(text)
-    || connectors.includes("scheduler");
+    || connectors.includes("scheduler") || hasSchedulerTrigger;
   if (scheduled) ev.push(evidence("requirement/model", "scheduled-trigger", "Schedule/timer language or scheduler trigger detected."));
 
   const batch = /\b(batch|batch job|large volume|chunk|partition|bulk processing)\b/.test(text)
-    || connectors.includes("batch") || connectors.includes("batch-job");
+    || connectors.includes("batch") || connectors.includes("batch-job") || hasBatchTrigger;
   if (batch) ev.push(evidence("requirement/model", "batch-processing", "Batch-processing language or batch capability detected."));
 
   const soap = /\b(soap|wsdl|web service)\b/.test(text) || Boolean(model.wsdl);
@@ -257,6 +263,9 @@ function buildEngineeringPlan(model = {}, options = {}) {
       classes: ["MULEFORGE_MANAGED", "SHARED", "DEVELOPER_MANAGED", "EXTERNAL"]
     },
     impact: buildChangeImpact(model, options.imported || {}),
+    coverage: buildCoverageMatrix(model, options.imported || {}),
+    dependencies: buildDependencyEvidence(options.imported || {}),
+    runtimeEvidence: buildRuntimeEvidence(model, options.imported || {}),
     coverage: buildCoverageMatrix(model, options.imported || {}),
     dependencies: buildDependencyEvidence(options.imported || {}),
     runtimeEvidence: buildRuntimeEvidence(model, options.imported || {}),
@@ -438,6 +447,18 @@ function buildRuntimeEvidence(model = {}, imported = {}) {
     rule: "DEPLOYED and RUNTIME-VERIFIED are distinct states; runtime verification requires authorized live evidence."
   };
 }
+
+function buildChangeImpact(model = {}, imported = {}) {
+  const operations = Array.isArray(model.operations) ? model.operations : (imported.operations || []);
+  return operations.map(op => ({ operation: [op.method, op.path].filter(Boolean).join(" ") || op.name || "unknown", source: op.source || null, affectedArtifacts: ["implementation","dataweave","error-handling","munit","traceability","ci-cd","deployment"], reviewBeforeRegeneration: true, evidence: op.source ? "source-backed" : "model-backed" }));
+}
+function buildCoverageMatrix(model = {}, imported = {}) {
+  const operations = Array.isArray(model.operations) ? model.operations : (imported.operations || []);
+  const inv = imported.inventory || {};
+  return operations.map(op => ({ operation: [op.method, op.path].filter(Boolean).join(" ") || op.name || "unknown", implementation: Boolean(op.source), contract: Number(inv.raml || 0) > 0 ? "available" : "unknown", dataWeave: Number(inv.dataWeave || 0) > 0 ? "available" : "unknown", munit: Number(inv.munit || 0) > 0 ? "available" : "unknown", deployment: "requires existing deployment/readiness gates", runtime: "not-verified" }));
+}
+function buildDependencyEvidence(imported = {}) { return { maven: imported.dependencyEvidence || [], exchange: imported.exchangeDependencies || [], rule: "Dependencies are evidence only; MuleForge does not copy, mutate, or silently upgrade external assets." }; }
+function buildRuntimeEvidence(model = {}, imported = {}) { return { status: "not-verified", deploymentTarget: model.deployment?.target || null, artifactManifestRequired: true, artifactSha256Required: true, deployed: "unknown", runtimeVerified: false, evidence: imported.deploymentEvidence || [], rule: "Deployment is not runtime verification; runtime evidence requires an authorized live probe." }; }
 
 function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan.json") {
   const base = path.resolve(root);
