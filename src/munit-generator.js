@@ -175,6 +175,20 @@ ${assertionForFields(op.responseFields)}
     </munit:validation>
   </munit:test>`);
     }
+    if (scenarioPlan.some(s => s.type === "conflict")) {
+      tests.push(`  <munit:test name="${testName(op, "conflict-or-duplicate")}">
+    <munit:behavior>
+      ${failureMocks}
+    </munit:behavior>
+    <munit:execution>
+      <munit:set-event><munit:set-payload value="#[{}]"/></munit:set-event>
+      <flow-ref name="${xmlEscape(flow)}"/>
+    </munit:execution>
+    <munit:validation>
+      <munit-tools:assert-that expression="#[vars.httpStatus default 409]" is="#[MunitTools::equalTo(409)]"/>
+    </munit:validation>
+  </munit:test>`);
+    }
     if (op.retry) {
       tests.push(`  <munit:test name="${testName(op, "retry-exhaustion")}">
     <munit:behavior>${failureMocks}
