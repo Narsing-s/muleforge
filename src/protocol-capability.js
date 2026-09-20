@@ -1,5 +1,6 @@
 const PROTOCOLS = Object.freeze({
   REST: "rest",
+  OAS: "oas",
   ASYNCAPI: "asyncapi",
   GRPC: "grpc",
   GRAPHQL: "graphql",
@@ -35,7 +36,8 @@ function detectProtocol(config = {}) {
   if (explicit === "odata" || /^odata/.test(specification) || /\bodata\b/.test(text)) return PROTOCOLS.ODATA;
   if (explicit === "graphql" || specification === "graphql" || /\bgraphql\b/.test(text)) return PROTOCOLS.GRAPHQL;
   if (explicit === "soap" || specification === "wsdl" || /\bsoap\b|\bwsdl\b/.test(text)) return PROTOCOLS.SOAP;
-  if (explicit === "rest" || specification === "raml" || specification === "oas" || specification === "openapi") return PROTOCOLS.REST;
+  if (explicit === "oas" || specification === "oas" || specification === "openapi") return PROTOCOLS.OAS;
+  if (explicit === "rest" || specification === "raml") return PROTOCOLS.REST;
   return null;
 }
 
