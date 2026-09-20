@@ -4,6 +4,7 @@ const { execFileSync } = require("child_process");
 const YAML = require("yaml");
 const { buildTraceability } = require("./traceability");
 const { classifyWorkload } = require("./workload-engine");
+const { checkEndToEndArtifacts } = require("./end-to-end");
 
 function readConfig(file = "muleforge.yaml") {
   const full = path.resolve(file);
@@ -315,6 +316,9 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
       checks.push(result(`Response field ${fieldName || "(unnamed)"}`, mentioned, "Confirmed response field should be represented in the generated API or implementation."));
     }
   }
+
+  const endToEnd = checkEndToEndArtifacts(root, { ...config, workloadType: workload.type });
+  checks.push(result("End-to-end generated artifact set", endToEnd.complete, endToEnd.complete ? "All required lifecycle artifacts are present." : "Required generated artifacts are missing: " + endToEnd.missing.map(item => item.path).join(", ")));
 
   const passed = checks.filter(c => c.pass).length;
   const score = checks.length ? Math.round((passed / checks.length) * 100) : 0;

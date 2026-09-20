@@ -56,6 +56,7 @@ const { checkRuntimeCompatibility } = require("./runtime-compatibility");
 const { environmentDiff } = require("./environment-diff");
 const { importProject } = require("./import-project");
 const { classifyWorkload, buildEngineeringPlan, explainImportedProject, writeEngineeringPlan, explainOperation } = require("./workload-engine");
+const { writeEndToEndReport } = require("./end-to-end");
 
 const VERSION = "0.9.18";
 const program = new Command();
@@ -217,6 +218,7 @@ function generateProject(file = "muleforge.yaml", options = {}) {
   write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d));
   if (engineeringPlan.workload.ramlRequired) write(path.join(root, "src/main/resources/api", `${d.artifactId}.raml`), generateRaml(config, d));
   write(path.join(root, "src/main/mule", `${d.artifactId}.xml`), generateMuleXml(config, d).replace(/\\n/g, "\n"));
+  writeDocumentation(root, config);
   if ((config.events || config.triggers || []).length) writeEventRuntime(root, config);
   for (const mapping of generateDataWeaveFiles(config)) {
     write(path.join(root, "src/main/resources/dwl", `${mapping.name}-request.dwl`), mapping.request);
@@ -226,6 +228,7 @@ function generateProject(file = "muleforge.yaml", options = {}) {
   writeProductionArtifacts(root, config, { ...d, workloadType: engineeringPlan.workload.type });
   writeTraceability(root, config);
   deploymentArtifacts(root, config, d);
+  writeEndToEndReport(root, { ...config, workloadType: engineeringPlan.workload.type });
   const afterGeneration = snapshot(root);
   const newlyGenerated = afterGeneration.filter(relative => !beforeGeneration.has(relative));
   const generated = [...new Set([...previousGenerated.filter(relative => afterGeneration.includes(relative)), ...newlyGenerated])]
