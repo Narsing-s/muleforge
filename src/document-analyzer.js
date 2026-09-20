@@ -134,16 +134,15 @@ function inferFields(text, endpoint) {
     ? unique.filter(v => /id|status|date|name/i.test(v))
     : unique;
 
+  const explicitlyRequired = new Set();
+  for (const sentence of String(text || "").split(/[\\n;.]/)) {
+    const match = sentence.match(/\\b([A-Za-z][A-Za-z0-9_.\\[\\]]*(?:\\s*(?:,|and)\\s*[A-Za-z][A-Za-z0-9_.\\[\\]]*)*)\\s+(?:is|are)\\s+(?:required|mandatory|must be provided|cannot be empty)\\b/i);
+    if (match) for (const field of match[1].split(/\\s*(?:,|and)\\s*/i)) explicitlyRequired.add(field.toLowerCase());
+  }
   const leafFields = selected.map(name => {
-    const escaped = String(name).replace(/[.*+?^$()|[\]\\]/g, "\\$&");
-    const annotationRequired = /(?:\brequired\b|\bmandatory\b|\bcannot be empty\b|\bmust be provided\b)/i.test(annotations.get(String(name).toLowerCase()) || "");
-    const sentenceRequired = String(text || "").split(/[\n;]/).some(sentence => {
-      if (!/\b(required|mandatory|must be provided|cannot be empty)\b/i.test(sentence)) return false;
-      const normalized = sentence.replace(/[^A-Za-z0-9_.\[\]]+/g, " ").toLowerCase();
-      const normalizedField = escaped.toLowerCase();
-      return new RegExp("(^|\\s)" + normalizedField + "(\\s|$)").test(normalized);
-    });
-    const required = sentenceRequired || (annotationRequired && /^(?:required|mandatory|cannot be empty|must be provided)$/i.test(String(annotations.get(String(name).toLowerCase()) || "").trim()));
+    const annotation = annotations.get(String(name).toLowerCase()) || "";
+    const annotationRequired = /^(?:required|mandatory|cannot be empty|must be provided)$/i.test(annotation.trim());
+    const required = explicitlyRequired.has(String(name).toLowerCase()) || annotationRequired;
     const annotation = annotations.get(String(name).toLowerCase()) || "";
     const enumMatch = annotation.match(/(?:enum|values?)\s*[:=]?\s*\[?([^\]]+)\]?/i);
     const enumValues = enumMatch
