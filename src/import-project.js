@@ -34,7 +34,7 @@ function importProject(root="."){
     source: sourceAssets
   };
   const operationEvidence = uniqueOps.map(op => {
-    const flow = semantics.flows.find(f => f.source === op.source && f.name === op.name) || semantics.flows.find(f => f.source === op.source && op.connector === "http" && /flow$/i.test(f.type));
+    const flow = semantics.flows.find(f => f.source === op.source && f.name === op.name);
     return {
       operation: [op.method, op.path].filter(Boolean).join(" "),
       connector: op.connector || null,
