@@ -15,7 +15,7 @@ function runGenerationGate(configFile, options = {}) {
   const root = path.resolve(path.dirname(configPath));
   const config = options.config || require("yaml").parse(fs.readFileSync(configPath, "utf8")) || {};
   const e2e = checkEndToEndArtifacts(root, { ...config, workloadType: options.workloadType || config.workloadType });
-  const verification = verifyProject(configPath);
+  const verification = verifyProject(configPath, { build: options.build !== false });
   const contract = validateContract(configPath);
   const configuration = validateConfigValues(config);
   const deployment = validateDeployment(config.deployment || {});
