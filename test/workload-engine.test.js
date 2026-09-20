@@ -31,7 +31,7 @@ test("classifies messaging integrations without forcing an API contract", () => 
 test("classifies SFTP/file integrations without manufacturing RAML", () => {
   const result = classifyWorkload({
     model: {
-      requirement: "Read files from SFTP every night and load them into a database.",
+      requirement: "Read files from SFTP and load them into a database.",
       connectors: ["sftp", "database"]
     }
   });
