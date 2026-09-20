@@ -26,7 +26,7 @@ function ruleTraceability(op, assets) {
     if (Number.isInteger(Number(value))) statuses.add(Number(value));
   }
   [...statuses].sort((a,b) => a-b).forEach(status => {
-    const suffix = status === 409 ? 'conflict-or-duplicate' : [500,502,503,504].includes(status) ? 'connector-error' : 'status-' + status;
+    const suffix = status === 400 ? 'validation' : status === 409 ? 'conflict-or-duplicate' : [500,502,503,504].includes(status) ? 'connector-error' : 'status-' + status;
     rules.push({ ruleId: safe + '-status-' + status, type: 'error-status', status, source: 'HTTP ' + status, munitTest: safe + '-' + suffix + '-test', mule: assets.mule });
   });
   if (op.retry) rules.push({ ruleId: safe + '-retry', type: 'retry', source: JSON.stringify(op.retry), munitTest: safe + '-retry-exhaustion-test', mule: assets.mule });

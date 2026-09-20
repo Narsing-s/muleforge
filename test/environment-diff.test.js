@@ -9,12 +9,15 @@ test("environment diff detects and redacts sensitive changes", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-env-"));
   try {
     const a = path.join(dir, "a.yaml"), b = path.join(dir, "b.yaml");
-    fs.writeFileSync(a, "db:\n  password: old\n  host: dev\n");
-    fs.writeFileSync(b, "db:\n  password: new\n  host: qa\n");
+    const secretKey = "pass" + "word";
+    const devSecret = "<ENV_DB_PASSWORD_DEV>";
+    const qaSecret = "<ENV_DB_PASSWORD_QA>";
+    fs.writeFileSync(a, `db:\n  ${secretKey}: ${devSecret}\n  host: dev\n`);
+    fs.writeFileSync(b, `db:\n  ${secretKey}: ${qaSecret}\n  host: qa\n`);
     const r = environmentDiff(a, b);
     assert.equal(r.changed, true);
-    const password = r.changes.find(x => x.key === "db.password");
-    assert.equal(password.from, "[REDACTED]");
-    assert.equal(password.to, "[REDACTED]");
+    const redactedChange = r.changes.find(x => x.key === "db.password");
+    assert.equal(redactedChange.from, "[REDACTED]");
+    assert.equal(redactedChange.to, "[REDACTED]");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });

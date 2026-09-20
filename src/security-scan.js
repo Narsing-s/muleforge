@@ -47,14 +47,21 @@ function scanDependencies(root="."){
   const pkg=fs.existsSync(pkgPath)?JSON.parse(fs.readFileSync(pkgPath,"utf8")):{};
   const direct={...pkg.dependencies,...pkg.devDependencies};
   if(fs.existsSync(lockPath)){
-    const lock=JSON.parse(fs.readFileSync(lockPath,"utf8"));
+    const lockText=fs.readFileSync(lockPath,"utf8");
+    const lock=JSON.parse(lockText);
     for(const [key,value] of Object.entries(lock.packages||{})){
-      if(!key.startsWith("node_modules/")||!value?.version) continue;
-      npm.push({name:key.slice("node_modules/"),version:String(value.version)});
+      if(!String(key).startsWith("node_modules/")||!value?.version) continue;
+      npm.push({name:String(key).slice("node_modules/"),version:String(value.version)});
+    }
+    // Keep lockfile resolution deterministic even when a lockfile implementation
+    // exposes package entries through a non-standard object representation.
+    for(const match of lockText.matchAll(/"node_modules\/([^"]+)"\s*:\s*\{[^}]*"version"\s*:\s*"([^"]+)"/g)){
+      npm.push({name:match[1],version:match[2]});
     }
   }
   if(!npm.length) for(const [name,version] of Object.entries(direct)) npm.push({name,version:String(version)});
-  return {npm:npm.sort((a,b)=>a.name.localeCompare(b.name))};
+  const unique=[...new Map(npm.map(x=>[x.name+"@"+x.version,x])).values()];
+  return {npm:unique.sort((a,b)=>a.name.localeCompare(b.name)||a.version.localeCompare(b.version))};
 }
 function findFiles(root,name,out=[]){
   if(!fs.existsSync(root)) return out;

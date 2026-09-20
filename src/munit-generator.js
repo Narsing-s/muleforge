@@ -97,7 +97,8 @@ function deriveScenarioPlan(operation = {}) {
     scenarios.push({ name: "conflict or duplicate", type: "conflict", status: 409 });
   }
   for (const status of [...declared].sort((a, b) => a - b)) {
-    if (![400, 409, 500, 502, 503, 504].includes(status)) {
+    const hasValidationRules = Array.isArray(operation.validation) && operation.validation.length > 0;
+    if (![409, 500, 502, 503, 504].includes(status) && !(status === 400 && hasValidationRules)) {
       scenarios.push({ name: "status " + status, type: "declared-status", status });
     }
   }
@@ -152,6 +153,10 @@ ${assertionForFields(op.responseFields)}
     </munit:validation>
   </munit:test>`);
     const scenarioPlan = deriveScenarioPlan({ ...op, method });
+    const explicit400 = /(?:^|[^0-9])400(?:[^0-9]|$)/.test(JSON.stringify(op.errors || [])) || (Array.isArray(op.errorStatuses) && op.errorStatuses.map(Number).includes(400));
+    if (explicit400 && !(Array.isArray(op.validation) && op.validation.length) && !scenarioPlan.some(s => s.type === "declared-status" && s.status === 400)) {
+      scenarioPlan.push({ name: "status 400", type: "declared-status", status: 400 });
+    }
     for (const scenario of scenarioPlan.filter(s => s.type === "declared-status")) {
       tests.push(`  <munit:test name="${testName(op, "status-" + scenario.status)}">
     <munit:execution>

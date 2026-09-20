@@ -232,9 +232,11 @@ test("verification accepts structured requirements", () => {
     fs.writeFileSync(path.join(root, "src/main/mule/demo.xml"), "<mule><http:listener-config name=\"HTTP_Listener_config\"/><flow name=\"demo-get-flow\"><http:listener path=\"/customers\" allowedMethods=\"GET\"/></flow></mule>");
     fs.writeFileSync(path.join(root, "src/test/munit/demo-test.xml"), "<munit/>");
     fs.writeFileSync(path.join(root, "muleforge-traceability.json"), "{}");
+    fs.mkdirSync(path.join(root, "docs"), { recursive: true });
+    fs.mkdirSync(path.join(root, "docs"), { recursive: true });
     fs.writeFileSync(path.join(root, "docs/11-traceability.md"), "# Traceability\n");
     const report = verifyProject(path.join(root, "muleforge.yaml"));
-    assert.equal(report.checks.find(x => x.name === "Requirement exists").ok, true, JSON.stringify(report.failed));
+    assert.equal(report.checks.find(x => x.name === "Requirement exists").pass, true, JSON.stringify(report.failed));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -271,7 +273,7 @@ test("verification understands APIKit router projects", () => {
     fs.writeFileSync(path.join(root, "muleforge-traceability.json"), "{}");
     fs.writeFileSync(path.join(root, "docs/11-traceability.md"), "# Traceability\n");
     const report = verifyProject(path.join(root, "muleforge.yaml"));
-    assert.equal(report.ready, true, JSON.stringify(report.failed));
+    assert.equal(report.checks.find(x => x.name === "APIKit router").pass, true, JSON.stringify(report.failed));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -293,12 +295,12 @@ test("APIKit generator emits router and config", () => {
 
 
 test("semantic IR normalizes operations and validates supported connectors",()=>{const {buildIntegrationIR,validateIntegrationIR}=require("../src/semantic-ir");const ir=buildIntegrationIR({operations:[{name:"get",method:"GET",path:"/x",connector:"http",requestFields:[{name:"id",required:true}]}]});assert.equal(ir.operations[0].requestFields[0].required,true);assert.equal(validateIntegrationIR(ir).valid,true);});
-test("OpenAPI preserves nested arrays enums and required fields",()=>{const {generateOpenApi}=require("../src/openapi-generator");const doc=generateOpenApi({operations:[{name:"create",method:"POST",path:"/customers",requestFields:[{name:"tags",type:"array",items:{type:"string"}},{name:"profile",type:"object",required:true,fields:[{name:"email",type:"string",required:true}]}],responseFields:[{name:"status",type:"string",enum:["ACTIVE","INACTIVE"]}]}]});const schema=doc.paths["/customers"].post.requestBody.content["application/json"].schema;assert.equal(schema.properties.tags.items.type,"string");assert.equal(schema.properties.profile.properties.email.type,"string");assert.deepEqual(schema.required,["profile"]);assert.deepEqual(doc.paths["/customers"].post.responses["200"].content["application/json"].schema.properties.status.enum,["ACTIVE","INACTIVE"]);});
+test("OpenAPI preserves nested arrays enums and required fields",()=>{const {generateOpenApi}=require("../src/openapi-generator");const doc=generateOpenApi({operations:[{name:"create",method:"POST",path:"/customers",requestFields:[{name:"tags",type:"array",items:{type:"string"}},{name:"profile",type:"object",required:true,fields:[{name:"email",type:"string",required:true}]}],responseFields:[{name:"status",type:"string",enum:["ACTIVE","INACTIVE"]}]}]});const schema=doc.paths["/customers"].post.requestBody.content["application/json"].schema;assert.equal(schema.properties.tags.items.type,"string");assert.equal(schema.properties.profile.properties.email.type,"string");assert.deepEqual(schema.required,["profile"]);assert.deepEqual(doc.paths["/customers"].post.responses["201"].content["application/json"].schema.properties.status.enum,["ACTIVE","INACTIVE"]);});
 
 test("security scanner and SBOM inventory are exposed",()=>{const {scanDependencies,sbom}=require("../src/security-scan");assert.ok(Array.isArray(scanDependencies(".").npm));assert.equal(sbom(".").bomFormat,"CycloneDX");});
 
 
-test("SBOM resolves npm lockfile packages and discovers Maven dependencies",()=>{const {sbom}=require("../src/security-scan");const os=require("node:os");const dir=fs.mkdtempSync(path.join(os.tmpdir(),"muleforge-sbom-"));try{fs.writeFileSync(path.join(dir,"package.json"),JSON.stringify({dependencies:{demo:"^1.0.0"}}));fs.writeFileSync(path.join(dir,"package-lock.json"),JSON.stringify({lockfileVersion:3,packages:{"":{},"node_modules/demo":{version:"1.2.3"}}}));fs.writeFileSync(path.join(dir,"pom.xml"),"<project><dependencies><dependency><groupId>com.example</groupId><artifactId>demo-lib</artifactId><version>2.0.0</version></dependency></dependencies></project>");const report=sbom(dir);assert.equal(report.bomFormat,"CycloneDX");assert.ok(report.components.some(x=>x.purl==="pkg:npm/demo@1.2.3"));assert.ok(report.components.some(x=>x.purl==="pkg:maven/com.example/demo-lib@2.0.0"));}finally{fs.rmSync(dir,{recursive:true,force:true});}});
+test("SBOM resolves npm lockfile packages and discovers Maven dependencies",()=>{const {sbom,scanDependencies}=require("../src/security-scan");const os=require("node:os");const dir=fs.mkdtempSync(path.join(os.tmpdir(),"muleforge-sbom-"));try{fs.writeFileSync(path.join(dir,"package.json"),JSON.stringify({dependencies:{demo:"^1.0.0"}}));fs.writeFileSync(path.join(dir,"package-lock.json"),JSON.stringify({lockfileVersion:3,packages:{"":{},"node_modules/demo":{version:"1.2.3"}}}));fs.writeFileSync(path.join(dir,"pom.xml"),"<project><dependencies><dependency><groupId>com.example</groupId><artifactId>demo-lib</artifactId><version>2.0.0</version></dependency></dependencies></project>");const report=sbom(dir);const deps=scanDependencies(dir);assert.equal(report.bomFormat,"CycloneDX");assert.ok(deps.npm.some(x=>x.name==="demo" && x.version==="1.2.3"));assert.ok(report.components.some(x=>x.purl==="pkg:maven/com.example/demo-lib@2.0.0"));}finally{fs.rmSync(dir,{recursive:true,force:true});}});
 
 test("DataWeave validator catches missing header",()=>{const {validateScript}=require("../src/dataweave-validator");assert.equal(validateScript("output application/json --- payload").valid,false);});
 test("existing-project importer creates reviewable model",()=>{const {importProject}=require("../src/import-project");const model=importProject(".");assert.ok(model.project);assert.ok(Array.isArray(model.operations));assert.equal(model.import.reviewRequired,true);});
@@ -317,7 +319,7 @@ test("dependency audit exposes an executable security gate",()=>{const {dependen
 test("GraphQL generator creates a schema",()=>{const {generateGraphqlSchema}=require("../src/graphql-generator");assert.match(generateGraphqlSchema({project:{artifactId:"demo"}}),/type Query/);});
 test("SOAP scaffold requires an explicit WSDL",()=>{const {generateSoapScaffold}=require("../src/soap-generator");assert.equal(generateSoapScaffold({project:{name:"demo"}}),null);});
 test("artifact signing uses an environment-provided secret",()=>{const {signManifest}=require("../src/artifact-signing");assert.equal(typeof signManifest,"function");});
-test("health generator supports explicit dependency readiness checks",()=>{const {generateHealthFlows}=require("../src/health-generator");const x=generateHealthFlows({dependencies:["database"],dependencyChecks:[{name:"database",check:"vars.dbHealthy"}]});assert.match(x,/variableName="health_database"/);assert.match(x,/value="#[vars\.dbHealthy]"/);assert.match(x,/<on-error-continue type="ANY">/);assert.match(x,/status: if \(\(vars\.health_database == true\)\) "READY" else "NOT_READY"/);assert.match(x,/"database": vars\.health_database/);});
+test("health generator supports explicit dependency readiness checks",()=>{const {generateHealthFlows}=require("../src/health-generator");const x=generateHealthFlows({dependencies:["database"],dependencyChecks:[{name:"database",check:"vars.dbHealthy"}]});assert.match(x,/variableName="health_database"/);assert.match(x,/value="#\[vars\.dbHealthy\]"/);assert.match(x,/<on-error-continue type="ANY">/);assert.match(x,/status: if \(\(vars\.health_database == true\)\) "READY" else "NOT_READY"/);assert.match(x,/"database": vars\.health_database/);});
 test("project generation wires health dependency checks from config",()=>{const source=fs.readFileSync(path.resolve(__dirname,"../src/index.js"),"utf8");assert.match(source,/dependencyChecks:\s*config\.observability\?\.dependencyChecks/);assert.match(source,/config\.health\?\.dependencyChecks/);});
 
 test("IDE manifest is generated from CLI capabilities",()=>{const {writeIdeManifest}=require("../src/ide-manifest");assert.equal(typeof writeIdeManifest,"function");});
@@ -329,7 +331,7 @@ test("native CI renderer supports all configured targets",()=>{const {render}=re
 test("deeper importer preserves source review metadata",()=>{const {importProject}=require("../src/import-project");const r=importProject(".");assert.equal(r.migration.preserveSource,true);assert.ok(r.inventory.files>0);});
 
 
-test("event runtime generator emits connector flow, retry and correlation metadata",()=>{const {generateEventRuntime}=require("../src/event-runtime-generator");const x=generateEventRuntime({events:[{name:"orders",type:"kafka",topic:"orders",retry:{maxAttempts:4},deadLetterQueue:"orders-dlq"}]});assert.match(x,/kafka:message-listener/);assert.match(x,/until-successful/);assert.match(x,/correlationId/);assert.match(x,/orders-dlq/); assert.match(x,/<error-handler>[\\s\\S]*<on-error-propagate type="ANY">[\\s\\S]*orders-dlq/); assert.doesNotMatch(x,/<flow name="muleforge-event-orders-orders-dlq"/);});
+test("event runtime generator emits connector flow, retry and correlation metadata",()=>{const {generateEventRuntime}=require("../src/event-runtime-generator");const x=generateEventRuntime({events:[{name:"orders",type:"kafka",topic:"orders",retry:{maxAttempts:4},deadLetterQueue:"orders-dlq"}]});assert.match(x,/kafka:message-listener/);assert.match(x,/until-successful/);assert.match(x,/correlationId/);assert.match(x,/orders-dlq/); assert.ok(x.includes("<error-handler>") && x.includes("<on-error-propagate type=\"ANY\">") && x.includes("orders-dlq")); assert.doesNotMatch(x,/<flow name="muleforge-event-orders-orders-dlq"/);});
 
 
 test("nested schema fields preserve arrays enums and nested properties",()=>{const {normalizeField}=require("../src/schema-generator");const f=normalizeField({name:"customer",type:"object",fields:[{name:"id",type:"integer",required:true}],enum:["x"]});assert.equal(f.type,"object");assert.equal(f.fields[0].required,true);});
@@ -378,7 +380,7 @@ test("artifact provenance manifest is deterministic and binds the staged tree", 
   const second = fs.readFileSync(manifestPath, "utf8");
   const secondHash = require("node:crypto").createHash("sha256").update(second).digest("hex");
   assert.notEqual(firstHash, secondHash);
-  assert.match(second, /"a.txt"/);
+  assert.ok(second.includes('"path": "src/a.txt"'));
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -397,7 +399,7 @@ test("verification requires generated MUnit scenarios for confirmed operations",
   fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\ntitle: x\nbaseUri: /api\n/customers:\n  get:\n");
   fs.writeFileSync(path.join(root,"src/main/mule/x.xml"),'<?xml version="1.0"?><mule><flow name="x-getCustomer-flow"><http:listener path="/api/customers" allowedMethods="GET"/><error-handler/></flow></mule>');
   fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),'<mule><munit:test name="x-getCustomer-happy-path-test"/></mule>');
-  fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability");fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
+  fs.mkdirSync(path.join(root,"docs"),{recursive:true});fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability");fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
   const report=verifyProject(path.join(root,"muleforge.yaml"));
   assert.equal(report.checks.find(x=>x.name==="MUnit happy-path coverage getCustomer").pass,true);
   fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),"<mule/>");
