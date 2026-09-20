@@ -55,7 +55,7 @@ const { validateApiGovernance } = require("./api-governance");
 const { checkRuntimeCompatibility } = require("./runtime-compatibility");
 const { environmentDiff } = require("./environment-diff");
 const { importProject } = require("./import-project");
-const { classifyWorkload, buildEngineeringPlan, explainImportedProject, writeEngineeringPlan } = require("./workload-engine");
+const { classifyWorkload, buildEngineeringPlan, explainImportedProject, writeEngineeringPlan, explainOperation } = require("./workload-engine");
 
 const VERSION = "0.9.18";
 const program = new Command();
@@ -466,5 +466,5 @@ program.command("self-test").description("Run local generation, contract, connec
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
 program.command("plan [config]").description("Classify the MuleSoft workload and produce the end-to-end developer engineering plan").action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config)),r=writeEngineeringPlan(root,buildEngineeringPlan(model));console.log(JSON.stringify(r.plan,null,2));if(r.plan.workload.developerActionRequired)process.exitCode=1;});
-program.command("explain [directory]").description("Explain an existing Mule project from imported semantic evidence without modifying source").action((directory=".")=>{const model=importProject(directory),plan=explainImportedProject(model);console.log(JSON.stringify(plan,null,2));});
+program.command("explain [directory]").description("Explain an existing Mule project from imported semantic evidence without modifying source").option("--operation <selector>","Explain one operation such as POST:/customers").action((directory=".",options)=>{const model=importProject(directory);const output=options.operation?explainOperation(model,options.operation):explainImportedProject(model);console.log(JSON.stringify(output,null,2));});
 program.parseAsync().catch(e => { console.error(`\n❌ ${e.message}`); process.exitCode = 1; });

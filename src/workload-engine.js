@@ -159,6 +159,51 @@ function classifyWorkload(input = {}) {
   };
 }
 
+const LIFECYCLE = Object.freeze([
+  "DESIGNED","APPROVED","GENERATED","VERIFIED","TESTED","PACKAGED",
+  "DEPLOYMENT-READY","DEV-DEPLOYED","DEV-VERIFIED","QA-APPROVED",
+  "QA-DEPLOYED","QA-VERIFIED","PROD-APPROVED","PROD-DEPLOYED","PROD-VERIFIED"
+]);
+
+function certaintyState(value) {
+  if (value === "confirmed" || value === "inferred" || value === "unknown" || value === "conflicting" || value === "not-applicable") return value;
+  return value ? "inferred" : "unknown";
+}
+
+function buildLifecycleState() {
+  return {
+    states: [...LIFECYCLE],
+    current: "DESIGNED",
+    transitions: LIFECYCLE.slice(1).map((to, i) => ({
+      from: LIFECYCLE[i],
+      to,
+      requires: i === 0 ? "explicit developer approval" : "evidence from the preceding gate"
+    })),
+    rule: "A later lifecycle state must not be claimed without evidence for the preceding state."
+  };
+}
+
+function buildDeveloperHandoff(plan, imported) {
+  const workload = plan.workload || {};
+  return {
+    certainty: {
+      workload: certaintyState(workload.status),
+      architecture: certaintyState(imported?.architecture?.decision || null),
+      deployment: workload.deploymentTarget ? "inferred" : "unknown"
+    },
+    artifacts: [
+      "solution-design.md","architecture.md","implementation-map.md","flow-map.md",
+      "configuration.md","connector-map.md","testing.md","deployment.md",
+      "runtime-verification.md","traceability.md","known-gaps.md"
+    ],
+    remediation: {
+      requiredFields: ["what","where","why","howToFix","affectedArtifacts"],
+      rule: "Every failed gate should identify the affected engineering evidence and a concrete remediation path."
+    },
+    kt: imported ? "Project-specific onboarding/support material should be derived from imported flows, connectors, configurations, tests and deployment evidence." : "Developer onboarding material should be derived from the generated engineering evidence."
+  };
+}
+
 function buildEngineeringPlan(model = {}, options = {}) {
   const workload = classifyWorkload({ model, imported: options.imported });
   const operations = Array.isArray(model.operations) ? model.operations : [];
@@ -227,6 +272,17 @@ function buildEngineeringPlan(model = {}, options = {}) {
       supportedTargets: ["cloudhub", "cloudhub-2", "runtime-fabric", "hybrid"],
       note: "Use the existing deployment validators and target-specific generators; credentials remain external."
     },
+    lifecycle: buildLifecycleState(),
+    certainty: {
+      requirement: requirements ? "confirmed-or-inferred" : "unknown",
+      workload: certaintyState(workload.status),
+      deployment: workload.deploymentTarget ? "inferred" : "unknown"
+    },
+    developerHandoff: {
+      artifacts: ["solution-design.md","architecture.md","implementation-map.md","flow-map.md","configuration.md","connector-map.md","testing.md","deployment.md","runtime-verification.md","traceability.md","known-gaps.md"],
+      remediation: ["what","where","why","howToFix","affectedArtifacts"],
+      onboarding: options.imported ? "derive from actual repository evidence" : "derive from generated engineering evidence"
+    },
     endToEnd: {
       design: workload.type === TYPES.API ? "RAML/OAS as indicated by the model" : "workload-specific integration design",
       implementation: "existing MuleForge generators and imported repository evidence",
@@ -240,6 +296,7 @@ function buildEngineeringPlan(model = {}, options = {}) {
 function explainImportedProject(imported = {}) {
   const model = imported.model || imported;
   const plan = buildEngineeringPlan(model, { imported });
+  plan.developerHandoff = buildDeveloperHandoff(plan, imported);
   const flows = Array.isArray(imported.semantics?.flows) ? imported.semantics.flows : [];
   return {
     ...plan,
@@ -256,6 +313,42 @@ function explainImportedProject(imported = {}) {
         transforms: flow.transforms || 0,
         errorHandlers: flow.errorHandlers || 0
       }))
+    }
+  };
+}
+
+function explainOperation(imported = {}, selector = "") {
+  const target = String(selector || "").trim().toLowerCase();
+  const operations = Array.isArray(imported.operations) ? imported.operations : [];
+  const matches = operations.filter(op => {
+    const key = [op.method, op.path].filter(Boolean).join(":").toLowerCase();
+    return !target || key === target || key.includes(target);
+  });
+  return {
+    selector,
+    found: matches.length > 0,
+    operations: matches.map(op => {
+      const flow = (imported.semantics?.flows || []).find(f => f.source === op.source && String(f.name || "").toLowerCase() === String(op.name || "").toLowerCase());
+      return {
+        operation: [op.method, op.path].filter(Boolean).join(" "),
+        source: op.source || null,
+        connector: op.connector || null,
+        action: op.action || null,
+        flow: flow?.name || op.name || null,
+        flowRefs: imported.semantics?.flowRefs || [],
+        transformations: imported.semantics?.transformCount || 0,
+        errorHandling: imported.semantics?.errorHandlers || [],
+        testAssets: imported.inventory?.munit || 0,
+        contractAssets: imported.inventory?.raml || 0,
+        certainty: "confirmed"
+      };
+    }),
+    remediation: matches.length ? null : {
+      what: "Operation was not found in imported evidence.",
+      where: selector,
+      why: "No matching HTTP/connector operation was reconstructed.",
+      howToFix: "Check the source Mule XML, listener configuration, generated/subflow references and importer coverage.",
+      affectedArtifacts: ["implementation", "tests", "traceability", "deployment"]
     }
   };
 }
@@ -286,6 +379,22 @@ function writeEngineeringPlan(root, plan, filename = "muleforge-engineering-plan
     "",
     plan.pipeline.map((x, i) => (i + 1) + ". " + x),
     "",
+    "## Lifecycle gate",
+    "",
+    "- Current state: **" + (plan.lifecycle?.current || "unknown") + "**",
+    "- Allowed states: " + (plan.lifecycle?.states || []).join(" → "),
+    "- Rule: " + (plan.lifecycle?.rule || "Evidence is required for each transition."),
+    "",
+    "## Certainty",
+    "",
+    "- Requirement: **" + (plan.certainty?.requirement || "unknown") + "**",
+    "- Workload: **" + (plan.certainty?.workload || "unknown") + "**",
+    "- Deployment: **" + (plan.certainty?.deployment || "unknown") + "**",
+    "",
+    "## Developer handoff",
+    "",
+    ...(plan.developerHandoff?.artifacts || []).map(x => "- " + x),
+    "",
     "## Existing repository",
     "",
     plan.existingProject
@@ -311,5 +420,10 @@ module.exports = {
   classifyWorkload,
   buildEngineeringPlan,
   explainImportedProject,
-  writeEngineeringPlan
+  writeEngineeringPlan,
+  LIFECYCLE,
+  certaintyState,
+  buildLifecycleState,
+  buildDeveloperHandoff,
+  explainOperation
 };

@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { TYPES, classifyWorkload, buildEngineeringPlan } = require("../src/workload-engine");
+const { TYPES, classifyWorkload, buildEngineeringPlan, buildLifecycleState, explainOperation } = require("../src/workload-engine");
 
 test("classifies REST requirements as API and requires RAML when specified", () => {
   const result = classifyWorkload({
@@ -97,4 +97,31 @@ test("engineering plan exposes workload-specific artifacts without duplicating g
   assert.deepEqual(plan.artifactPlan.contract, ["workload-specific Mule implementation", "MUnit"]);
   assert.ok(plan.pipeline.includes("deployment-preflight"));
   assert.ok(plan.ownership.classes.includes("EXTERNAL"));
+});
+
+
+test("engineering plan exposes gated lifecycle and certainty states", () => {
+  const plan = buildEngineeringPlan({
+    requirement: "Nightly read customer records from SFTP.",
+    connectors: ["sftp"],
+    deployment: { target: "cloudhub-2" }
+  });
+  assert.equal(plan.lifecycle.current, "DESIGNED");
+  assert.ok(plan.lifecycle.states.includes("PROD-VERIFIED"));
+  assert.equal(plan.certainty.workload, "inferred");
+  assert.equal(plan.deployment.recognized, true);
+});
+
+test("operation explanation returns source-backed remediation when missing", () => {
+  const imported = {
+    operations: [{ method: "POST", path: "/customers", name: "post-customers", connector: "http", source: "src/main/mule/customers.xml" }],
+    semantics: { flows: [], flowRefs: [], errorHandlers: [] },
+    inventory: { munit: 1, raml: 1 }
+  };
+  const found = explainOperation(imported, "POST:/customers");
+  assert.equal(found.found, true);
+  assert.equal(found.operations[0].source, "src/main/mule/customers.xml");
+  const missing = explainOperation(imported, "GET:/orders");
+  assert.equal(missing.found, false);
+  assert.ok(missing.remediation.affectedArtifacts.includes("traceability"));
 });
