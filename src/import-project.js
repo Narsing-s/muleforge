@@ -25,7 +25,7 @@ function importProject(root="."){
   const dependencyEvidence = [];
   for (const pomFile of files.filter(f => path.basename(f) === "pom.xml")) {
     const pom = fs.readFileSync(pomFile, "utf8");
-    for (const m of pom.matchAll(/<dependency>\\s*[\\s\\S]*?<groupId>([^<]+)<\\/groupId>[\\s\\S]*?<artifactId>([^<]+)<\\/artifactId>(?:[\\s\\S]*?<version>([^<]+)<\\/version>)?[\\s\\S]*?<\\/dependency>/g)) {
+    for (const m of pom.matchAll(/<dependency>\s*[\s\S]*?<groupId>([^<]+)<\/groupId>[\s\S]*?<artifactId>([^<]+)<\/artifactId>(?:[\s\S]*?<version>([^<]+)<\/version>)?[\s\S]*?<\/dependency>/g)) {
       dependencyEvidence.push({ groupId: m[1].trim(), artifactId: m[2].trim(), version: m[3] ? m[3].trim() : null, source: relative(base, pomFile), state: "confirmed" });
     }
   }
