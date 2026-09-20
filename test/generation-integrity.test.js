@@ -388,13 +388,13 @@ test("verification requires generated MUnit scenarios for confirmed operations",
   fs.mkdirSync(path.join(root,"src/main/resources/api"),{recursive:true});
   fs.mkdirSync(path.join(root,"src/main/mule"),{recursive:true});
   fs.mkdirSync(path.join(root,"src/test/munit"),{recursive:true});
-  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\\nproject:\\n  name: x\\n  artifactId: x\\napi:\\n  name: x\\n  basePath: /api\\noperations:\\n  - name: getCustomer\\n    method: GET\\n    path: /customers\\n    responseFields: [{name: id}]\\n");
+  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\nproject:\n  name: x\n  artifactId: x\napi:\n  name: x\n  basePath: /api\noperations:\n  - name: getCustomer\n    method: GET\n    path: /customers\n    responseFields: [{name: id}]\n");
   fs.writeFileSync(path.join(root,"pom.xml"),"<project/>");
   fs.writeFileSync(path.join(root,"mule-artifact.json"),"{}");
   fs.writeFileSync(path.join(root,"src/main/resources/application.yaml"),"x: y");
   for(const env of ["dev","qa","uat","prod"]){fs.mkdirSync(path.join(root,"src/main/resources/properties"),{recursive:true});fs.writeFileSync(path.join(root,"src/main/resources/properties","application-"+env+".yaml"),"x: y");}
   fs.mkdirSync(path.join(root,"postman"),{recursive:true});fs.writeFileSync(path.join(root,"postman/x.collection.json"),"{}");
-  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\\ntitle: x\\nbaseUri: /api\\n/customers:\\n  get:\\n");
+  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\ntitle: x\nbaseUri: /api\n/customers:\n  get:\n");
   fs.writeFileSync(path.join(root,"src/main/mule/x.xml"),'<?xml version="1.0"?><mule><flow name="x-getCustomer-flow"><http:listener path="/api/customers" allowedMethods="GET"/><error-handler/></flow></mule>');
   fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),'<mule><munit:test name="x-getCustomer-happy-path-test"/></mule>');
   fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability");fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
@@ -411,11 +411,11 @@ test("verification requires MUnit coverage for confirmed behavior policies",()=>
   const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),{verifyProject}=require("../src/verify");
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"muleforge-munit-policy-"));
   fs.mkdirSync(path.join(root,"src/main/resources/api"),{recursive:true}); fs.mkdirSync(path.join(root,"src/main/mule"),{recursive:true}); fs.mkdirSync(path.join(root,"src/test/munit"),{recursive:true}); fs.mkdirSync(path.join(root,"src/main/resources/properties"),{recursive:true}); fs.mkdirSync(path.join(root,"postman"),{recursive:true}); fs.mkdirSync(path.join(root,"docs"),{recursive:true});
-  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\\nproject:\\n  name: x\\n  artifactId: x\\napi:\\n  name: x\\n  basePath: /api\\noperations:\\n  - name: create\\n    method: POST\\n    path: /customers\\n    successStatus: 201\\n    errorStatuses: [409, 503]\\n    retry: {maxAttempts: 2}\\n    transaction: true\\n    idempotency: true\\n    pagination: {pageParam: page}\\n");
+  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\nproject:\n  name: x\n  artifactId: x\napi:\n  name: x\n  basePath: /api\noperations:\n  - name: create\n    method: POST\n    path: /customers\n    successStatus: 201\n    errorStatuses: [409, 503]\n    retry: {maxAttempts: 2}\n    transaction: true\n    idempotency: true\n    pagination: {pageParam: page}\n");
   fs.writeFileSync(path.join(root,"pom.xml"),"<project/>"); fs.writeFileSync(path.join(root,"mule-artifact.json"),"{}"); fs.writeFileSync(path.join(root,"src/main/resources/application.yaml"),"x: y");
   for(const env of ["dev","qa","uat","prod"]) fs.writeFileSync(path.join(root,"src/main/resources/properties","application-"+env+".yaml"),"x: y");
   fs.writeFileSync(path.join(root,"postman/x.collection.json"),"{}"); fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability"); fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
-  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\\ntitle: x\\nbaseUri: /api\\n/customers:\\n  post:\\n    responses:\\n      201:\\n");
+  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\ntitle: x\nbaseUri: /api\n/customers:\n  post:\n    responses:\n      201:\n");
   fs.writeFileSync(path.join(root,"src/main/mule/x.xml"),'<?xml version="1.0"?><mule><flow name="x-create-flow"><http:listener path="/api/customers" allowedMethods="POST"/><error-handler/></flow></mule>');
   const complete='<mule><munit:test name="x-create-happy-path-test"/><munit:test name="x-create-conflict-or-duplicate-test"/><munit:test name="x-create-connector-error-test"/><munit:test name="x-create-retry-exhaustion-test"/><munit:test name="x-create-transaction-rollback-test"/><munit:test name="x-create-idempotency-duplicate-test"/><munit:test name="x-create-pagination-test"/></mule>';
   fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),complete);
@@ -451,11 +451,11 @@ test("verification enforces rule-level traceability to Mule assets and MUnit tes
   const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),{verifyProject}=require("../src/verify");
   const root=fs.mkdtempSync(path.join(os.tmpdir(),"muleforge-rule-trace-"));
   fs.mkdirSync(path.join(root,"src/main/resources/api"),{recursive:true}); fs.mkdirSync(path.join(root,"src/main/mule"),{recursive:true}); fs.mkdirSync(path.join(root,"src/test/munit"),{recursive:true}); fs.mkdirSync(path.join(root,"src/main/resources/properties"),{recursive:true}); fs.mkdirSync(path.join(root,"postman"),{recursive:true}); fs.mkdirSync(path.join(root,"docs"),{recursive:true});
-  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\\nproject:\\n  name: x\\n  artifactId: x\\napi:\\n  name: x\\n  basePath: /api\\noperations:\\n  - name: create\\n    method: POST\\n    path: /customers\\n    validation: [email is required]\\n    errorStatuses: [409]\\n");
+  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\nproject:\n  name: x\n  artifactId: x\napi:\n  name: x\n  basePath: /api\noperations:\n  - name: create\n    method: POST\n    path: /customers\n    validation: [email is required]\n    errorStatuses: [409]\n");
   fs.writeFileSync(path.join(root,"pom.xml"),"<project/>"); fs.writeFileSync(path.join(root,"mule-artifact.json"),"{}"); fs.writeFileSync(path.join(root,"src/main/resources/application.yaml"),"x: y");
   for(const env of ["dev","qa","uat","prod"]) fs.writeFileSync(path.join(root,"src/main/resources/properties","application-"+env+".yaml"),"x: y");
   fs.writeFileSync(path.join(root,"postman/x.collection.json"),"{}"); fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability"); fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
-  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\\ntitle: x\\nbaseUri: /api\\n/customers:\\n  post:\\n    responses:\\n      200:\\n");
+  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\ntitle: x\nbaseUri: /api\n/customers:\n  post:\n    responses:\n      200:\n");
   fs.writeFileSync(path.join(root,"src/main/mule/x.xml"),'<?xml version="1.0"?><mule><flow name="x-create-flow"><http:listener path="/api/customers" allowedMethods="POST"/><error-handler/></flow></mule>');
   fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),'<mule><munit:test name="x-create-happy-path-test"/><munit:test name="x-create-validation-test"/><munit:test name="x-create-conflict-or-duplicate-test"/></mule>');
   let report=verifyProject(path.join(root,"muleforge.yaml"));
