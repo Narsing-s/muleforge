@@ -93,7 +93,30 @@ function deriveScenarioPlan(operation = {}) {
   return scenarios;
 }
 
-function assertionForFields(fields = [], source = "payload", indent = "      ") {\n  const checks=[];\n  for (const field of Array.isArray(fields)?fields:[]) {\n    const item=typeof field==="string"?{name:field}:field||{};\n    const name=item.name||item.field; if(!name) continue;\n    const expression=`${source}.${name}`;\n    checks.push(`${indent}<munit-tools:assert-that expression="#[${expression}]" is="#[MunitTools::notNullValue()]"/>`);\n    if(item.required) checks.push(`${indent}<munit-tools:assert-that expression="#[!isEmpty(${expression} default null)]" is="#[MunitTools::equalTo(true)]"/>`);\n    if(Array.isArray(item.enum) && item.enum.length) {\n      const allowed=JSON.stringify(item.enum.map(String));\n      checks.push(`${indent}<munit-tools:assert-that expression="#[${JSON.stringify(item.enum.map(String))}.contains(${expression})]" is="#[MunitTools::equalTo(true)]"/>`);\n    }\n    if(String(item.type||"").toLowerCase()==="object" && Array.isArray(item.fields)) checks.push(assertionForFields(item.fields,expression,indent));\n    if(String(item.type||"").toLowerCase()==="array" && item.items && typeof item.items==="object" && Array.isArray(item.items.fields)) {\n      checks.push(`${indent}<munit-tools:assert-that expression="#[sizeOf(${expression} default [])]" is="#[MunitTools::greaterThanOrEqualTo(0)]"/>`);\n      checks.push(assertionForFields(item.items.fields,`${expression}[0]`,indent));\n    }\n  }\n  return checks.filter(Boolean).join("\n");\n}
+function assertionForFields(fields = [], source = "payload", indent = "      ") {
+  const checks = [];
+  for (const field of Array.isArray(fields) ? fields : []) {
+    const item = typeof field === "string" ? { name: field } : field || {};
+    const name = item.name || item.field;
+    if (!name) continue;
+    const expression = `${source}.${name}`;
+    checks.push(`${indent}<munit-tools:assert-that expression="#[${expression}]" is="#[MunitTools::notNullValue()]"/>`);
+    if (item.required) checks.push(`${indent}<munit-tools:assert-that expression="#[!isEmpty(${expression} default null)]" is="#[MunitTools::equalTo(true)]"/>`);
+    if (Array.isArray(item.enum) && item.enum.length) {
+      const allowed = JSON.stringify(item.enum.map(String));
+      checks.push(`${indent}<munit-tools:assert-that expression="#[${allowed}.contains(${expression})]" is="#[MunitTools::equalTo(true)]"/>`);
+    }
+    if (String(item.type || "").toLowerCase() === "object" && Array.isArray(item.fields)) {
+      checks.push(assertionForFields(item.fields, expression, indent));
+    }
+    if (String(item.type || "").toLowerCase() === "array" && item.items && typeof item.items === "object" && Array.isArray(item.items.fields)) {
+      checks.push(`${indent}<munit-tools:assert-that expression="#[sizeOf(${expression} default [])]" is="#[MunitTools::greaterThanOrEqualTo(0)]"/>`);
+      checks.push(assertionForFields(item.items.fields, `${expression}[0]`, indent));
+    }
+  }
+  return checks.filter(Boolean).join("\n");
+}
+
 function generateMunit(config, data) {
   const ops = operations(config);
   const tests = [];
