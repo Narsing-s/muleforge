@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { TYPES, classifyWorkload, buildEngineeringPlan } = require("../src/workload-engine");
+const { TYPES, classifyWorkload, buildEngineeringPlan, buildLifecycleState, explainOperation } = require("../src/workload-engine");
 
 test("classifies REST requirements as API and requires RAML when specified", () => {
   const result = classifyWorkload({
