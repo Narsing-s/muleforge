@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Aligned MUnit policy scenario generation with `errorStatuses`, including declared 409 conflict scenarios, so generation and verification use the same confirmed behavior model.
+
 - Extended the existing verification gate to require per-operation MUnit happy-path coverage and validation scenarios where validation rules are confirmed.
 
 - Strengthened the existing verification gate with business-rule coverage checks for declared validation rules, error statuses, and response fields.
