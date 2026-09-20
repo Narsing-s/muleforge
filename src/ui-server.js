@@ -4,6 +4,7 @@ const path = require("path");
 const { analyzeRequirementDocument, extractDocumentBuffer } = require("./document-analyzer");
 const { generateUiAssets } = require("./ui-generator");
 const { prepareAndSave } = require("./local-export");
+const { version } = require("../package.json");
 
 function json(res, status, value) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -75,11 +76,23 @@ function applyResolutions(model, resolutions = []) {
   return model;
 }
 
+function validateSaveRequest(model, approved) {
+  if (!approved || model?.approval?.approved !== true) throw new Error("User approval is required before generation can be saved.");
+  if (!model || typeof model !== "object") throw new Error("Analyze the requirement before saving.");
+  if (!String(model.requirement || "").trim()) throw new Error("A confirmed requirement is required before saving.");
+  if (!model.project || !String(model.project.name || "").trim()) throw new Error("A project name is required before saving.");
+  if (!Array.isArray(model.operations) || model.operations.length === 0) throw new Error("At least one confirmed operation is required before saving.");
+  if (Array.isArray(model.conflicts) && model.conflicts.length) throw new Error("Resolve all requirement conflicts before saving.");
+  if (Array.isArray(model.missingConfigurations) && model.missingConfigurations.length) throw new Error("Resolve all required connectivity decisions before saving.");
+  if (model.operations.some(op => op && op.connectorAmbiguous)) throw new Error("Resolve ambiguous operation connector mappings before saving.");
+  return true;
+}
+
 function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT || 4173)) {
   const file = path.resolve(__dirname, "../web/index.html");
   const hosted = Boolean(process.env.PORT);
   const server = http.createServer(async (req, res) => {
-    if (req.method === "GET" && req.url === "/health") return json(res, 200, { ok: true, service: "muleforge", version: "0.6.0", mode: hosted ? "hosted" : "local" });
+    if (req.method === "GET" && req.url === "/health") return json(res, 200, { ok: true, service: "muleforge", version, mode: hosted ? "hosted" : "local" });
     if (req.url === "/" || req.url === "/index.html") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       return res.end(fs.readFileSync(file));
@@ -106,7 +119,7 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
       if (hosted) return json(res, 409, { ok: false, saved: false, error: "Desktop export is available only in MuleForge Local mode.", message: "The hosted server cannot write to a visitor's physical Desktop. Run MuleForge locally for direct Desktop export." });
       try {
         const input = JSON.parse(await readBody(req, 8_000_000));
-        if (!input.model || typeof input.model !== "object") return json(res, 400, { error: "Analyze the requirement before saving." });
+        validateSaveRequest(input.model, input.approved === true);
         const result = prepareAndSave(input.model);
         return json(res, 200, { ok: true, ...result, message: "Workflow passed. Saved " + result.projectName + " to the Desktop." });
       } catch (error) {
@@ -122,4 +135,4 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
   });
   return server;
 }
-module.exports = { startUi };
+module.exports = { startUi, validateSaveRequest };
