@@ -247,9 +247,10 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     for (const operation of traceability.operations || []) {
       for (const rule of operation.rules || []) {
         const muleAssetPresent = Boolean(rule.mule) && exists(root, rule.mule);
+        const operationSafeName = String(operation.operation || operation.name || '').replace(/[^A-Za-z0-9_-]/g, '-');
         const munitTestPresent = Boolean(rule.munitTest) && (
           new RegExp('name="[^"]*' + String(rule.munitTest) + '"').test(munit) ||
-          (Number(rule.status) === 400 && new RegExp('name="[^"]*' + String(operation.operation || operation.name || '').replace(/[^A-Za-z0-9_-]/g, '-') + '-validation-test"').test(munit))
+          (Number(rule.status) === 400 && new RegExp('<munit:test\\b[^>]*name="[^"]*' + operationSafeName + '[^"]*"[^>]*>[\\s\\S]*?400[\\s\\S]*?<\\/munit:test>').test(munit))
         );
         checks.push(result(
           "Traceability Mule asset " + rule.ruleId,
