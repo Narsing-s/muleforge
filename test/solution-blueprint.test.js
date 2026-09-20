@@ -50,7 +50,7 @@ test("blueprint blocks unresolved conflicts and unknown workloads", () => {
 
 test("blueprint preserves end-to-end engineering decisions instead of hardcoding delivery details", () => {
   const model = {
-    requirement: "Deploy separate Experience and Process applications independently. Monitor correlation IDs and latency.",
+    requirement: "Deploy independently deployable applications for the Experience and Process APIs. Monitor correlation IDs and latency.",
     requirements: [
       { id: "REQ-001", text: "Validate email before creating a customer.", source: "requirements.docx" },
       { id: "REQ-002", text: "Return 409 when the customer already exists.", source: "requirements.docx", businessRule: "Customer identity must be unique." }
