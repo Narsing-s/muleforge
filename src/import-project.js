@@ -11,7 +11,7 @@ function extractSemantics(xml){
   const transforms=[...xml.matchAll(/<(ee:transform|transform-message)\b/gi)].map(()=>"transform");
   const errorHandlers=[...xml.matchAll(/<(on-error-(?:continue|propagate)|on-error)\b[^>]*>([\s\S]*?)<\/on-error[^>]*>/gi)].map(m=>{const a=attrs(m[0]);return {type:m[1].toLowerCase(),errorType:a.type||a.errorType||null};});
   const configRefs=[...xml.matchAll(/\bconfig-ref="([^"]+)"/gi)].map(m=>m[1]);
-  const globalConfigs=[...xml.matchAll(/<([\w-]+):([\w-]+(?:-config|-connection))\b([^>]*)/gi)].map(m=>{const a=attrs(m[0]);return {namespace:m[1].toLowerCase(),element:m[2],name:a.name||null};});
+  const globalConfigs=[...xml.matchAll(/<([\w-]+):([\w-]+(?:-config|-connection|config|connection))\b([^>]*)/gi)].map(m=>{const a=attrs(m[0]);return {namespace:m[1].toLowerCase(),element:m[2],name:a.name||null};});
   return {flows,flowRefs:unique(flowRefs),transformCount:transforms.length,errorHandlers,configRefs:unique(configRefs),globalConfigs};
 }
 function importProject(root="."){
