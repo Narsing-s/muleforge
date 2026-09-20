@@ -445,3 +445,24 @@ test("traceability maps confirmed behavior rules to executable MUnit tests",()=>
   assert.equal(report.operations[0].rules.find(r=>r.ruleId==="create-status-409").munitTest,"create-conflict-or-duplicate-test");
   assert.equal(report.operations[0].rules.find(r=>r.ruleId==="create-retry").munitTest,"create-retry-exhaustion-test");
 });
+
+
+test("verification enforces rule-level traceability to Mule assets and MUnit tests",()=>{
+  const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),{verifyProject}=require("../src/verify");
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"muleforge-rule-trace-"));
+  fs.mkdirSync(path.join(root,"src/main/resources/api"),{recursive:true}); fs.mkdirSync(path.join(root,"src/main/mule"),{recursive:true}); fs.mkdirSync(path.join(root,"src/test/munit"),{recursive:true}); fs.mkdirSync(path.join(root,"src/main/resources/properties"),{recursive:true}); fs.mkdirSync(path.join(root,"postman"),{recursive:true}); fs.mkdirSync(path.join(root,"docs"),{recursive:true});
+  fs.writeFileSync(path.join(root,"muleforge.yaml"),"requirement: test\\nproject:\\n  name: x\\n  artifactId: x\\napi:\\n  name: x\\n  basePath: /api\\noperations:\\n  - name: create\\n    method: POST\\n    path: /customers\\n    validation: [email is required]\\n    errorStatuses: [409]\\n");
+  fs.writeFileSync(path.join(root,"pom.xml"),"<project/>"); fs.writeFileSync(path.join(root,"mule-artifact.json"),"{}"); fs.writeFileSync(path.join(root,"src/main/resources/application.yaml"),"x: y");
+  for(const env of ["dev","qa","uat","prod"]) fs.writeFileSync(path.join(root,"src/main/resources/properties","application-"+env+".yaml"),"x: y");
+  fs.writeFileSync(path.join(root,"postman/x.collection.json"),"{}"); fs.writeFileSync(path.join(root,"docs/11-traceability.md"),"# Traceability"); fs.writeFileSync(path.join(root,"muleforge-traceability.json"),"{}");
+  fs.writeFileSync(path.join(root,"src/main/resources/api/x.raml"),"#%RAML 1.0\\ntitle: x\\nbaseUri: /api\\n/customers:\\n  post:\\n    responses:\\n      200:\\n");
+  fs.writeFileSync(path.join(root,"src/main/mule/x.xml"),'<?xml version="1.0"?><mule><flow name="x-create-flow"><http:listener path="/api/customers" allowedMethods="POST"/><error-handler/></flow></mule>');
+  fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),'<mule><munit:test name="x-create-happy-path-test"/><munit:test name="x-create-validation-test"/><munit:test name="x-create-conflict-or-duplicate-test"/></mule>');
+  let report=verifyProject(path.join(root,"muleforge.yaml"));
+  assert.equal(report.checks.find(x=>x.name==="Traceability MUnit test create-validation-1").pass,true);
+  assert.equal(report.checks.find(x=>x.name==="Traceability MUnit test create-status-409").pass,true);
+  fs.writeFileSync(path.join(root,"src/test/munit/x-test.xml"),'<mule><munit:test name="x-create-happy-path-test"/><munit:test name="x-create-validation-test"/></mule>');
+  report=verifyProject(path.join(root,"muleforge.yaml"));
+  assert.equal(report.checks.find(x=>x.name==="Traceability MUnit test create-status-409").pass,false);
+  fs.rmSync(root,{recursive:true,force:true});
+});
