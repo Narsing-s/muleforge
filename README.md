@@ -232,6 +232,7 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge golden-test [directory]` | Run golden generation regression fixtures |
 | `muleforge import [directory]` | Reverse-engineer an existing Mule project into a reviewable model |
 | `muleforge reconcile [config] [directory]` | Reconcile confirmed requirements against an existing Mule repository without overwriting or duplicating source assets |
+| `muleforge readiness [config] [directory]` | Aggregate existing engineering gates into one lifecycle readiness report without replacing them |
 | `muleforge artifact-manifest [directory]` | Generate a SHA-256 artifact provenance manifest |
 | `muleforge artifact-keygen [directory]` | Generate an Ed25519 signing key pair |
 | `muleforge artifact-sign [directory]` | Sign an artifact manifest |
