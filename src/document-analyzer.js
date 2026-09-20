@@ -132,6 +132,30 @@ function inferFields(text, endpoint) {
       : null;
     const field = { name, type: inferFieldType(name.replace(/\[\]/g, "").split(".").pop(), annotation), required };
     if (enumValues?.length) field.enum = enumValues;
+
+    // Preserve explicit validation metadata in the existing field model.
+    // These attributes are intentionally optional so requirements without
+    // constraints continue to generate exactly the same contracts.
+    const captureNumber = (pattern) => {
+      const m = annotation.match(pattern);
+      return m ? Number(m[1]) : undefined;
+    };
+    const captureText = (pattern) => {
+      const m = annotation.match(pattern);
+      return m ? m[1].trim().replace(/^[\"']|[\"']$/g, "") : undefined;
+    };
+    const minimum = captureNumber(/(?:min(?:imum)?|minimum)\s*[:=]\s*(-?\\d+(?:\\.\\d+)?)/i);
+    const maximum = captureNumber(/(?:max(?:imum)?|maximum)\s*[:=]\s*(-?\\d+(?:\\.\\d+)?)/i);
+    const minLength = captureNumber(/min(?:imum)?Length\s*[:=]\s*(\\d+)/i);
+    const maxLength = captureNumber(/max(?:imum)?Length\s*[:=]\s*(\\d+)/i);
+    const format = captureText(/format\s*[:=]\s*([A-Za-z][A-Za-z0-9_-]*)/i);
+    const pattern = captureText(/pattern\s*[:=]\s*(?:[\"']([^\"']+)[\"']|([^,;]+))/i);
+    if (minimum !== undefined) field.minimum = minimum;
+    if (maximum !== undefined) field.maximum = maximum;
+    if (minLength !== undefined) field.minLength = minLength;
+    if (maxLength !== undefined) field.maxLength = maxLength;
+    if (format) field.format = format;
+    if (pattern) field.pattern = pattern;
     return field;
   });
 
