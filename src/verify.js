@@ -148,7 +148,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     const statuses = new Set(Array.isArray(op.errorStatuses) ? op.errorStatuses.map(Number).filter(Number.isInteger) : []);
     for (const error of Array.isArray(op.errors) ? op.errors : []) {
       const text = typeof error === "string" ? error : JSON.stringify(error || "");
-      for (const match of text.matchAll(/\\b([4-5]\\d\\d)\\b/g)) statuses.add(Number(match[1]));
+      for (const match of text.matchAll(/\b([4-5]\d\d)\b/g)) statuses.add(Number(match[1]));
       const statusMap = {
         bad_request: 400, validation: 400, unauthorized: 401, forbidden: 403,
         not_found: 404, conflict: 409, too_many_requests: 429,
@@ -162,7 +162,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   for (const op of operations) {
     const operationXml = operationFlowsForCoverage.find(x => x.name === `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`)?.block || mule;
     if (Array.isArray(op.validation) && op.validation.length) {
-      const validationImplemented = /VALIDATION:VALIDATION|VALIDATION_ERROR|Invalid email|isEmpty\\(payload/i.test(operationXml);
+      const validationImplemented = /VALIDATION:VALIDATION|VALIDATION_ERROR|Invalid email|isEmpty\(payload/i.test(operationXml);
       checks.push(result(
         `Business validation coverage ${op.name}`,
         validationImplemented,
