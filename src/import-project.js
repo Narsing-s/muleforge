@@ -1,3 +1,4 @@
+const { inferApiLedArchitecture } = require("./architecture");
 const fs=require("node:fs"),path=require("node:path"),YAML=require("yaml");
 function walk(d,out=[]){if(!fs.existsSync(d))return out;for(const e of fs.readdirSync(d,{withFileTypes:true})){if([".git","target","node_modules"].includes(e.name))continue;const p=path.join(d,e.name);e.isDirectory()?walk(p,out):out.push(p);}return out;}
 function attrs(tag){const a={};for(const m of String(tag).matchAll(/([A-Za-z_:][\w:.-]*)\s*=\s*"([^"]*)"/g))a[m[1]]=m[2];return a;}
@@ -21,6 +22,11 @@ function importProject(root="."){
   const uniqueOps=[...new Map(operations.map(o=>[JSON.stringify([o.name,o.path,o.connector,o.action]),o])).values()];
   const configs=files.filter(f=>/application.*\.(yaml|yml|properties)$/.test(f)).map(f=>relative(base,f));
   const sourceAssets=files.filter(f=>/\.(dwl|xml|raml|yaml|yml|properties)$/i.test(f)).map(f=>relative(base,f));
+  const architecture=inferApiLedArchitecture({
+    text: raml.map(f=>fs.readFileSync(f,"utf8")).join("\n"),
+    operations: uniqueOps,
+    existingArtifacts: sourceAssets
+  });
   return {version:"1.3",architecture,project:{name:path.basename(base),artifactId:path.basename(base),version:"1.0.0"},api:{name:path.basename(base),version:"v1",basePath:"/api/v1"},operations:uniqueOps,inventory:{files:files.length,muleXml:xml.length,raml:raml.length,dataWeave:dw.length,munit:munit.length,pom:Boolean(pom),environmentConfigs:configs,semantic:{flowCount:semantics.flows.length,flowReferenceCount:semantics.flowRefs.length,transformCount:semantics.transformCount,errorHandlerCount:semantics.errorHandlers.length,configReferenceCount:semantics.configRefs.length,globalConfigCount:semantics.globalConfigs.length}},semantics,import:{reviewRequired:true,preserveSource:true},migration:{reviewRequired:true,preserveSource:true,unmappedAssets:sourceAssets},ramlSources:raml.map(f=>relative(base,f)),dataWeaveSources:dw.map(f=>relative(base,f))};
 }
 function writeImportedModel(root="."){const model=importProject(root),target=path.join(path.resolve(root),"muleforge-import.yaml");fs.writeFileSync(target,YAML.stringify(model),"utf8");return {target,model};}
