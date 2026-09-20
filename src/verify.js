@@ -318,7 +318,9 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   }
 
   const endToEnd = checkEndToEndArtifacts(root, { ...config, workloadType: workload.type });
-  checks.push(result("End-to-end generated artifact set", endToEnd.complete, endToEnd.complete ? "All required lifecycle artifacts are present." : "Required generated artifacts are missing: " + endToEnd.missing.map(item => item.path).join(", ")));\n\n  const passed = checks.filter(c => c.pass).length;
+  checks.push(result("End-to-end generated artifact set", endToEnd.complete, endToEnd.complete ? "All required lifecycle artifacts are present." : "Required generated artifacts are missing: " + endToEnd.missing.map(item => item.path).join(", ")));
+
+  const passed = checks.filter(c => c.pass).length;
   const score = checks.length ? Math.round((passed / checks.length) * 100) : 0;
   const failed = checks.filter(c => !c.pass);
   let build = { skipped: true, pass: true, detail: "Build not requested." };
