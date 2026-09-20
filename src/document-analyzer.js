@@ -90,15 +90,18 @@ function inferFieldType(name, annotation = "") {
 function inferFields(text, endpoint) {
   const candidates = [];
   const annotations = new Map();
+
   const addCandidate = (name, annotation = "") => {
-    const clean = String(name || "").trim().replace(/[^A-Za-z0-9_]/g, "");
-    if (!clean) return;
+    const clean = String(name || "").trim().replace(/\[\]/g, "[]");
+    if (!/^[A-Za-z][A-Za-z0-9_.\[\]]*$/.test(clean)) return;
     candidates.push(clean);
     if (annotation) annotations.set(clean.toLowerCase(), annotation.trim());
   };
+
   for (const field of ["id","customerId","accountId","name","firstName","lastName","email","phone","mobileNumber","address","amount","status","date","createdAt","updatedAt"]) {
     if (new RegExp("\\b" + field.replace(/[A-Z]/g, m => "[" + m.toLowerCase() + m + "]") + "\\b", "i").test(text)) addCandidate(field);
   }
+
   for (const line of String(text || "").split("\n")) {
     if (!/(?:request|input|payload|fields?|required fields?)/i.test(line)) continue;
     const match = line.match(/(?:request|input|payload|fields?|required fields?)\s*[:\-]\s*(.+)$/i);
@@ -106,24 +109,83 @@ function inferFields(text, endpoint) {
     for (const part of match[1].split(/,|\band\b/i)) {
       const piece = part.trim();
       if (!piece) continue;
-      const m = piece.match(/^([A-Za-z][A-Za-z0-9_]*)\s*(?::|\(|-)?\s*([^),]+)?\)?$/);
+      const m = piece.match(/^([A-Za-z][A-Za-z0-9_.\[\]]*)\s*(?::|\(|-)?\s*([^),]+)?\)?$/);
       if (m) addCandidate(m[1], m[2] || "");
     }
   }
+
   const unique = [...new Set(candidates)].filter(Boolean);
-  const selected = /^(GET|DELETE)$/i.test(endpoint.method) ? unique.filter(v => /id|status|date|name/i.test(v)) : unique;
-  return selected.map(name => {
-    const escaped = String(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const required = new RegExp("(?:\\brequired\\b|\\bmandatory\\b|\\bmust be provided\\b|\\bcannot be empty\\b)[^\\n]{0,100}\\b" + escaped + "\\b|\\b" + escaped + "\\b[^\\n]{0,100}(?:\\brequired\\b|\\bmandatory\\b|\\bmust be provided\\b|\\bcannot be empty\\b)", "i").test(text);
+  const selected = /^(GET|DELETE)$/i.test(endpoint.method)
+    ? unique.filter(v => /id|status|date|name/i.test(v))
+    : unique;
+
+  const leafFields = selected.map(name => {
+    const escaped = String(name).replace(/[.*+?^$()|[\]\\]/g, "\\$&");
+    const required = new RegExp(
+      "(?:\\b(required|mandatory|must be provided|cannot be empty)\\b)[^\\n]{0,100}\\b" + escaped + "\\b|\\b" + escaped + "\\b[^\\n]{0,100}(?:\\b(required|mandatory|must be provided|cannot be empty)\\b)",
+      "i"
+    ).test(text);
     const annotation = annotations.get(String(name).toLowerCase()) || "";
     const enumMatch = annotation.match(/(?:enum|values?)\s*[:=]?\s*\[?([^\]]+)\]?/i);
     const enumValues = enumMatch
-      ? enumMatch[1].split(/,|\|/).map(v => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean)
+      ? enumMatch[1].split(/,|\|/).map(v => v.trim().replace(/^[\"']|[\"']$/g, "")).filter(Boolean)
       : null;
-    const field = { name, type: inferFieldType(name, annotation), required };
+    const field = { name, type: inferFieldType(name.replace(/\[\]/g, "").split(".").pop(), annotation), required };
     if (enumValues?.length) field.enum = enumValues;
     return field;
   });
+
+  // Fold dotted/array paths into the existing nested-field model instead of
+  // introducing another schema representation. Examples:
+  // address.city: string
+  // items[].sku: string
+  const roots = new Map();
+  const direct = [];
+  for (const field of leafFields) {
+    const parts = String(field.name).split(".");
+    if (parts.length === 1) {
+      if (!roots.has(parts[0])) roots.set(parts[0], field);
+      else direct.push(field);
+      continue;
+    }
+    const rootName = parts[0].replace(/\[\]$/, "");
+    let root = roots.get(rootName);
+    if (!root) {
+      root = { name: rootName, type: parts[0].endsWith("[]") ? "array" : "object", required: false, fields: [] };
+      if (root.type === "array") root.items = { type: "object", fields: root.fields };
+      roots.set(rootName, root);
+    }
+    const arrayRoot = parts[0].endsWith("[]");
+    if (arrayRoot && root.type !== "array") {
+      root.type = "array";
+      root.items = { type: "object", fields: root.fields || [] };
+    }
+    const container = root.type === "array" ? root.items : root;
+    if (!Array.isArray(container.fields)) container.fields = [];
+    let cursor = container;
+    for (let i = 1; i < parts.length; i++) {
+      const part = parts[i].replace(/\[\]$/, "");
+      const isArray = parts[i].endsWith("[]");
+      const last = i === parts.length - 1;
+      if (last) {
+        cursor.fields.push({ ...field, name: part });
+      } else {
+        let child = cursor.fields.find(x => x.name === part);
+        if (!child) {
+          child = { name: part, type: isArray ? "array" : "object", required: false, fields: [] };
+          if (isArray) child.items = { type: "object", fields: child.fields };
+          cursor.fields.push(child);
+        }
+        cursor = child.type === "array" ? child.items : child;
+        if (!Array.isArray(cursor.fields)) cursor.fields = [];
+      }
+    }
+  }
+
+  for (const field of leafFields) {
+    if (!String(field.name).includes(".") && !String(field.name).includes("[]") && roots.get(field.name) === field) direct.push(field);
+  }
+  return [...roots.values(), ...direct.filter(f => !roots.has(f.name))].filter((field, index, list) => list.findIndex(x => x.name === field.name) === index);
 }
 function inferValidation(text, fields) {
   const rules = [];
