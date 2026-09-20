@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { writeEndToEndReport, checkEndToEndArtifacts } = require("../src/end-to-end");
+const { writeEndToEndReport, checkEndToEndArtifacts, requirementCoverage } = require("../src/end-to-end");
 
 function makeProject(root, api = true) {
   const files = [
@@ -77,4 +77,13 @@ function makeProject(root, api = true) {
   assert.equal(graphql.missing.some(item => item.id === "graphql-contract"), false);
   const event = checkEndToEndArtifacts(root, { requirement: "Consume events", project: { name: "demo", artifactId: "demo" }, workloadType: "event", events: [{ type: "kafka", topic: "orders" }] });
   assert.equal(event.missing.some(item => item.id === "event-runtime"), false);
+}
+
+{
+  const coverage = requirementCoverage({
+    requirements: [{ id: "REQ-001", text: "Expose customer health endpoint." }],
+    operations: [{ method: "GET", path: "/health", responseFields: [{ name: "status", type: "string" }], errors: [{ status: 200 }] }]
+  });
+  assert.equal(coverage.complete, true);
+  assert.equal(coverage.critical.length, 0);
 }
