@@ -161,8 +161,8 @@ function inferFields(text, endpoint) {
       const m = annotation.match(pattern);
       return m ? m[1].trim().replace(/^[\"']|[\"']$/g, "") : undefined;
     };
-    const minimum = captureNumber(/(?:min(?:imum)?|minimum)\s*[:=]\s*(-?\\d+(?:\\.\\d+)?)/i);
-    const maximum = captureNumber(/(?:max(?:imum)?|maximum)\s*[:=]\s*(-?\\d+(?:\\.\\d+)?)/i);
+    const minimum = captureNumber(/(?:min(?:imum)?|minimum)\s*[:=]\s*(-?\d+(?:\.\d+)?)/i);
+    const maximum = captureNumber(/(?:max(?:imum)?|maximum)\s*[:=]\s*(-?\d+(?:\.\d+)?)/i);
     const minLength = captureNumber(/min(?:imum)?Length\s*[:=]\s*(\d+)/i);
     const maxLength = captureNumber(/max(?:imum)?Length\s*[:=]\s*(\d+)/i);
     const format = captureText(/format\s*[:=]\s*([A-Za-z][A-Za-z0-9_-]*)/i);
