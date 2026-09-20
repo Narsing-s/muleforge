@@ -335,6 +335,9 @@ For an existing project:
 
     muleforge explain ./existing-mule-project
     muleforge plan muleforge.yaml
+    muleforge explain ./existing-mule-project --operation POST:/customers
+
+Operation explain mode traces a reconstructed operation back to its source file and reports available flow, connector, transformation, error-handling, contract and MUnit evidence. Missing evidence is returned with remediation fields rather than being invented.
 
 The local UI also has **Existing MuleSoft repository** mode. A complete repository folder can be selected for read-only reverse engineering; MuleForge copies it to a temporary workspace, reconstructs its semantics and workload, and never edits the supplied source during analysis.
 
