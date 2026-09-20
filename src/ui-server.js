@@ -109,7 +109,10 @@ function validateSaveRequest(model, approved) {
   if (!model || typeof model !== "object") throw new Error("Analyze the requirement before saving.");
   if (!String(model.requirement || "").trim()) throw new Error("A confirmed requirement is required before saving.");
   if (!model.project || !String(model.project.name || "").trim()) throw new Error("A project name is required before saving.");
-  if (!Array.isArray(model.operations) || model.operations.length === 0) throw new Error("At least one confirmed operation is required before saving.");
+  const workload = classifyWorkload({ model });
+  if (workload.type === "unknown") throw new Error("MuleForge could not determine the workload type. Confirm the integration design before saving.");
+  if (workload.apiContractRequired && (!Array.isArray(model.operations) || model.operations.length === 0)) throw new Error("At least one confirmed API operation is required before saving.");
+  if (!workload.apiContractRequired && (!Array.isArray(model.operations) || model.operations.length === 0) && !((model.events || model.triggers || model.connectors || []).length)) throw new Error("A non-API workload needs a confirmed trigger, event, connector, or operation before saving.");
   if (Array.isArray(model.conflicts) && model.conflicts.length) throw new Error("Resolve all requirement conflicts before saving.");
   if (Array.isArray(model.missingConfigurations) && model.missingConfigurations.length) throw new Error("Resolve all required connectivity decisions before saving.");
   if (model.operations.some(op => op && op.connectorAmbiguous)) throw new Error("Resolve ambiguous operation connector mappings before saving.");
