@@ -24,7 +24,7 @@ function batTest(op, data) {
   const method = String(op.method || "GET").toUpperCase();
   const body = requestBody(op);
   const rawPath = op.path || "/";
-  const renderedPath = String(rawPath).replace(/\\{([^}]+)\\}/g, (_, name) => "$(config." + name + ")");
+  const renderedPath = String(rawPath).replace(/\{([^}]+)\}/g, (_, name) => "$(config." + name + ")");
   const url = "$(config.baseUrl)" + (data.basePath || "/api/v1") + renderedPath;
   const headers = [];
   if (body) headers.push('"Content-Type": \'application/json\'');
@@ -75,7 +75,7 @@ function generateBatManifest(artifact) {
 function generateBatConfig(config = {}) {
   const operations = Array.isArray(config.operations) ? config.operations : [];
   const security = new Set(operations.map(op => String(op.security || "").toLowerCase()).filter(Boolean));
-  const pathParameters = [...new Set(operations.flatMap(op => [...String(op.path || "").matchAll(/\\{([^}]+)\\}/g)].map(match => match[1])))];
+  const pathParameters = [...new Set(operations.flatMap(op => [...String(op.path || "").matchAll(/\{([^}]+)\}/g)].map(match => match[1])))];
   const values = { baseUrl: "https://SET_ME" };
   pathParameters.forEach(name => { values[name] = "SET_ME"; });
   if (security.has("client-id") || security.has("clientid")) values.clientId = "SET_ME";
