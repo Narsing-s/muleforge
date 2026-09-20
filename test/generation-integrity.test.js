@@ -380,7 +380,7 @@ test("artifact provenance manifest is deterministic and binds the staged tree", 
   const second = fs.readFileSync(manifestPath, "utf8");
   const secondHash = require("node:crypto").createHash("sha256").update(second).digest("hex");
   assert.notEqual(firstHash, secondHash);
-  assert.match(second, /"a.txt"/);
+  assert.match(second, /"path": "src\\/a.txt"/);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
