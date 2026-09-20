@@ -232,7 +232,7 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge golden-test [directory]` | Run golden generation regression fixtures |
 | `muleforge import [directory]` | Reverse-engineer an existing Mule project into a reviewable model |
 | `muleforge reconcile [config] [directory]` | Reconcile confirmed requirements against an existing Mule repository without overwriting or duplicating source assets |
-| `muleforge readiness [config] [directory]` | Aggregate existing engineering gates into one lifecycle readiness report without replacing them |
+| `muleforge readiness [config] [directory]` | Aggregate existing engineering gates into one lifecycle readiness report without replacing them |\n| `muleforge plan [config]` | Classify the workload and produce the single end-to-end developer engineering plan |\n| `muleforge explain [directory]` | Explain an existing Mule project using imported semantic evidence without modifying source |
 | `muleforge artifact-manifest [directory]` | Generate a SHA-256 artifact provenance manifest |
 | `muleforge artifact-keygen [directory]` | Generate an Ed25519 signing key pair |
 | `muleforge artifact-sign [directory]` | Sign an artifact manifest |
@@ -305,6 +305,39 @@ The resulting model drives the same downstream lifecycle:
     documentation → requirements/evidence → API design → Mule implementation → DataWeave → MUnit → Postman → verification → CI/CD → deployment artifacts → promotion/rollback metadata
 
 MuleSoft documents the same design-before-implementation lifecycle: define the API contract, implement and test the integration, then deploy and verify it. citeturn0search0turn0search2turn0search5
+## 🧭 Workload-neutral engineering
+
+MuleForge is not limited to customer-facing REST APIs. The same evidence/model pipeline can classify and engineer API, event-driven, scheduled, file/SFTP, batch, SOAP, GraphQL, general integration and unknown Mule workloads.
+
+The input paths converge:
+
+    requirement documents
+          OR
+    existing Mule repository
+          ↓
+    existing evidence extraction
+          ↓
+    canonical MuleForge model
+          ↓
+    workload classification
+          ↓
+    architecture/design
+          ↓
+    implementation → transformation → reliability → MUnit
+          ↓
+    quality → traceability → package
+          ↓
+    deployment preflight → deployment → runtime verification
+
+RAML/OpenAPI is generated when the workload actually requires an API contract. Non-API integrations are not forced through an artificial RAML/Postman path.
+
+For an existing project:
+
+    muleforge explain ./existing-mule-project
+    muleforge plan muleforge.yaml
+
+MuleForge reports confirmed/inferred/unknown decisions and preserves developer-owned and external assets during regeneration. The existing importer, semantic IR, traceability and verification engines remain the source of engineering evidence; this workload layer does not duplicate them.
+
 ## 🔄 Existing repository reconciliation
 
 MuleForge can use an existing Mule repository as an engineering input, not only as a generation target. Use `muleforge import` to inventory the existing project, then `muleforge reconcile` to compare a confirmed `muleforge.yaml` against that repository.
