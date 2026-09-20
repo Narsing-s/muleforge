@@ -141,7 +141,8 @@ function startUi(port = Number(process.env.PORT || process.env.MULEFORGE_UI_PORT
           if (project) { model.project.name = project; model.project.artifactId = project; model.api.name = project; }
         }
         const assets = generateUiAssets(model);
-        return json(res, 200, { ok: true, ...assets, model });
+        const plan = buildEngineeringPlan(model);
+        return json(res, 200, { ok: true, ...assets, model, plan });
       } catch (error) {
         return json(res, 400, { error: error.message });
       }
