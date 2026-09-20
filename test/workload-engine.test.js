@@ -180,3 +180,6 @@ test("repository trigger evidence classifies scheduler-only and batch workloads"
   });
   assert.equal(batch.type, TYPES.BATCH);
 });
+
+
+test("repository dependency evidence captures Maven scope and Exchange assets",()=>{const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),{importProject}=require("../src/import-project");const root=fs.mkdtempSync(path.join(os.tmpdir(),"muleforge-deps-"));try{fs.writeFileSync(path.join(root,"pom.xml"),"<project><dependencies><dependency><groupId>com.example</groupId><artifactId>demo</artifactId><version>1.2.3</version><scope>test</scope></dependency></dependencies></project>");fs.writeFileSync(path.join(root,"exchange.json"),JSON.stringify({dependencies:[{groupId:"org.example",artifactId:"shared",version:"2.0.0"}]}));const model=importProject(root);assert.equal(model.dependencyEvidence[0].version,"1.2.3");assert.equal(model.exchangeDependencies[0].dependency.version,"2.0.0");}finally{fs.rmSync(root,{recursive:true,force:true});}});
