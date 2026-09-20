@@ -354,7 +354,7 @@ test("event runtime generates valid XML with real newlines and correlation heade
     }]
   });
   assert.match(xml, /<flow name="muleforge-event-customer-events">/);
-  assert.ok(xml.includes("x-correlation-id") && xml.includes("default uuid()"));
+  assert.ok(/x-correlation-id/.test(xml) && /default uuid\(\)/.test(xml));
   assert.match(xml, /<until-successful maxRetries="2" millisBetweenRetries="250">/);
   assert.doesNotMatch(xml, /\\\\n/);
 });
