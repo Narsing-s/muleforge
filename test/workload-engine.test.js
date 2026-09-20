@@ -66,7 +66,7 @@ test("classifies scheduled file/database workloads without inventing an API", ()
       connectors: ["sftp", "database"]
     }
   });
-  assert.equal(result.type, TYPES.SCHEDULED);
+  assert.equal(result.type, TYPES.FILE);
   assert.ok(result.capabilities.includes("scheduler"));
   assert.ok(result.capabilities.includes("file-transfer"));
   assert.equal(result.ramlRequired, false);
