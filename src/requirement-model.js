@@ -38,6 +38,18 @@ function parseRequirementItems(text) {
 }
 
 function isBodyOperation(method) { return ["POST", "PUT", "PATCH"].includes(String(method || "").toUpperCase()); }
+function inferApiSpecification(text, answers = {}) {
+  const explicit = String(answers.apiSpecification || answers.specification || answers.api?.specification || "").trim().toUpperCase();
+  if (explicit) return explicit === "OPENAPI" ? "OAS" : explicit;
+  const value = String(text || "").toLowerCase();
+  if (/\\basyncapi\\b/.test(value)) return "AsyncAPI";
+  if (/\\bgrpc\\b|protocol buffers?/.test(value)) return "Protobuf";
+  if (/\\bgraphql\\b/.test(value)) return "GraphQL";
+  if (/\\bodata\\b/.test(value)) return "OData";
+  if (/\\bsoap\\b|\\bwsdl\\b/.test(value)) return "WSDL";
+  if (/\\bopenapi\\b|\\boas\\b/.test(value)) return "OAS";
+  return "RAML";
+}
 function buildRequirementModel(requirement, answers = {}) {
   const text = String(requirement || "").trim();
   if (!text) throw new Error("A requirement is required");
@@ -60,7 +72,7 @@ function buildRequirementModel(requirement, answers = {}) {
       name: answers.apiName || slug(answers.projectName || "mule-api"),
       version: answers.apiVersion || "v1",
       type: answers.apiType || "System API",
-      specification: "RAML",
+      specification: inferApiSpecification(text, answers),
       basePath: answers.basePath || "/api/v1"
     },
     connectors,
