@@ -126,7 +126,7 @@ function writeEndToEndReport(root, config = {}) {
   }
   if (report.requirements.issues.length) {
     lines.push("## Requirement coverage and unresolved assumptions", "");
-    for (const issue of report.requirements.issues) lines.push(`- **${issue.severity.toUpperCase()}** \\`${issue.code}\\`: ${issue.message}${issue.operation ? ` (operation: ${issue.operation})` : ""}`);
+    for (const issue of report.requirements.issues) lines.push(`- **${issue.severity.toUpperCase()}** \`${issue.code}\`: ${issue.message}${issue.operation ? ` (operation: ${issue.operation})` : ""}`);
     lines.push("");
   }
   if (report.missing.length) {
