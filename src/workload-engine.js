@@ -278,6 +278,11 @@ function buildEngineeringPlan(model = {}, options = {}) {
       workload: certaintyState(workload.status),
       deployment: workload.deploymentTarget ? "inferred" : "unknown"
     },
+    developerHandoff: {
+      artifacts: ["solution-design.md","architecture.md","implementation-map.md","flow-map.md","configuration.md","connector-map.md","testing.md","deployment.md","runtime-verification.md","traceability.md","known-gaps.md"],
+      remediation: ["what","where","why","howToFix","affectedArtifacts"],
+      onboarding: options.imported ? "derive from actual repository evidence" : "derive from generated engineering evidence"
+    },
     endToEnd: {
       design: workload.type === TYPES.API ? "RAML/OAS as indicated by the model" : "workload-specific integration design",
       implementation: "existing MuleForge generators and imported repository evidence",
