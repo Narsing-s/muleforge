@@ -195,6 +195,9 @@ function copyProjectToDesktop(root) {
 function generateProject(file = "muleforge.yaml", options = {}) {
   const config = loadConfig(file), d = context(config), root = path.resolve(path.dirname(file)), t = path.resolve(__dirname, "../templates");
   const engineeringPlan = buildEngineeringPlan(config);
+  const solutionBlueprint = buildSolutionBlueprint(config);
+  const blueprintValidation = validateSolutionBlueprint(config, solutionBlueprint);
+  if (!blueprintValidation.valid) throw new Error("Solution blueprint gate failed: " + blueprintValidation.critical.map(x => x.code + ": " + x.message).join("; "));
   writeEngineeringPlan(root, engineeringPlan);
   const ownershipFile = path.join(root, ".muleforge-generated.json");
   let previousGenerated = [];
@@ -228,6 +231,7 @@ function generateProject(file = "muleforge.yaml", options = {}) {
   if ((config.testing || {}).munit !== false) write(path.join(root, "src/test/munit", `${d.artifactId}-test.xml`), generateMunit(config, d));
   writeProductionArtifacts(root, config, { ...d, workloadType: engineeringPlan.workload.type });
   writeTraceability(root, config);
+  write(path.join(root, "muleforge-solution-blueprint.json"), JSON.stringify({ ...solutionBlueprint, validation: blueprintValidation }, null, 2) + "\n");
   deploymentArtifacts(root, config, d);
   writeEndToEndReport(root, { ...config, workloadType: engineeringPlan.workload.type });
   const afterGeneration = snapshot(root);
