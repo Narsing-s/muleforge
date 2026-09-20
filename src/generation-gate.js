@@ -9,6 +9,7 @@ const { auditProject } = require("./quality-audit");
 const { scanSecrets } = require("./security-scan");
 const { validateDirectory } = require("./dataweave-validator");
 const { checkRuntimeCompatibility } = require("./runtime-compatibility");
+const { validateProtocolCapability } = require("./protocol-capability");
 
 function runGenerationGate(configFile, options = {}) {
   const configPath = path.resolve(configFile);
@@ -25,6 +26,7 @@ function runGenerationGate(configFile, options = {}) {
   const security = scanSecrets(root);
   const dataweave = validateDirectory(root);
   const compatibility = checkRuntimeCompatibility(config, root);
+  const protocol = validateProtocolCapability(config);
 
   const checks = [
     { id: "end-to-end-artifacts", passed: e2e.complete, detail: e2e },
@@ -37,7 +39,8 @@ function runGenerationGate(configFile, options = {}) {
     { id: "project-quality", passed: audit.ready, detail: audit },
     { id: "secret-scan", passed: security.length === 0, detail: security },
     { id: "dataweave-static-validation", passed: dataweave.valid, detail: dataweave },
-    { id: "runtime-compatibility", passed: compatibility.valid, detail: compatibility }
+    { id: "runtime-compatibility", passed: compatibility.valid, detail: compatibility },
+    { id: "protocol-capability", passed: protocol.valid, detail: protocol }
   ];
 
   const failed = checks.filter(check => !check.passed);
@@ -63,6 +66,14 @@ function runGenerationGate(configFile, options = {}) {
     "## Gates",
     "",
     ...checks.map(check => `- [${check.passed ? "x" : " "}] **${check.id}**`),
+    "",
+    "## Protocol capability",
+    "",
+    `- Requested protocol: ${protocol.protocol || "not explicitly specified"}`,
+    `- Capability status: ${protocol.status}`,
+    protocol.requiredNextStep ? `- Required next step: ${protocol.requiredNextStep}` : "- Dedicated generation path is available.",
+    "",
+    "MuleForge blocks verified generation when an explicitly requested protocol does not have a complete implementation path. It must not silently substitute REST scaffolding for another protocol.",
     "",
     "## Verification boundary",
     "",
