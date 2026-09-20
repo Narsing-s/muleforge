@@ -433,3 +433,15 @@ test("MUnit generator honors declared errorStatuses for policy scenarios",()=>{
   const xml=generateMunit({operations:[{name:"lookup",method:"GET",path:"/customers/{id}",errorStatuses:[409]}]},{artifactId:"customers",hasDatabase:false});
   assert.match(xml,/name="lookup-conflict-or-duplicate-test"/);
 });
+
+
+test("traceability maps confirmed behavior rules to executable MUnit tests",()=>{
+  const {buildTraceability}=require("../src/traceability");
+  const report=buildTraceability({project:{artifactId:"customer-api"},operations:[{name:"create",method:"POST",path:"/customers",validation:["email is required"],errorStatuses:[409,503],retry:{maxAttempts:2},transaction:true,idempotency:true,pagination:{pageParam:"page"}}]});
+  const ids=report.operations[0].rules.map(r=>r.ruleId);
+  assert.ok(ids.includes("create-validation-1"));
+  assert.ok(ids.includes("create-status-409"));
+  assert.ok(ids.includes("create-status-503"));
+  assert.equal(report.operations[0].rules.find(r=>r.ruleId==="create-status-409").munitTest,"create-conflict-or-duplicate-test");
+  assert.equal(report.operations[0].rules.find(r=>r.ruleId==="create-retry").munitTest,"create-retry-exhaustion-test");
+});
