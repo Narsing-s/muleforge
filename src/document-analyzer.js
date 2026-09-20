@@ -494,6 +494,7 @@ function analyzeRequirementDocument(text, file = "requirement.txt", packageDocum
     project: { name: projectName, artifactId: projectName, groupId: "com.example", version: "1.0.0", muleRuntime: "4.9.0", java: "17" },
     schemas: merged.requirements.reduce((acc, r) => { if (r.fields && Array.isArray(r.fields)) acc.push(...r.fields); return acc; }, []).reduce((acc, f) => { const name = String(f.name || f.field || "").trim(); if (name && !acc.some(x => x.name === name)) acc.push({ name, type: f.type || "string", required: Boolean(f.required) }); return acc; }, []),
     api: { name: projectName, version: "v1", type: "System API", specification: "RAML", basePath: "/api/v1" },
+    architecture: inferApiLedArchitecture({ text: combined, operations }),
     database: (() => {
       const db = connectivity.find(c => c.type === "database");
       if (!db) return undefined;
