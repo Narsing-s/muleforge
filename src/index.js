@@ -380,10 +380,10 @@ async function collectRequirementFiles(input) {
   walk(root);
   return files.sort();
 }
-function analyzeDocument(file, projectName) {
+async function analyzeDocument(file, projectName) {
   const input = path.resolve(file);
   const stat = fs.statSync(input);
-  const files = stat.isDirectory() ? collectRequirementFiles(input) : [input];
+  const files = stat.isDirectory() ? await collectRequirementFiles(input) : [input];
   if (!files.length) throw new Error("No supported requirement or API documentation files found: " + file);
   const documents = files.map(source => {
     const extracted = extractDocumentBuffer(fs.readFileSync(source), path.basename(source));
