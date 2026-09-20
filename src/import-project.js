@@ -41,7 +41,7 @@ function importProject(root="."){
     state: "confirmed"
   }));
   const dependencyEvidence=[];
-  if(pom){const pomText=fs.readFileSync(pom,"utf8");for(const m of pomText.matchAll(/<dependency>[\\s\\S]*?<groupId>([^<]+)<\\/groupId>[\\s\\S]*?<artifactId>([^<]+)<\\/artifactId>[\\s\\S]*?<version>([^<]+)<\\/version>[\\s\\S]*?<\\/dependency>/gi)){dependencyEvidence.push({groupId:m[1].trim(),artifactId:m[2].trim(),version:m[3].trim(),source:relative(base,pom),kind:"maven"});}}
+  if(pom){const pomText=fs.readFileSync(pom,"utf8");for(const m of pomText.matchAll(/<dependency>[\s\S]*?<groupId>([^<]+)<\\/groupId>[\s\S]*?<artifactId>([^<]+)<\\/artifactId>[\s\S]*?<version>([^<]+)<\\/version>[\s\S]*?<\\/dependency>/gi)){dependencyEvidence.push({groupId:m[1].trim(),artifactId:m[2].trim(),version:m[3].trim(),source:relative(base,pom),kind:"maven"});}}
   const exchangeDependencies=[];
   for(const f of files.filter(x=>path.basename(x)==="exchange.json")){try{const value=JSON.parse(fs.readFileSync(f,"utf8"));const assets=Array.isArray(value.assets)?value.assets:Array.isArray(value.dependencies)?value.dependencies:[];for(const a of assets){if(a&&(a.groupId||a.artifactId||a.assetId||a.name))exchangeDependencies.push({groupId:a.groupId||null,artifactId:a.artifactId||a.assetId||a.name,version:a.version||null,source:relative(base,f),kind:"exchange"});}}catch{}}
   const workload=classifyWorkload({model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},imported:{semantics}});
