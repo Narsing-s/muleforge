@@ -15,6 +15,8 @@
 
 ## Unreleased
 
+- Extended the existing engineering plan with an evidence-gated lifecycle state machine, explicit certainty states, operation-level explain/remediation, source-backed import asset/operation evidence, and developer handoff/KT guidance without adding a second analysis or traceability engine.
+
 - Extended the existing MUnit scenario planner to generate executable coverage for any declared HTTP error status not already covered by the specialized validation, conflict, or connector-error scenarios.
 
 - Made the existing verification gate enforce rule-level traceability: confirmed behavior rules must resolve to an existing generated Mule asset and the executable MUnit test named by the traceability manifest.
