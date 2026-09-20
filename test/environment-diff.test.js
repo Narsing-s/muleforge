@@ -16,8 +16,8 @@ test("environment diff detects and redacts sensitive changes", () => {
     fs.writeFileSync(b, `db:\n  ${secretKey}: ${qaSecret}\n  host: qa\n`);
     const r = environmentDiff(a, b);
     assert.equal(r.changed, true);
-    const password = r.changes.find(x => x.key === "db.password");
-    assert.equal(password.from, "[REDACTED]");
-    assert.equal(password.to, "[REDACTED]");
+    const redactedChange = r.changes.find(x => x.key === "db.password");
+    assert.equal(redactedChange.from, "[REDACTED]");
+    assert.equal(redactedChange.to, "[REDACTED]");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
