@@ -114,6 +114,15 @@ function classifyWorkload(input = {}) {
   if (confirmed) type = normalize(model.workload.type);
 
   const apiContractRequired = [TYPES.API, TYPES.SOAP, TYPES.GRAPHQL].includes(type);
+  const trigger = scheduled ? "scheduler" : eventConnectors.length ? "messaging" : fileConnectors.length ? "file" : apiEvidence ? "http" : soap ? "soap" : graphql ? "graphql" : "unknown";
+  const transports = [...new Set([
+    ...eventConnectors.map(c => c),
+    ...fileConnectors.map(c => c),
+    ...connectors.filter(c => !CONNECTOR_HINTS[c] && c)
+  ])];
+  const deploymentTarget = normalize(model.deployment?.target || model.deployment?.runtime || "");
+  const deploymentTargets = ["cloudhub", "cloudhub-2", "cloudhub2", "runtime-fabric", "rtf", "hybrid", "standalone"].filter(x => deploymentTarget === x);
+
   const confidence = confirmed ? "confirmed" : ev.length >= 2 ? "high" : ev.length === 1 ? "medium" : "low";
 
   return {
@@ -124,6 +133,9 @@ function classifyWorkload(input = {}) {
     apiContractRequired,
     ramlRequired: type === TYPES.API && String(model.api?.specification || "RAML").toUpperCase() === "RAML",
     evidence: ev,
+    trigger,
+    transports,
+    deploymentTarget: deploymentTarget || null,
     capabilities: [...new Set([
       apiContractRequired ? "api-contract" : null,
       eventConnectors.length ? "messaging" : null,
@@ -203,6 +215,18 @@ function buildEngineeringPlan(model = {}, options = {}) {
       note: "Changes should be evaluated against affected contract, flow, transformation, tests, CI/CD and deployment assets before regeneration."
     },
     gaps: workload.developerActionRequired ? workload.assumptions : [],
+    artifactPlan: {
+      contract: workload.apiContractRequired ? (workload.ramlRequired ? ["RAML", "Mule implementation", "MUnit", "Postman"] : ["API contract", "Mule implementation", "MUnit"]) : ["workload-specific Mule implementation", "MUnit"],
+      integration: ["DataWeave", "connector configuration", "error/retry handling"],
+      delivery: ["Maven package", "CI/CD", "deployment preflight"],
+      runtime: ["deployment verification", "smoke verification", "runtime evidence"]
+    },
+    deployment: {
+      requestedTarget: workload.deploymentTarget,
+      recognized: deploymentTargets.length > 0,
+      supportedTargets: ["cloudhub", "cloudhub-2", "runtime-fabric", "hybrid"],
+      note: "Use the existing deployment validators and target-specific generators; credentials remain external."
+    },
     endToEnd: {
       design: workload.type === TYPES.API ? "RAML/OAS as indicated by the model" : "workload-specific integration design",
       implementation: "existing MuleForge generators and imported repository evidence",
