@@ -5,6 +5,38 @@ function slug(value) { return String(value || "project").toLowerCase().replace(/
 function parseEndpoints(text) { const found = []; const re = /\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[^\s,.;]+)/gi; let match; while ((match = re.exec(text))) found.push({ method: match[1].toUpperCase(), path: match[2] }); return found; }
 function inferConnectors(text) { const lower = text.toLowerCase(); const connectors = ["http"]; if (/snowflake/.test(lower)) connectors.push("snowflake"); if (/\b(database|mysql|postgres|postgresql|oracle)\b/.test(lower)) connectors.push("database"); if (/\b(sftp|file transfer)\b/.test(lower)) connectors.push("sftp"); if (/ibm\s*mq|queue manager/.test(lower)) connectors.push("ibm-mq"); if (/anypoint\s*mq/.test(lower)) connectors.push("anypoint-mq"); if (/object\s*store|objectstore|cache/.test(lower)) connectors.push("object-store"); return [...new Set(connectors)]; }
 function inferFields(text) { const match = text.match(/(?:accept|fields?|parameters?)\s*[:\-]?\s*([^.!?\n]+)/i); if (!match) return []; return match[1].split(/,|\band\b/i).map(v => v.trim().replace(/[^A-Za-z0-9_]/g, "")).filter(Boolean); }
+function parseRequirementItems(text) {
+  const source = String(text || "").replace(/\r/g, "");
+  const lines = source.split("\n");
+  const items = [];
+  let sequence = 0;
+  const push = (value, line, kind) => {
+    const normalized = String(value || "").replace(/^[-*+\d.)]+\s+/, "").replace(/\s+/g, " ").trim();
+    if (!normalized || normalized.length < 8) return;
+    if (/^(requirement|requirements|overview|introduction|scope|background|notes?)\s*:?[\s-]*$/i.test(normalized)) return;
+    const duplicate = items.some(item => item.text.toLowerCase() === normalized.toLowerCase());
+    if (duplicate) return;
+    sequence += 1;
+    items.push({
+      id: "REQ-" + String(sequence).padStart(3, "0"),
+      text: normalized,
+      source: "requirement:line:" + line,
+      kind
+    });
+  };
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    if (/^#{1,6}\s+/.test(trimmed)) push(trimmed.replace(/^#{1,6}\s+/, ""), index + 1, "heading");
+    else if (/^[-*+]\s+/.test(trimmed) || /^\d+[.)]\s+/.test(trimmed)) push(trimmed, index + 1, "list-item");
+    else {
+      const sentences = trimmed.split(/(?<=[.!?])\s+(?=[A-Z0-9])/).map(x => x.trim()).filter(Boolean);
+      sentences.forEach(sentence => push(sentence, index + 1, "statement"));
+    }
+  });
+  return items;
+}
+
 function isBodyOperation(method) { return ["POST", "PUT", "PATCH"].includes(String(method || "").toUpperCase()); }
 function buildRequirementModel(requirement, answers = {}) {
   const text = String(requirement || "").trim();
@@ -15,6 +47,7 @@ function buildRequirementModel(requirement, answers = {}) {
   const backendConnectors = connectors.filter(c => String(c).toLowerCase() !== "http");
   return {
     requirement: text,
+    requirements: parseRequirementItems(text),
     project: {
       name: slug(answers.projectName || "mule-api"),
       artifactId: slug(answers.projectName || "mule-api"),
