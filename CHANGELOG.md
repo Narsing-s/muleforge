@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Strengthened the existing verification gate with business-rule coverage checks for declared validation rules, error statuses, and response fields.
+
 - Added final Desktop-export provenance binding using the existing SHA-256 artifact manifest, with copy-time manifest verification and regression coverage.
 
 - Added server-side save invariants requiring explicit solution approval and blocking unresolved conflicts/configuration before Desktop export.
