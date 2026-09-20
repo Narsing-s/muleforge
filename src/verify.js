@@ -135,6 +135,10 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     }
   }
 
+  const operationFlowsForCoverage = mule
+    ? [...mule.matchAll(/<flow\\b[^>]*name="([^"]+)"[^>]*>[\\s\\S]*?<\\/flow>/g)].map(m => ({ name: m[1], block: m[0] }))
+    : [];
+
   if ((config.testing || {}).munit !== false) {
     const munit = safeRead(root, munitPath);
     checks.push(result("MUnit scaffold", Boolean(munit), `Expected ${munitPath}.`));
@@ -156,7 +160,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
   }
 
   for (const op of operations) {
-    const operationXml = operationFlowsChecked.find(x => x.name === expectedOperationFlowNames[operations.indexOf(op)])?.block || mule;
+    const operationXml = operationFlowsForCoverage.find(x => x.name === `${artifactId}-${String(op.name || "").replace(/[^A-Za-z0-9_-]/g, "-")}-flow`)?.block || mule;
     if (Array.isArray(op.validation) && op.validation.length) {
       const validationImplemented = /VALIDATION:VALIDATION|VALIDATION_ERROR|Invalid email|isEmpty\\(payload/i.test(operationXml);
       checks.push(result(
