@@ -76,6 +76,7 @@ function inferFieldType(name, annotation = "") {
     if (["float", "double", "decimal"].includes(explicit)) return "number";
     if (explicit === "bool") return "boolean";
     if (explicit === "date-time") return "datetime";
+    if (explicit === "date") return "date-only";
     return explicit;
   }
   const value = String(name || "").toLowerCase();
@@ -106,12 +107,25 @@ function inferFields(text, endpoint) {
     if (!/(?:request|input|payload|fields?|required fields?)/i.test(line)) continue;
     const match = line.match(/(?:request|input|payload|fields?|required fields?)\s*[:\-]\s*(.+)$/i);
     if (!match) continue;
-    for (const part of match[1].split(/,|\band\b/i)) {
+    for (const part of splitFieldParts(match[1])) {
       const piece = part.trim();
       if (!piece) continue;
       const m = piece.match(/^([A-Za-z][A-Za-z0-9_.\[\]]*)\s*(?::|\(|-)?\s*([^),]+)?\)?$/);
       if (m) addCandidate(m[1], m[2] || "");
     }
+  }
+
+  function splitFieldParts(value) {
+    const parts = [];
+    let current = "", depth = 0;
+    for (const ch of String(value || "")) {
+      if (ch === "[") depth++;
+      if (ch === "]") depth = Math.max(0, depth - 1);
+      if (depth === 0 && ch === ",") { parts.push(current); current = ""; continue; }
+      current += ch;
+    }
+    if (current.trim()) parts.push(current);
+    return parts.flatMap(part => /\s+and\s+/i.test(part) && !/\benum\s*[:=]/i.test(part) ? part.split(/\s+and\s+/i) : [part]);
   }
 
   const unique = [...new Set(candidates)].filter(Boolean);
@@ -121,10 +135,13 @@ function inferFields(text, endpoint) {
 
   const leafFields = selected.map(name => {
     const escaped = String(name).replace(/[.*+?^$()|[\]\\]/g, "\\$&");
-    const required = new RegExp(
-      "(?:\\b(required|mandatory|must be provided|cannot be empty)\\b)[^\\n]{0,100}\\b" + escaped + "\\b|\\b" + escaped + "\\b[^\\n]{0,100}(?:\\b(required|mandatory|must be provided|cannot be empty)\\b)",
-      "i"
-    ).test(text);
+    const annotationRequired = /(?:\brequired\b|\bmandatory\b|\bcannot be empty\b|\bmust be provided\b)/i.test(annotations.get(String(name).toLowerCase()) || "");
+    const sentenceRequired = String(text || "").split(/[.\n;]/).some(sentence => {
+      if (!/\b(required|mandatory|must be provided|cannot be empty)\b/i.test(sentence)) return false;
+      const normalized = sentence.replace(/[^A-Za-z0-9_.\[\]]+/g, " ").toLowerCase();
+      return new RegExp("(^|\\s)" + escaped.toLowerCase() + "(\\s|$)").test(normalized);
+    });
+    const required = annotationRequired || sentenceRequired;
     const annotation = annotations.get(String(name).toLowerCase()) || "";
     const enumMatch = annotation.match(/(?:enum|values?)\s*[:=]?\s*\[?([^\]]+)\]?/i);
     const enumValues = enumMatch
@@ -146,11 +163,11 @@ function inferFields(text, endpoint) {
     };
     const minimum = captureNumber(/(?:min(?:imum)?|minimum)\s*[:=]\s*(-?\\d+(?:\\.\\d+)?)/i);
     const maximum = captureNumber(/(?:max(?:imum)?|maximum)\s*[:=]\s*(-?\\d+(?:\\.\\d+)?)/i);
-    const minLength = captureNumber(/min(?:imum)?Length\s*[:=]\s*(\\d+)/i);
-    const maxLength = captureNumber(/max(?:imum)?Length\s*[:=]\s*(\\d+)/i);
+    const minLength = captureNumber(/min(?:imum)?Length\s*[:=]\s*(\d+)/i);
+    const maxLength = captureNumber(/max(?:imum)?Length\s*[:=]\s*(\d+)/i);
     const format = captureText(/format\s*[:=]\s*([A-Za-z][A-Za-z0-9_-]*)/i);
     const patternMatch = annotation.match(/pattern\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|([^,;]+))/i);
-    const pattern = patternMatch ? (patternMatch[1] || patternMatch[2] || patternMatch[3]).trim() : undefined;
+    const pattern = patternMatch ? (patternMatch[1] || patternMatch[2] || patternMatch[3]).trim().replace(/[.;]+$/, "") : undefined;
     const descriptionMatch = annotation.match(/(?:description|desc)\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|(.+?))(?=\s+(?:enum|values?|format|pattern|min(?:imum)?Length|max(?:imum)?Length|min(?:imum)?|max(?:imum)?)\s*[:=]|$)/i);
     const description = descriptionMatch ? (descriptionMatch[1] || descriptionMatch[2] || descriptionMatch[3]).trim() : undefined;
     if (description) field.description = description.replace(/[.;]+$/, "").trim();
