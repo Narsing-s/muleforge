@@ -27,7 +27,7 @@ function makeProject(root, api = true) {
     "src/main/resources/properties/application-uat.yaml",
     "src/main/resources/properties/application-prod.yaml"
   ];
-  if (api) files.push("src/main/resources/api/demo.raml", "postman/demo.collection.json");
+  if (api) files.push("src/main/resources/api/demo.raml", "postman/demo.collection.json", "functional-monitoring/tests/demo.dwl");
   for (const file of files) {
     const target = path.join(root, file);
     fs.mkdirSync(path.dirname(target), { recursive: true });
