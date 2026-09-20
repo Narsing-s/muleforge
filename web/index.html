@@ -142,7 +142,7 @@ async function saveToDesktop(){if(!result||!result.model)return;if(currentFinger
   const opsHtml=ops.map(o=>'<div class="op"><span class="method">'+esc(o.method)+'</span><code>'+esc(o.path)+'</code><span class="muted">'+esc(o.name)+'</span><span class="success">'+esc(o.successStatus)+'</span></div>').join('');
   document.getElementById('summary').innerHTML=
     '<div class="two"><div><div class="muted">Project</div><h2>'+esc(s.project)+'</h2></div><div><div class="muted">API</div><h2>'+esc(s.api)+'</h2></div></div>'+
-    '<h2 style="margin-top:20px">Requirement Evidence</h2>'+
+    '<h2 style="margin-top:20px">Engineering classification</h2><div class="notice"><b>'+esc((data.plan&&data.plan.workload&&data.plan.workload.type)||"unknown")+'</b> · '+esc((data.plan&&data.plan.workload&&data.plan.workload.status)||"unknown")+' · API contract required: '+esc(String(Boolean(data.plan&&data.plan.workload&&data.plan.workload.apiContractRequired)))+'</div><h2 style="margin-top:20px">Requirement Evidence</h2>'+
     '<div class="stats"><div class="stat"><b>'+docs.length+'</b><span class="muted">source documents</span></div><div class="stat"><b>'+reqs.length+'</b><span class="muted">requirements identified</span></div><div class="stat"><b>'+con.length+'</b><span class="muted">explicit connectivity items</span></div><div class="stat"><b>'+missing.length+'</b><span class="muted">missing configurations</span></div></div>'+
     conflictHtml+
     '<h3>Explicit connectivity</h3><div>'+connectivityHtml+'</div>'+
