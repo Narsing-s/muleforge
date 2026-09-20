@@ -10,7 +10,9 @@ assert.equal(detectProtocol({ requirement: "Provide OData v4 entity sets" }), "o
 assert.equal(detectProtocol({ requirement: "Build a GraphQL API" }), "graphql");
 
 assert.equal(validateProtocolCapability({ api: { specification: "RAML" } }).valid, true);
+assert.equal(validateProtocolCapability({ api: { specification: "OAS" } }).valid, false);
 assert.equal(validateProtocolCapability({ api: { specification: "WSDL" } }).valid, true);
+assert.equal(detectProtocol({ requirement: "Build an OpenAPI API" }), "oas");
 assert.equal(validateProtocolCapability({ requirement: "Build an AsyncAPI event API" }).valid, false);
 assert.equal(validateProtocolCapability({ requirement: "Build a gRPC API" }).valid, false);
 assert.equal(validateProtocolCapability({ requirement: "Build an OData API" }).valid, false);
