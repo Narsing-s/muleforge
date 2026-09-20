@@ -506,3 +506,8 @@ PDF extraction uses `pdftotext` when available; DOCX/PPTX/XLSX extraction uses t
 Generated projects now include a machine-readable `muleforge-traceability.json` manifest and `docs/11-traceability.md`. Run `muleforge trace` to regenerate them and `muleforge validate` or `muleforge self-test` before release; `muleforge audit` to check requirement completeness, duplicate operations, generated assets and obvious hard-coded secrets.
 
 These additions are additive: the existing generation, verification, Maven and Desktop-save workflow remains unchanged.
+
+
+### Source-backed developer engineering evidence
+
+Existing-repository analysis now carries trigger/router evidence (including scheduler, batch, listeners and APIKit/flow routers) into workload classification. The canonical engineering plan also exposes change-impact coverage, Maven/Exchange dependency evidence, and an explicit deployment-versus-runtime-verification boundary. These are evidence layers over the existing semantic model, validators, generators and readiness gates; they do not create a second project model.
