@@ -33,13 +33,17 @@ function importProject(root="."){
     configuration: configs,
     source: sourceAssets
   };
-  const operationEvidence = uniqueOps.map(op => ({
-    operation: [op.method, op.path].filter(Boolean).join(" "),
-    connector: op.connector || null,
-    action: op.action || null,
-    source: op.source || null,
-    state: "confirmed"
-  }));
+  const operationEvidence = uniqueOps.map(op => {
+    const flow = semantics.flows.find(f => f.source === op.source && f.name === op.name) || semantics.flows.find(f => f.source === op.source && op.connector === "http" && /flow$/i.test(f.type));
+    return {
+      operation: [op.method, op.path].filter(Boolean).join(" "),
+      connector: op.connector || null,
+      action: op.action || null,
+      source: op.source || null,
+      flow: flow ? { name: flow.name, source: flow.source, type: flow.type } : null,
+      state: "confirmed"
+    };
+  });
   const dependencyEvidence=[];
   for (const pomFile of files.filter(x => path.basename(x) === "pom.xml")) {
     const pomText=fs.readFileSync(pomFile,"utf8");
