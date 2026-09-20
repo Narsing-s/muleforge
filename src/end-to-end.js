@@ -96,15 +96,21 @@ function checkEndToEndArtifacts(root, config = {}) {
   }));
   const missing = artifacts.filter(item => item.required && !item.present);
   const requirements = requirementCoverage(config);
+  const strictRequirements = config.generationPolicy?.strictRequirements !== false;
+  const unresolvedWarnings = strictRequirements ? requirements.warnings : [];
+  const generationReady = requirements.complete && unresolvedWarnings.length === 0;
   return {
-    version: "1.0",
+    version: "1.1",
+    strictRequirements,
+    unresolvedWarnings,
     generatedAt: new Date().toISOString(),
     project: config.project?.name || config.project?.artifactId || "mule-api",
     architecture: config.architecture || null,
     artifacts,
     missing,
     requirements,
-    complete: missing.length === 0 && requirements.complete
+    generationReady,
+    complete: missing.length === 0 && generationReady
   };
 }
 

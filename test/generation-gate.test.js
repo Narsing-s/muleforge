@@ -39,3 +39,33 @@ const { runGenerationGate } = require("../src/generation-gate");
   assert.ok(fs.existsSync(path.join(root, "muleforge-generation-gate.json")));
   assert.ok(fs.existsSync(path.join(root, "docs", "14-generation-gate.md")));
 }
+
+
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "muleforge-generation-evidence-"));
+  const configPath = path.join(root, "muleforge.yaml");
+  fs.writeFileSync(configPath, [
+    "requirement: Build a customer API.",
+    "project:",
+    "  name: evidence-demo",
+    "  artifactId: evidence-demo",
+    "operations:",
+    "  - name: createCustomer",
+    "    method: POST",
+    "    path: /customers",
+    "    requestFields:",
+    "      - name: name",
+    "        type: string",
+    "connectors:",
+    "  - http",
+    "testing:",
+    "  munit: false",
+    "deployment:",
+    "  target: none",
+    ""
+  ].join("\n"));
+  const report = runGenerationGate(configPath, { build: false });
+  assert.equal(report.status, "blocked");
+  assert.ok(report.failed.includes("end-to-end-artifacts"));
+  assert.equal(report.checks.find(x => x.id === "end-to-end-artifacts").detail.strictRequirements, true);
+}
