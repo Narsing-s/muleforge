@@ -231,6 +231,7 @@ This is intentionally local: no generated project is uploaded to a remote servic
 | `muleforge dataweave-run <file>` | Execute DataWeave only when the official runtime CLI is installed |
 | `muleforge golden-test [directory]` | Run golden generation regression fixtures |
 | `muleforge import [directory]` | Reverse-engineer an existing Mule project into a reviewable model |
+| `muleforge reconcile [config] [directory]` | Reconcile confirmed requirements against an existing Mule repository without overwriting or duplicating source assets |
 | `muleforge artifact-manifest [directory]` | Generate a SHA-256 artifact provenance manifest |
 | `muleforge artifact-keygen [directory]` | Generate an Ed25519 signing key pair |
 | `muleforge artifact-sign [directory]` | Sign an artifact manifest |
@@ -303,6 +304,28 @@ The resulting model drives the same downstream lifecycle:
     documentation → requirements/evidence → API design → Mule implementation → DataWeave → MUnit → Postman → verification → CI/CD → deployment artifacts → promotion/rollback metadata
 
 MuleSoft documents the same design-before-implementation lifecycle: define the API contract, implement and test the integration, then deploy and verify it. citeturn0search0turn0search2turn0search5
+## 🔄 Existing repository reconciliation
+
+MuleForge can use an existing Mule repository as an engineering input, not only as a generation target. Use `muleforge import` to inventory the existing project, then `muleforge reconcile` to compare a confirmed `muleforge.yaml` against that repository.
+
+Example:
+
+    muleforge reconcile muleforge.yaml ./existing-mule-project
+
+The reconciliation report identifies implemented operations, missing operations, connector drift and extra existing operations. It writes references and findings to `muleforge-reconciliation.json` and `docs/12-reconciliation.md` without copying or regenerating the existing source assets.
+
+This keeps the repository path and the documentation-upload path on the same canonical project model:
+
+    documentation/repository evidence
+             ↓
+       confirmed model
+             ↓
+    design → implementation → test → CI/CD → deployment → runtime verification
+             ↓
+       reconciliation when an existing implementation is supplied
+
+Existing repository credentials, environment values and organization-specific deployment permissions remain external inputs. MuleForge can generate and validate the deployment automation, but it must not invent or store those secrets.
+
 ## 🧩 Current capabilities
 
 - Interactive requirement workflow
