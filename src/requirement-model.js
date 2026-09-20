@@ -50,6 +50,18 @@ function inferApiSpecification(text, answers = {}) {
   if (/\\bopenapi\\b|\\boas\\b/.test(value)) return "OAS";
   return "RAML";
 }
+function inferApiSpecification(text, answers = {}) {
+  const explicit = String(answers.apiSpecification || answers.specification || answers.api?.specification || "").trim().toUpperCase();
+  if (explicit) return explicit === "OPENAPI" ? "OAS" : explicit;
+  const value = String(text || "").toLowerCase();
+  if (/\basyncapi\b/.test(value)) return "AsyncAPI";
+  if (/\bgrpc\b|protocol buffers?/.test(value)) return "Protobuf";
+  if (/\bgraphql\b/.test(value)) return "GraphQL";
+  if (/\bodata\b/.test(value)) return "OData";
+  if (/\bsoap\b|\bwsdl\b/.test(value)) return "WSDL";
+  if (/\bopenapi\b|\boas\b/.test(value)) return "OAS";
+  return "RAML";
+}
 function buildRequirementModel(requirement, answers = {}) {
   const text = String(requirement || "").trim();
   if (!text) throw new Error("A requirement is required");
