@@ -1,7 +1,7 @@
 const CONNECTOR_ALIASES = {
   http: "http", rest: "http", https: "http",
   db: "database", database: "database", mysql: "database", postgres: "database", postgresql: "database", oracle: "database",
-  snowflake: "snowflake",
+  snowflake: "snowflake", "snowflake-database": "snowflake", "snowflake-db": "snowflake", "snowflake-connector": "snowflake",
   sftp: "sftp",
   "ibm mq": "ibm-mq", "ibm-mq": "ibm-mq", ibmmq: "ibm-mq",
   "anypoint mq": "anypoint-mq", "anypoint-mq": "anypoint-mq", anypointmq: "anypoint-mq",

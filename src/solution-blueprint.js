@@ -14,8 +14,15 @@ function requirementItems(model) {
       source: item.source || null
     })).filter(item => item.text);
   }
-  return text(model.requirement)
-    ? [{ id: "REQ-001", text: text(model.requirement), source: "confirmed-model" }]
+  if (text(model.requirement)) return [{ id: "REQ-001", text: text(model.requirement), source: "confirmed-model" }];
+  const hasProjectModel = Boolean(
+    model.project &&
+    (Array.isArray(model.operations) && model.operations.length ||
+      Array.isArray(model.connectors) && model.connectors.length ||
+      model.api)
+  );
+  return hasProjectModel
+    ? [{ id: "MODEL-001", text: "Existing project model supplied; generate from the confirmed project configuration.", source: "project-model" }]
     : [];
 }
 
@@ -61,6 +68,93 @@ function nfrSignals(model) {
   return [...new Set(categories)];
 }
 
+function requirementTexts(model) {
+  return [
+    model.requirement,
+    ...(Array.isArray(model.requirements) ? model.requirements.map(x => x.text || x.description || x.requirement || "") : [])
+  ].filter(Boolean).join("\\n");
+}
+
+function operationRules(operations) {
+  return operations.map((op, index) => {
+    const name = op.name || op.operation || `${op.method || "operation"} ${op.path || index + 1}`;
+    return {
+      id: op.id || `OP-${String(index + 1).padStart(3, "0")}`,
+      name,
+      method: op.method || null,
+      path: op.path || null,
+      validation: Array.isArray(op.validation) ? op.validation : [],
+      errors: Array.isArray(op.errors) ? op.errors : [],
+      successStatus: op.successStatus || null,
+      requestFields: Array.isArray(op.requestFields) ? op.requestFields : [],
+      responseFields: Array.isArray(op.responseFields) ? op.responseFields : [],
+      reliability: {
+        retry: op.retry || null,
+        timeout: op.timeout || null,
+        idempotency: op.idempotency || false,
+        transaction: op.transaction || false,
+        pagination: op.pagination || null
+      },
+      security: op.security || null,
+      connector: op.connector || null
+    };
+  });
+}
+
+function observabilitySignals(model) {
+  const source = requirementTexts(model).toLowerCase();
+  const explicit = model.observability && typeof model.observability === "object" ? model.observability : {};
+  return {
+    required: Boolean(Object.keys(explicit).length) || /observability|monitoring|metrics|logging|alert|correlation.?id|distributed trace|tracing/.test(source),
+    requirements: Object.keys(explicit).length ? explicit : {
+      correlationId: /correlation.?id|trace.?id|distributed trace|tracing/.test(source),
+      metrics: /metrics|performance|latency|throughput/.test(source),
+      logs: /logging|logs|audit/.test(source),
+      alerts: /alert|notification|incident/.test(source)
+    },
+    source: Object.keys(explicit).length ? "explicit model" : "requirement evidence"
+  };
+}
+
+function businessRules(model, operations) {
+  const textRules = [];
+  for (const item of Array.isArray(model.requirements) ? model.requirements : []) {
+    if (item.businessRule || item.rule) textRules.push({ source: item.source || null, rule: text(item.businessRule || item.rule) });
+  }
+  return {
+    operationRules: operationRules(operations),
+    requirementRules: textRules.filter(x => x.rule),
+    rule: "Business rules are evidence-backed; MuleForge must not invent domain decisions that are absent from the requirement/model."
+  };
+}
+
+function projectTopology(model, architecture) {
+  const source = requirementTexts(model).toLowerCase();
+  const explicitMultiple = /separate (?:projects?|applications?)|independent (?:projects?|applications?)|multiple (?:mule )?(?:apps?|projects?)|deploy each (?:api|layer)|independently deployable/.test(source);
+  const layers = Array.isArray(architecture?.layers) ? architecture.layers : [];
+  return {
+    mode: explicitMultiple ? "multi-project-required" : "single-project-default",
+    explicit: explicitMultiple,
+    logicalApiLayers: layers.map(layer => typeof layer === "string" ? layer : layer.name).filter(Boolean),
+    rule: "API-led layers are logical architecture boundaries unless the requirement explicitly requires independently deployable projects.",
+    generationBoundary: explicitMultiple
+      ? "Generation must orchestrate one Mule project per explicitly independent application/API; do not flatten them into one application."
+      : "Use the existing single-project generators unless independent deployment is explicitly required."
+  };
+}
+
+function environmentPlan(model) {
+  const configured = model.deployment?.promotionEnvironments || model.deployment?.environments;
+  const environments = Array.isArray(configured) && configured.length
+    ? configured.map(String)
+    : ["dev", "qa", "uat", "prod"];
+  return {
+    environments: [...new Set(environments)],
+    source: Array.isArray(configured) && configured.length ? "explicit model" : "MuleForge default promotion lifecycle",
+    rule: "Environment-specific values remain externalized; secrets and credentials are never embedded in generated source."
+  };
+}
+
 function architectureFor(model, workload) {
   const supplied = model.architecture;
   if (supplied && typeof supplied === "object") return supplied;
@@ -91,6 +185,10 @@ function buildSolutionBlueprint(model = {}) {
   );
   const operations = Array.isArray(model.operations) ? model.operations : [];
   const connectors = Array.isArray(model.connectors) ? [...new Set(model.connectors.map(String))] : [];
+  const rules = businessRules(model, operations);
+  const observability = observabilitySignals(model);
+  const topology = projectTopology(model, architecture);
+  const environments = environmentPlan(model);
 
   return {
     version: "1.0",
@@ -116,16 +214,35 @@ function buildSolutionBlueprint(model = {}) {
       semanticIRErrors: irValidation.errors
     },
     security,
+    businessRules: rules,
     nonFunctionalRequirements: {
       categories: nfr,
-      source: nfr.length ? "requirement evidence" : "no explicit NFR evidence found"
+      source: nfr.length ? "requirement evidence" : "no explicit NFR evidence found",
+      requiredImplementation: nfr
     },
+    observability,
+    projectTopology: topology,
     delivery: {
       engineeringPlan: plan,
       contract: workload.apiContractRequired ? "required" : "not-applicable",
       tests: model.testing?.munit === false ? "explicitly-disabled" : "required",
       deployment: model.deployment || {},
-      environments: ["dev", "qa", "uat", "prod"]
+      environments: environments.environments,
+      environmentPlan: environments,
+      release: {
+        promotionPlan: Boolean(model.deployment),
+        rollback: Boolean(model.deployment),
+        runtimeVerification: "required before claiming live-verified"
+      }
+    },
+    generationContract: {
+      requirement: ["source evidence", "requirements", "conflicts", "missing decisions"],
+      design: ["workload", "architecture", "business rules", "security", "NFRs", "connectivity"],
+      implementation: ["Mule XML", "DataWeave", "connector configuration", "error/reliability handling"],
+      validation: ["contract validation", "MUnit", "Postman", "traceability", "quality/security gates"],
+      delivery: ["Maven", "CI/CD", "deployment configuration", "promotion/rollback metadata"],
+      operations: ["runtime verification", "functional monitoring artifacts", "observability evidence"],
+      rule: "A generated artifact is considered complete only when it is supported by the confirmed requirement model and passes the existing MuleForge verification gates."
     },
     artifactOwnership: {
       rule: "Reuse existing MuleForge generators and preserve developer-owned/external assets.",
@@ -157,11 +274,17 @@ function validateSolutionBlueprint(model = {}, blueprint = buildSolutionBlueprin
     const layers = new Set(blueprint.architecture.layers || []);
     if (!layers.size) issues.push({ severity: "critical", code: "BLUEPRINT_API_LED_UNRESOLVED", message: "API-led connectivity was explicitly requested but no architecture layers were resolved." });
   }
+  if (blueprint.projectTopology.mode === "multi-project-required") {
+    issues.push({ severity: "critical", code: "BLUEPRINT_MULTI_PROJECT_ORCHESTRATION_REQUIRED", message: "The requirement explicitly requires independently deployable applications/projects; single-project generation must not flatten this topology." });
+  }
   if (blueprint.security.required && !blueprint.security.schemes.length) {
     issues.push({ severity: "warning", code: "SECURITY_SCHEME_UNCONFIRMED", message: "Security evidence exists but no concrete authentication scheme was confirmed." });
   }
   if (!blueprint.nonFunctionalRequirements.categories.length) {
     issues.push({ severity: "warning", code: "NFR_UNCONFIRMED", message: "No explicit non-functional requirement categories were detected." });
+  }
+  if (blueprint.observability.required && !Object.keys(blueprint.observability.requirements || {}).some(key => blueprint.observability.requirements[key])) {
+    issues.push({ severity: "warning", code: "OBSERVABILITY_UNCONFIRMED", message: "Observability evidence exists but no concrete monitoring requirement was confirmed." });
   }
   if (!blueprint.delivery.deployment || !Object.keys(blueprint.delivery.deployment).length) {
     issues.push({ severity: "warning", code: "DEPLOYMENT_TARGET_UNCONFIRMED", message: "No deployment target was confirmed; deployment artifacts can remain target-neutral." });
