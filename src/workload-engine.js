@@ -59,6 +59,8 @@ function classifyWorkload(input = {}) {
     model.api?.specification,
     ...(Array.isArray(model.requirements) ? model.requirements.map(x => x.text || x.description || x) : []),
     textOf(model.events || model.triggers || []),
+    textOf(imported?.triggers || imported?.semantics?.triggers || []),
+    textOf(imported?.routers || imported?.semantics?.routers || []),
     textOf(model.connectors || [])
   ].join("\n").toLowerCase();
 
