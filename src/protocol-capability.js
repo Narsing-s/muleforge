@@ -8,7 +8,8 @@ const PROTOCOLS = Object.freeze({
 });
 
 const CAPABILITIES = Object.freeze({
-  rest: { implemented: true, contract: ["RAML", "OAS"], generator: "apikit-generator.js" },
+  rest: { implemented: true, contract: ["RAML"], generator: "apikit-generator.js" },
+  oas: { implemented: false, contract: ["OAS"], generator: null },
   soap: { implemented: true, contract: ["WSDL"], generator: "soap-generator.js" },
   graphql: { implemented: true, contract: ["GraphQL schema"], generator: "graphql-generator.js" },
   asyncapi: { implemented: false, contract: ["AsyncAPI"], generator: null },
