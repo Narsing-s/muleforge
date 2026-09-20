@@ -110,7 +110,7 @@ function inferFields(text, endpoint) {
     for (const part of splitFieldParts(match[1])) {
       const piece = part.trim();
       if (!piece) continue;
-      const m = piece.match(/^([A-Za-z][A-Za-z0-9_.\[\]]*)\s*(?::|\(|-)?\s*([^),]+)?\)?$/);
+      const m = piece.match(/^([A-Za-z][A-Za-z0-9_.\[\]]*)\s*(?::|\(|-)?\s*(.*?)\s*\)?$/);
       if (m) addCandidate(m[1], m[2] || "");
     }
   }
@@ -139,7 +139,7 @@ function inferFields(text, endpoint) {
     const sentenceRequired = String(text || "").split(/[.\n;]/).some(sentence => {
       if (!/\b(required|mandatory|must be provided|cannot be empty)\b/i.test(sentence)) return false;
       const normalized = sentence.replace(/[^A-Za-z0-9_.\[\]]+/g, " ").toLowerCase();
-      return new RegExp("(^|\\s)" + escaped.toLowerCase() + "(\\s|$)").test(normalized);
+      const normalizedField = escaped.toLowerCase().replace(/\\\./g, " ");\n      return new RegExp("(^|\\s)" + normalizedField + "(\\s|$)").test(normalized);
     });
     const required = annotationRequired || sentenceRequired;
     const annotation = annotations.get(String(name).toLowerCase()) || "";
