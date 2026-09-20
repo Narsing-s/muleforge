@@ -54,8 +54,9 @@ const { validateConfigValues } = require("./config-schema");
 const { validateApiGovernance } = require("./api-governance");
 const { checkRuntimeCompatibility } = require("./runtime-compatibility");
 const { environmentDiff } = require("./environment-diff");
+const { classifyWorkload, buildEngineeringPlan, explainImportedProject, writeEngineeringPlan } = require("./workload-engine");
 
-const VERSION = "0.9.17";
+const VERSION = "0.9.18";
 const program = new Command();
 const write = (file, content) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content, "utf8"); };
 const render = (template, data) => {
@@ -100,7 +101,7 @@ function runtimeCheck(directory = ".") {
   if (!result.ready) process.exitCode = 1;
 }
 function loadConfig(file = "muleforge.yaml") { const full = path.resolve(file); if (!fs.existsSync(full)) throw new Error(`Configuration not found: ${file}`); return YAML.parse(fs.readFileSync(full, "utf8")) || {}; }
-function context(config) { const p = config.project || {}, a = config.api || {}, db = config.database || {}; const requested = [...(config.connectors || []), ...(db.type === "snowflake" ? ["database"] : []), ...((config.operations || []).some(o => o.idempotency) ? ["object-store"] : [])]; if (requested.some(c => String(c).toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-") === "snowflake")) requested.push("database"); const connectors = resolveConnectors(requested); const snowflake = db.type === "snowflake" || connectors.some(c => c.id === "snowflake"); return { projectName: p.name || "mule-api", artifactId: p.artifactId || p.name || "mule-api", groupId: p.groupId || "com.example", version: p.version || "1.0.0", muleRuntime: p.muleRuntime || "4.9.0", java: p.java || "17", apiName: a.name || p.name || "Mule API", apiVersion: a.version || "v1", basePath: a.basePath || "/api/v1", connectors, connectorDependencies: buildConnectorDependencies(config, config.connectorVersions || config.connectors?.versions || {}), hasSnowflake: snowflake, hasDatabase: Boolean(db.type) || snowflake || connectors.some(c => c.id === "database"), databaseType: db.type || (snowflake ? "snowflake" : ""), databaseTable: db.table || "CUSTOMER", databaseUrl: db.url || "${db.url}", databaseUser: db.user || "${db.user}", databasePassword: db.password || "${db.password}", databaseDriverClass: db.type === "mysql" ? "com.mysql.cj.jdbc.Driver" : db.type === "postgres" || db.type === "postgresql" ? "org.postgresql.Driver" : db.type === "oracle" ? "oracle.jdbc.OracleDriver" : "", hasSftp: connectors.some(c => c.id === "sftp"), apiImplementation: String(a.implementation || a.router || "listener").toLowerCase() }; }
+function context(config) { const p = config.project || {}, a = config.api || {}, db = config.database || {}; const workload = classifyWorkload({ model: config }); const requested = [...(config.connectors || []), ...(db.type === "snowflake" ? ["database"] : []), ...((config.operations || []).some(o => o.idempotency) ? ["object-store"] : [])]; if (requested.some(c => String(c).toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-") === "snowflake")) requested.push("database"); const connectors = resolveConnectors(requested); const snowflake = db.type === "snowflake" || connectors.some(c => c.id === "snowflake"); return { projectName: p.name || "mule-api", artifactId: p.artifactId || p.name || "mule-api", groupId: p.groupId || "com.example", version: p.version || "1.0.0", muleRuntime: p.muleRuntime || "4.9.0", java: p.java || "17", apiName: a.name || p.name || "Mule API", apiVersion: a.version || "v1", basePath: a.basePath || "/api/v1", connectors, connectorDependencies: buildConnectorDependencies(config, config.connectorVersions || config.connectors?.versions || {}), hasSnowflake: snowflake, hasDatabase: Boolean(db.type) || snowflake || connectors.some(c => c.id === "database"), databaseType: db.type || (snowflake ? "snowflake" : ""), databaseTable: db.table || "CUSTOMER", databaseUrl: db.url || "${db.url}", databaseUser: db.user || "${db.user}", databasePassword: db.password || "${db.password}", databaseDriverClass: db.type === "mysql" ? "com.mysql.cj.jdbc.Driver" : db.type === "postgres" || db.type === "postgresql" ? "org.postgresql.Driver" : db.type === "oracle" ? "oracle.jdbc.OracleDriver" : "", hasSftp: connectors.some(c => c.id === "sftp"), apiImplementation: String(a.implementation || a.router || "listener").toLowerCase(), workloadType: workload.type, apiContractRequired: workload.apiContractRequired }; }
 function jsonExampleValue(field) {
   const f = typeof field === "string" ? { name: field, type: "string" } : (field || {});
   const name = String(f.name || f.field || "").toLowerCase();
@@ -190,6 +191,8 @@ function copyProjectToDesktop(root) {
 }
 function generateProject(file = "muleforge.yaml", options = {}) {
   const config = loadConfig(file), d = context(config), root = path.resolve(path.dirname(file)), t = path.resolve(__dirname, "../templates");
+  const engineeringPlan = buildEngineeringPlan(config);
+  writeEngineeringPlan(root, engineeringPlan);
   const ownershipFile = path.join(root, ".muleforge-generated.json");
   let previousGenerated = [];
   if (fs.existsSync(ownershipFile)) {
@@ -211,7 +214,7 @@ function generateProject(file = "muleforge.yaml", options = {}) {
   write(path.join(root, "pom.xml"), render(fs.readFileSync(path.join(t, "pom.xml.hbs"), "utf8"), d));
   write(path.join(root, "mule-artifact.json"), render(fs.readFileSync(path.join(t, "mule-artifact.json.hbs"), "utf8"), d));
   write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d));
-  write(path.join(root, "src/main/resources/api", `${d.artifactId}.raml`), generateRaml(config, d));
+  if (engineeringPlan.workload.ramlRequired) write(path.join(root, "src/main/resources/api", `${d.artifactId}.raml`), generateRaml(config, d));
   write(path.join(root, "src/main/mule", `${d.artifactId}.xml`), generateMuleXml(config, d).replace(/\\n/g, "\n"));
   if ((config.events || config.triggers || []).length) writeEventRuntime(root, config);
   for (const mapping of generateDataWeaveFiles(config)) {
@@ -219,7 +222,7 @@ function generateProject(file = "muleforge.yaml", options = {}) {
     write(path.join(root, "src/main/resources/dwl", `${mapping.name}-response.dwl`), mapping.response);
   }
   if ((config.testing || {}).munit !== false) write(path.join(root, "src/test/munit", `${d.artifactId}-test.xml`), generateMunit(config, d));
-  writeProductionArtifacts(root, config, d);
+  writeProductionArtifacts(root, config, { ...d, workloadType: engineeringPlan.workload.type });
   writeTraceability(root, config);
   deploymentArtifacts(root, config, d);
   const afterGeneration = snapshot(root);
@@ -440,6 +443,8 @@ program.command("ci-native <target> [directory]").description("Generate a native
 program.command("dataweave-validate <file>").description("Validate one DataWeave script").action(file=>{const r=validateScript(fs.readFileSync(path.resolve(file),"utf8"));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
 program.command("import [directory]").description("Reverse-engineer an existing Mule project into a reviewable MuleForge model").action((directory=".")=>{const r=writeImportedModel(directory);console.log("✔ Imported model written to "+r.target);console.log(JSON.stringify(r.model,null,2));});\nprogram.command("reconcile [config] [directory]").description("Reconcile confirmed requirements against an existing Mule repository without duplicating or overwriting source assets").action((config="muleforge.yaml",directory=".")=>{const r=writeReconciliation(config,directory);console.log(JSON.stringify(r,null,2));if(r.summary.missing || r.summary.connectorDrift) process.exitCode=1;});
 program.command("readiness [config] [directory]").description("Aggregate existing MuleForge engineering gates into one lifecycle readiness report").action((config="muleforge.yaml",directory=".")=>{const r=writeReadiness(config,directory);console.log(JSON.stringify(r,null,2));if(r.summary.status==="action-required") process.exitCode=1;});
+program.command("plan [config]").description("Classify the MuleSoft workload and produce one end-to-end developer engineering plan").action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config)),r=writeEngineeringPlan(root,buildEngineeringPlan(model));console.log(JSON.stringify(r.plan,null,2));if(r.plan.workload.developerActionRequired)process.exitCode=1;});
+program.command("explain [directory]").description("Explain an existing Mule project using imported semantics without modifying its source").action((directory=".")=>{const r=writeImportedModel(directory),plan=explainImportedProject(r.model);console.log(JSON.stringify(plan,null,2));});
 program.command("db-migration <from> <to> [directory]").description("Generate reviewable SQL for schema drift between two JSON schema models").action((from,to,directory=".")=>{const a=JSON.parse(fs.readFileSync(path.resolve(from),"utf8")),b=JSON.parse(fs.readFileSync(path.resolve(to),"utf8"));const {writeSchemaMigration}=require("./db-schema");console.log("✔ Migration written to "+writeSchemaMigration(directory,a,b));});
 program.command("promotion-plan [config]").description("Generate an environment promotion and rollback plan").action((config="muleforge.yaml")=>{const model=loadConfig(config),root=path.resolve(path.dirname(config));console.log("✔ Promotion plan written to "+writePromotionPlan(root,model));});
 program.command("ir-check [config]").description("Validate the semantic integration model").action((config="muleforge.yaml")=>{const r=validateIntegrationIR(buildIntegrationIR(loadConfig(config)));console.log(JSON.stringify(r,null,2));if(!r.valid)process.exitCode=1;});
