@@ -206,3 +206,23 @@ test("preserves explicitly required fields for JSON request bodies", () => {
   assert.equal(op.requestFields.find(f => (f.name || f) === "mobileNumber").required, false);
   assert.equal(op.responseFields.length > 0, true);
 });
+
+test("infers explicit and safe field types from requirement documents", () => {
+  const model = analyzeRequirementDocument(
+    [
+      "POST /payments creates a payment.",
+      "Request fields: customerId: string, amount: number, quantity: integer, active: boolean, transactionDate: date.",
+      "customerId and amount are required."
+    ].join("\n"),
+    "payments.md"
+  );
+  const fields = Object.fromEntries(model.operations[0].requestFields.map(f => [f.name || f, f]));
+  assert.equal(fields.customerId.type, "string");
+  assert.equal(fields.amount.type, "number");
+  assert.equal(fields.quantity.type, "integer");
+  assert.equal(fields.active.type, "boolean");
+  assert.equal(fields.transactionDate.type, "date-only");
+  assert.equal(fields.customerId.required, true);
+  assert.equal(fields.amount.required, true);
+  assert.equal(fields.quantity.required, false);
+});
