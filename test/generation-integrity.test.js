@@ -234,7 +234,7 @@ test("verification accepts structured requirements", () => {
     fs.writeFileSync(path.join(root, "muleforge-traceability.json"), "{}");
     fs.writeFileSync(path.join(root, "docs/11-traceability.md"), "# Traceability\n");
     const report = verifyProject(path.join(root, "muleforge.yaml"));
-    assert.equal(report.checks.find(x => x.name === "Requirement exists").ok, true, JSON.stringify(report.failed));
+    assert.equal(report.checks.find(x => x.name === "Requirement exists").pass, true, JSON.stringify(report.failed));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
