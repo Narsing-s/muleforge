@@ -236,3 +236,25 @@ test("preserves documented enum values in requirement fields", () => {
   assert.deepEqual(status.enum, ["ACTIVE", "INACTIVE"]);
   assert.equal(status.required, true);
 });
+
+
+test("builds nested objects and arrays from dotted requirement fields", () => {
+  const model = analyzeRequirementDocument(
+    [
+      "POST /orders creates an order.",
+      "Request fields: customerId: string, address.city: string, address.state: string, items[].sku: string, items[].quantity: integer.",
+      "customerId, address.city and items[].sku are required."
+    ].join("\n"),
+    "orders.md"
+  );
+  const op = model.operations[0];
+  const address = op.requestFields.find(f => f.name === "address");
+  const items = op.requestFields.find(f => f.name === "items");
+  assert.equal(address.type, "object");
+  assert.equal(address.fields.find(f => f.name === "city").required, true);
+  assert.equal(address.fields.find(f => f.name === "state").required, false);
+  assert.equal(items.type, "array");
+  assert.equal(items.items.type, "object");
+  assert.equal(items.items.fields.find(f => f.name === "sku").required, true);
+  assert.equal(items.items.fields.find(f => f.name === "quantity").type, "integer");
+});
