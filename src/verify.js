@@ -170,6 +170,7 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     }));
     checks.push(result("Flow error handling", isApiKit ? operationFlowsChecked.every(x => !x.block || /<error-handler>/.test(x.block)) : operationFlowsChecked.every(x => /<error-handler>/.test(x.block)), isApiKit ? "APIKit operation flows may rely on router/runtime error handling when no operation-specific errors are declared." : "Every generated operation flow must contain its own error handler."));
     checks.push(result("Generated operation flow names", operationFlowsChecked.every(x => flowNames.has(x.name)), "Every configured operation must map to a generated Mule flow."));
+    checks.push(result("APIKit router", !isApiKit || /<apikit:router\\b/.test(mule), "APIKit implementations must contain an explicit apikit:router."));
     checks.push(result("HTTP listener config", /<http:listener-config\b/.test(mule), "An HTTP listener configuration is expected for HTTP APIs."));
     for (const op of operations) {
       const expectedPath = (api.basePath || "") + (op.path || "");
