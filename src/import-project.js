@@ -14,7 +14,9 @@ function extractSemantics(xml){
   const errorHandlers=[...xml.matchAll(/<(on-error-(?:continue|propagate)|on-error)\b[^>]*>([\s\S]*?)<\/on-error[^>]*>/gi)].map(m=>{const a=attrs(m[0]);return {type:m[1].toLowerCase(),errorType:a.type||a.errorType||null};});
   const configRefs=[...xml.matchAll(/\bconfig-ref="([^"]+)"/gi)].map(m=>m[1]);
   const globalConfigs=[...xml.matchAll(/<([\w-]+):([\w-]+(?:-config|-connection|config|connection))\b([^>]*)/gi)].map(m=>{const a=attrs(m[0]);return {namespace:m[1].toLowerCase(),element:m[2],name:a.name||null};});
-  const triggers=[...xml.matchAll(/<(scheduler|http:listener|jms:listener|sftp:listener|file:listener|vm:listener|batch:job)\b([^>]*)/gi)].map(m=>({type:m[1].toLowerCase(),sourceAttributes:attrs(m[0])}));\n  const routers=[...xml.matchAll(/<(apikit:router|apikit:config|choice|scatter-gather|first-successful|foreach|until-successful)\b([^>]*)/gi)].map(m=>({type:m[1].toLowerCase(),sourceAttributes:attrs(m[0])}));\n  return {flows,flowRefs:unique(flowRefs),transformCount:transforms.length,errorHandlers,configRefs:unique(configRefs),globalConfigs,triggers,routers};
+  const triggers=[...xml.matchAll(/<(scheduler|http:listener|jms:listener|sftp:listener|file:listener|vm:listener|batch:job)\b([^>]*)/gi)].map(m=>({type:m[1].toLowerCase(),sourceAttributes:attrs(m[0])}));
+  const routers=[...xml.matchAll(/<(apikit:router|apikit:config|choice|scatter-gather|first-successful|foreach|until-successful)\b([^>]*)/gi)].map(m=>({type:m[1].toLowerCase(),sourceAttributes:attrs(m[0])}));
+  return {flows,flowRefs:unique(flowRefs),transformCount:transforms.length,errorHandlers,configRefs:unique(configRefs),globalConfigs,triggers,routers};
 }
 function importProject(root="."){
   const base=path.resolve(root),files=walk(base),xml=files.filter(f=>f.endsWith(".xml")),raml=files.filter(f=>f.endsWith(".raml")),dw=files.filter(f=>f.endsWith(".dwl")),munit=files.filter(f=>/munit/i.test(f)&&f.endsWith(".xml")),pom=files.find(f=>path.basename(f)==="pom.xml");
@@ -37,10 +39,15 @@ function importProject(root="."){
     action: op.action || null,
     source: op.source || null,
     state: "confirmed"
-  }));\n  const dependencyEvidence=[];\n  if(pom){const pomText=fs.readFileSync(pom,"utf8");for(const m of pomText.matchAll(/<dependency>[\\s\\S]*?<groupId>([^<]+)<\\/groupId>[\\s\\S]*?<artifactId>([^<]+)<\\/artifactId>[\\s\\S]*?<version>([^<]+)<\\/version>[\\s\\S]*?<\\/dependency>/gi)){dependencyEvidence.push({groupId:m[1].trim(),artifactId:m[2].trim(),version:m[3].trim(),source:relative(base,pom),kind:"maven"});}}\n  const exchangeDependencies=[];\n  for(const f of files.filter(x=>path.basename(x)==="exchange.json")){try{const value=JSON.parse(fs.readFileSync(f,"utf8"));const assets=Array.isArray(value.assets)?value.assets:Array.isArray(value.dependencies)?value.dependencies:[];for(const a of assets){if(a&&(a.groupId||a.artifactId||a.assetId||a.name))exchangeDependencies.push({groupId:a.groupId||null,artifactId:a.artifactId||a.assetId||a.name,version:a.version||null,source:relative(base,f),kind:"exchange"});}}catch{}}
+  }));
+  const dependencyEvidence=[];
+  if(pom){const pomText=fs.readFileSync(pom,"utf8");for(const m of pomText.matchAll(/<dependency>[\\s\\S]*?<groupId>([^<]+)<\\/groupId>[\\s\\S]*?<artifactId>([^<]+)<\\/artifactId>[\\s\\S]*?<version>([^<]+)<\\/version>[\\s\\S]*?<\\/dependency>/gi)){dependencyEvidence.push({groupId:m[1].trim(),artifactId:m[2].trim(),version:m[3].trim(),source:relative(base,pom),kind:"maven"});}}
+  const exchangeDependencies=[];
+  for(const f of files.filter(x=>path.basename(x)==="exchange.json")){try{const value=JSON.parse(fs.readFileSync(f,"utf8"));const assets=Array.isArray(value.assets)?value.assets:Array.isArray(value.dependencies)?value.dependencies:[];for(const a of assets){if(a&&(a.groupId||a.artifactId||a.assetId||a.name))exchangeDependencies.push({groupId:a.groupId||null,artifactId:a.artifactId||a.assetId||a.name,version:a.version||null,source:relative(base,f),kind:"exchange"});}}catch{}}
   const workload=classifyWorkload({model:{operations:uniqueOps,connectors:uniqueOps.map(o=>o.connector),api:{specification:raml.length?"RAML":""}},imported:{semantics}});
   const architecture=inferApiLedArchitecture({
-    text: raml.map(f=>fs.readFileSync(f,"utf8")).join("\n"),
+    text: raml.map(f=>fs.readFileSync(f,"utf8")).join("
+"),
     operations: uniqueOps,
     existingArtifacts: sourceAssets
   });
