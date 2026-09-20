@@ -4,6 +4,7 @@ const { execFileSync } = require("child_process");
 const YAML = require("yaml");
 const { buildTraceability } = require("./traceability");
 const { classifyWorkload } = require("./workload-engine");
+const { checkEndToEndArtifacts } = require("./end-to-end");
 
 function readConfig(file = "muleforge.yaml") {
   const full = path.resolve(file);
@@ -316,7 +317,8 @@ function verifyProject(file = "muleforge.yaml", options = {}) {
     }
   }
 
-  const passed = checks.filter(c => c.pass).length;
+  const endToEnd = checkEndToEndArtifacts(root, { ...config, workloadType: workload.type });
+  checks.push(result("End-to-end generated artifact set", endToEnd.complete, endToEnd.complete ? "All required lifecycle artifacts are present." : "Required generated artifacts are missing: " + endToEnd.missing.map(item => item.path).join(", ")));\n\n  const passed = checks.filter(c => c.pass).length;
   const score = checks.length ? Math.round((passed / checks.length) * 100) : 0;
   const failed = checks.filter(c => !c.pass);
   let build = { skipped: true, pass: true, detail: "Build not requested." };
