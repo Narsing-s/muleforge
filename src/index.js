@@ -218,6 +218,7 @@ function generateProject(file = "muleforge.yaml", options = {}) {
   write(path.join(root, "src/main/resources/application.yaml"), render(fs.readFileSync(path.join(t, "connectors/application.yaml.hbs"), "utf8"), d));
   if (engineeringPlan.workload.ramlRequired) write(path.join(root, "src/main/resources/api", `${d.artifactId}.raml`), generateRaml(config, d));
   write(path.join(root, "src/main/mule", `${d.artifactId}.xml`), generateMuleXml(config, d).replace(/\\n/g, "\n"));
+  writeDocumentation(root, config);
   if ((config.events || config.triggers || []).length) writeEventRuntime(root, config);
   for (const mapping of generateDataWeaveFiles(config)) {
     write(path.join(root, "src/main/resources/dwl", `${mapping.name}-request.dwl`), mapping.request);
