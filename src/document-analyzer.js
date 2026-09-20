@@ -139,9 +139,8 @@ function inferFields(text, endpoint) {
     const sentenceRequired = String(text || "").split(/[.\n;]/).some(sentence => {
       if (!/\b(required|mandatory|must be provided|cannot be empty)\b/i.test(sentence)) return false;
       const normalized = sentence.replace(/[^A-Za-z0-9_.\[\]]+/g, " ").toLowerCase();
-      const normalizedField = escaped.toLowerCase().replace(/\\\./g, " ");\n      return new RegExp("(^|\\s)" + normalizedField + "(\\s|$)").test(normalized);
+      const normalizedField = escaped.toLowerCase().replace(/\\\./g, " ");
       return new RegExp("(^|\\s)" + normalizedField + "(\\s|$)").test(normalized);
-    });
     const required = annotationRequired || sentenceRequired;
     const annotation = annotations.get(String(name).toLowerCase()) || "";
     const enumMatch = annotation.match(/(?:enum|values?)\s*[:=]?\s*\[?([^\]]+)\]?/i);
