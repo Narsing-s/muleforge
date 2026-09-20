@@ -71,7 +71,7 @@ function classifyWorkload(input = {}) {
   ].filter(Boolean).map(normalize);
 
   const ev = [];
-  const apiEvidence = operations.some(op => op.path && op.method)
+  const apiEvidence = operations.some(op => op.path && op.method) || /^(apikit|api-kit)$/i.test(String(model.api?.implementation || model.api?.router || ""))
     ? evidence("model.operations", "http-operation", "HTTP method/path operations are explicitly declared.")
     : null;
   if (apiEvidence) ev.push(apiEvidence);
