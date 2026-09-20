@@ -9,6 +9,7 @@ const { verifyProject } = require("./verify");
 const { auditProject } = require("./quality-audit");
 const { checkRuntimeCompatibility } = require("./runtime-compatibility");
 const { inferApiLedArchitecture } = require("./architecture");
+const { classifyWorkload } = require("./workload-engine");
 
 function loadModel(configFile) {
   const full = path.resolve(configFile);
@@ -24,9 +25,11 @@ function buildReadiness(configFile = "muleforge.yaml", directory = null) {
   const loaded = loadModel(configFile);
   const root = path.resolve(directory || loaded.root);
   const model = loaded.model;
+  const workload = classifyWorkload({ model });
+  const apiWorkload = workload.type === "api";
 
-  const governance = validateApiGovernance(model);
-  const contract = validateContract(loaded.full);
+  const governance = apiWorkload ? validateApiGovernance(model) : { valid: true, status: "not-applicable", detail: "API governance is not required for a non-API workload." };
+  const contract = apiWorkload ? validateContract(loaded.full) : { valid: true, status: "not-applicable", detail: "API contract validation is not required for a non-API workload." };
   const configuration = validateConfigValues(model);
   const deployment = validateDeployment(model.deployment || {});
   const policies = validateOperationPolicies(model.operations || []);
@@ -90,6 +93,7 @@ function buildReadiness(configFile = "muleforge.yaml", directory = null) {
     mode: "unified-engineering-readiness",
     project: model.project || {},
     architecture,
+    workload,
     stages,
     existingGates: {
       governance,
