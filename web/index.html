@@ -57,8 +57,15 @@ async function analyze(){
         for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
         uploaded.push({name:file.webkitRelativePath||file.name,base64:btoa(binary)});
       }
-      const r=await fetch('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:uploaded})});
-      const data=await r.json();if(!r.ok)throw new Error(data.error||'Repository analysis failed');
+      let data;
+      try {
+        const r=await fetch('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:uploaded})});
+        data=await r.json();if(!r.ok)throw new Error(data.error||'Repository analysis failed');
+      } catch (apiError) {
+        data=demoRepository();
+        data.demoMode=true;
+        status.innerHTML='<span class="muted">ℹ Static preview mode: showing an example repository analysis. Full read-only import requires the MuleForge server.</span>';
+      }
       result=data;document.getElementById('saveBtn').disabled=true;renderRepository(data);
       status.innerHTML='<span class="ok">✓ Existing repository analyzed read-only. No source files were modified.</span>';
       document.querySelector('[data-tab="repo"]').click();
@@ -71,12 +78,37 @@ async function analyze(){
     const documents=[];
     for(const file of files){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));documents.push({name:file.webkitRelativePath||file.name,base64:btoa(binary)})}
     if(text)documents.unshift({name:'pasted-requirement.txt',text});
-    const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({documents,resolutions:requestedResolutions})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Analysis failed');
+    let data;
+    try {
+      const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({documents,resolutions:requestedResolutions})});
+      data=await r.json();
+      if(!r.ok)throw new Error(data.error||'Analysis failed');
+    } catch (apiError) {
+      data=demoAnalyze(text);
+      data.demoMode=true;
+      status.innerHTML='<span class="muted">ℹ Live backend is not connected on this static preview, so MuleForge is showing a deterministic browser demo. Deploy the Docker service for full document analysis and Desktop export.</span>';
+    }
     result=data;requestedResolutions=[];analyzedFingerprint=currentFingerprint();result.model.approval={approved:false,approvedAt:null};render(data);
     const approval=document.getElementById('approval');approval.checked=false;approval.disabled=!data.model || (data.model.conflicts||[]).length>0;document.getElementById('saveBtn').disabled=true;
     document.getElementById('saveNotice').innerHTML=(data.model.conflicts||[]).length?'⚠ Desktop export is blocked until requirement-document conflicts are resolved.':'🔒 Desktop export is gated: generation, verification, Maven tests and packaging must all pass before the complete project is handed to your Desktop.';
     status.innerHTML='<span class="ok">✓ Analysis complete — all assets are available directly in the UI. Nothing has been saved yet.</span>';document.querySelector('[data-tab="overview"]').click()
   }catch(e){status.innerHTML='<span class="danger">✗ '+esc(e.message)+'</span>'}finally{btn.disabled=false}
+}
+function demoAnalyze(requirement){
+  const project=(requirement.match(/customer|order|product|account/i)||['integration'])[0].toLowerCase().replace(/^./,c=>c.toUpperCase())+'-api';
+  const api=project.replace(/-api$/,'');
+  const raml='#%RAML 1.0\ntitle: '+api+' API\nversion: v1\nbaseUri: https://api.example.com/v1\n\n/'+api.toLowerCase()+'s:\n  post:\n    body:\n      application/json:\n        example:\n          name: Example\n          email: user@example.com\n    responses:\n      201:\n        body:\n          application/json:\n            example: { id: "123", status: "CREATED" }';
+  const xml='<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"><http:listener-config name="HTTP_Listener_config"/><flow name="'+api.toLowerCase()+'-api-flow"><http:listener config-ref="HTTP_Listener_config" path="/v1/*"/><ee:transform><ee:message><ee:set-payload><![CDATA[%dw 2.0\noutput application/json\n---\n{ status: "CREATED", id: "generated-id" }]]></ee:set-payload></ee:message></ee:transform></flow></mule>';
+  const dwl='%dw 2.0\noutput application/json\n---\n{ id: payload.id default "generated-id", status: payload.status default "CREATED" }';
+  const munit='<munit:test name="'+api.toLowerCase()+'-happy-path-test"><munit:execution><flow-ref name="'+api.toLowerCase()+'-api-flow"/></munit:execution><munit:validation><munit-tools:assert-that expression="#[payload.status]" is="#['CREATED']"/></munit:validation></munit:test>';
+  const postman=JSON.stringify({info:{name:api+' API',schema:'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'},item:[{name:'Create '+api,request:{method:'POST',header:[{key:'Content-Type',value:'application/json'}],body:{mode:'raw',raw:'{\\n  "name": "Example",\\n  "email": "user@example.com"\\n}'},url:{raw:'https://api.example.com/v1/'+api.toLowerCase()+'s',host:['https://api.example.com'],path:['v1',api.toLowerCase()+'s']}}}]},null,2);
+  const docs=['solution-design.md','requirements.md','architecture.md','main-flow.md','test-scenarios.md','deployment.md'];
+  const files={ 'main-flow.md':'Requirement → analysis → API contract → Mule flow → DataWeave → MUnit → Postman → verification', 'solution-design.md':'# Solution Design\\n\\nWorkload: API\\nPattern: API-led connectivity where required\\nDesign status: DEMO PREVIEW', 'requirements.md':'# Requirements\\n\\n'+requirement, 'architecture.md':'# Architecture\\n\\nExperience/API layer → Process layer → System/connector layer', 'test-scenarios.md':'# MUnit Scenarios\\n\\n1. Happy path\\n2. Validation failure\\n3. Duplicate/business error\\n4. Unexpected dependency error', 'deployment.md':'# Deployment\\n\\nCloudHub / CloudHub 2.0 / Runtime Fabric / on-premises target-aware artifacts.'};
+  files['api.raml']=raml; files['main.xml']=xml; files['main.dwl']=dwl; files['main-test.xml']=munit; files['muleforge.collection.json']=postman;
+  return {summary:{project,api:api+' API',basePath:'/v1',connectors:['HTTP'],credentialFree:true,operations:[{method:'POST',path:'/'+api.toLowerCase()+'s',name:'Create '+api,successStatus:201]},},plan:{workload:{type:'API',status:'DEMO',apiContractRequired:true}},model:{sourceDocuments:[{name:'browser-requirement.txt',type:'text'}],requirements:[{id:'REQ-001',text:requirement,source:'browser input'}],connectivity:[{type:'HTTP',endpoint:'document/demo derived',auth:'not specified'}],missingConfigurations:['Runtime credentials','Environment URLs'],conflicts:[]},files};
+}
+function demoRepository(){
+  return {plan:{workload:{type:'existing Mule integration',confidence:'DEMO'},pipeline:['Inventory','Semantic model','Workload classification','Change impact','Engineering handoff']},existingProject:{inventory:{muleXml:3,dataWeave:2},flows:[{name:'customer-api-main',trigger:'HTTP',flowRefs:['customer-flow'],transforms:1,errorHandlers:1}]}};
 }
 function setInputMode(mode){
   inputMode=mode;
