@@ -26,19 +26,51 @@ function build(t){
  add("Verify","Run contract, workflow and failure-path checks","Test");add("Deploy","Package with environment-specific configuration","Deployment");return steps
 }
 async function generate(){
- const t=$("#requirement").value.trim();if(!t){$("#status").textContent="Add a requirement";return}
+ const t=$("#requirement").value.trim();
+ if(!t){$("#status").textContent="Add a requirement";return}
  $("#status").textContent="Generating…";
  let workflow=null;
- try{
-   const r=await fetch("/api/generate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({requirement:t})});
-   if(r.ok){const data=await r.json();workflow=data.workflow;workflow._source="AI Gateway"}
- }catch(_){}
+
+ // GitHub Pages is static, so use the local planner immediately there.
+ // On a server deployment, try the AI endpoint briefly and fall back safely.
+ const isStaticPages=location.hostname.endsWith("github.io");
+ if(!isStaticPages){
+   try{
+     const controller=new AbortController();
+     const timer=setTimeout(()=>controller.abort(),2500);
+     const r=await fetch("/api/generate",{
+       method:"POST",
+       headers:{"content-type":"application/json"},
+       body:JSON.stringify({requirement:t}),
+       signal:controller.signal
+     });
+     clearTimeout(timer);
+     if(r.ok){
+       const data=await r.json();
+       if(data && data.workflow && Array.isArray(data.workflow.steps) && data.workflow.steps.length){
+         workflow=data.workflow;
+         workflow._source="AI Gateway";
+       }
+     }
+   }catch(_){}
+ }
+
  const steps=workflow?.steps?.length?workflow.steps:build(t);
- current=workflow||{name:"AgentFlow workflow",type:classify(t),sourceRequirement:t,generatedAt:new Date().toISOString(),steps,qualityGates:[]};
+ current=workflow||{
+   name:"AgentFlow workflow",
+   type:classify(t),
+   sourceRequirement:t,
+   generatedAt:new Date().toISOString(),
+   steps,
+   qualityGates:[]
+ };
  current.qualityGates=current.qualityGates||[];
- $("#empty").classList.add("hidden");$("#result").classList.remove("hidden");$("#planType").textContent=current.type;
- $("#steps").innerHTML=steps.map((s,i)=>'<div class="step"><div class="num">'+String(i+1).padStart(2,"0")+'</div><div><strong>'+esc(s.title)+'</strong><span>'+esc(s.detail)+'</span></div><em>'+esc(s.kind)+'</em></div>').join("");
- validate();$("#status").textContent=current._source||"Local planner"
+ $("#empty").classList.add("hidden");
+ $("#result").classList.remove("hidden");
+ $("#planType").textContent=current.type;
+ $("#steps").innerHTML=steps.map((s,i)=>'<div class="step"><div class="num">'+String(i+1).padStart(2,"0")+'</div><div><strong>'+esc(String(s.title||"Step"))+'</strong><span>'+esc(String(s.detail||""))+'</span></div><em>'+esc(String(s.kind||"Workflow"))+'</em></div>').join("");
+ validate();
+ $("#status").textContent=current._source||"Local planner";
 }
 function validate(){
  if(!current)return;const t=current.sourceRequirement.toLowerCase();
