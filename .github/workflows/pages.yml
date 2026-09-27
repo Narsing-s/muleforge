@@ -1,8 +1,11 @@
-name: Publish MuleForge Web Preview
+name: Publish AgentFlow Studio
 
 on:
   push:
     branches: [main]
+    paths:
+      - "agentflow/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -21,11 +24,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare static preview
+      - name: Run AgentFlow smoke tests
+        run: node agentflow/test.js
+
+      - name: Prepare AgentFlow Pages artifact
         run: |
           rm -rf site
           mkdir -p site
-          cp web/index.html site/index.html
+          cp -R agentflow/. site/
           touch site/.nojekyll
 
       - name: Upload Pages artifact
