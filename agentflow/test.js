@@ -1,6 +1,10 @@
 const fs=require("fs");
 const app=fs.readFileSync(__dirname+"/app.js","utf8");
 const api=fs.readFileSync(__dirname+"/../api/generate.js","utf8");
-for(const name of ["classify","build","validate","exportJson"]) if(!app.includes("function "+name)) throw new Error("Missing "+name);
-for(const token of ["AI_GATEWAY_API_KEY","ai-gateway.vercel.sh","response_format","qualityGates"]) if(!api.includes(token)) throw new Error("Missing AI API contract: "+token);
-console.log("AgentFlow tests passed: planner + AI provider contract");
+const artifacts=fs.readFileSync(__dirname+"/artifacts.js","utf8");
+const index=fs.readFileSync(__dirname+"/index.html","utf8");
+for(const name of ["classify","build","validate","exportJson","generate"]) if(!app.includes("function "+name)) throw new Error("Missing "+name);
+for(const token of ["AI_GATEWAY_API_KEY","ai-gateway.vercel.sh","response_format","muleXml","dataWeave","configYaml","postman"]) if(!api.includes(token)) throw new Error("Missing AI artifact contract: "+token);
+for(const token of ["window.AgentFlowArtifacts","muleXml","configYaml","postman-collection.json"]) if(!artifacts.includes(token)) throw new Error("Missing artifact UI contract: "+token);
+if(!index.includes('src="./artifacts.js"')) throw new Error("artifacts.js is not loaded");
+console.log("AgentFlow tests passed: planner + AI workflow + MuleSoft artifact contract");
