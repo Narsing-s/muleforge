@@ -44,6 +44,10 @@ Developer review
 
 MuleForge should not silently invent important business decisions. Confirmed decisions become part of the project model and drive generation and documentation.
 
+## ✨ AgentFlow Studio
+
+Try the product-facing workflow planner at [agentflow/index.html](agentflow/index.html). It turns plain-English integration requirements into a structured workflow, runs quality gates, and exports a JSON workflow artifact. A GitHub Pages workflow is included at `.github/workflows/agentflow-pages.yml`.
+
 ## 🚀 Install
 
 ### Prerequisites
